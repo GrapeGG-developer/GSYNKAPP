@@ -9,6 +9,9 @@ import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import java.util.Locale
 
+/** Русский голос для синтеза речи (современный способ вместо конструктора Locale). */
+private val RUSSIAN: Locale = Locale.forLanguageTag("ru-RU")
+
 /**
  * Быстрые действия мультитула: фонарик, «Не беспокоить», звонок, синтез речи.
  * Все методы безопасны: при отсутствии доступа просто возвращают ошибку, не падая.
@@ -98,7 +101,7 @@ object AutomationActions {
         val engine = tts ?: TextToSpeech(app) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) {
-                tts?.language = Locale("ru", "RU")
+                tts?.language = RUSSIAN
             }
         }.also { tts = it }
 
@@ -112,12 +115,12 @@ object AutomationActions {
         if (!ttsReady) {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 if (ttsReady) {
-                    engine.language = Locale("ru", "RU")
+                    engine.language = RUSSIAN
                     engine.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "gsynk")
                 }
             }, 900)
         } else {
-            engine.language = Locale("ru", "RU")
+            engine.language = RUSSIAN
             engine.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "gsynk")
         }
     }

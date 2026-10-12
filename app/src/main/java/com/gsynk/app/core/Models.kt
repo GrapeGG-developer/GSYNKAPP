@@ -116,7 +116,7 @@ data class AppSettings(
     /** MAIN-режим: авто / принудительно полный / базовый. */
     val mainMode: Int = MainMode.AUTO,
     /** Репозиторий для OTA-обновлений («владелец/репозиторий»). */
-    val updateRepo: String = ""
+    val updateRepo: String = "GrapeGG-developer/GSYNKAPP"
 )
 
 object MainMode {
