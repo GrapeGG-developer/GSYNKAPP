@@ -11,15 +11,22 @@
 
 ## 0. Готовый APK
 
-| Файл | Версия | Размер |
-|---|---|---|
-| `apk/GSYNK-v2.0.2-debug.apk` | 2.0.2 (versionCode 7) | ~32.5 МБ |
-| `apk/GSYNK-v2.0.1-debug.apk` | 2.0.1 (versionCode 6) | ~32.5 МБ |
-| `apk/GSYNK-v2.0.0-debug.apk` | 2.0.0 (versionCode 5) | ~32.5 МБ — для проверки OTA |
-| `apk/GSYNK-v1.2.0-debug.apk` | 1.2.0 (versionCode 4) | ~31.9 МБ — предыдущая ветка |
+Все сборки лежат в релизах GitHub — там же, откуда их скачивает само приложение
+при обновлении по воздуху:
+
+| Версия | Ссылка |
+|---|---|
+| **2.0.2** (текущая, versionCode 7) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.0.2/GSYNK-v2.0.2-debug.apk |
+| 2.0.1 (для проверки OTA) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.0.1/GSYNK-v2.0.1-debug.apk |
+| 2.0.0 (первый мультитул) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.0.0/GSYNK-v2.0.0-debug.apk |
+
+Страница всех релизов: **https://github.com/GrapeGG-developer/GSYNKAPP/releases**
+
+> APK намеренно не хранятся в рабочей папке проекта: они занимают по 32 МБ и дублируют
+> релизы GitHub. Свежесобранный APK лежит в `app/build/outputs/apk/debug/app-debug.apk`
+> (эта папка исключена из резервных копий и не раздувает проект).
 
 Репозиторий: **https://github.com/GrapeGG-developer/GSYNKAPP**
-Релизы с APK: **https://github.com/GrapeGG-developer/GSYNKAPP/releases**
 
 Пакет: `com.gsynk.app.debug` (debug-сборка, ставится рядом с обычной версией).
 Минимальная версия — Android 11 (API 30), целевая — Android 16 (API 36).
