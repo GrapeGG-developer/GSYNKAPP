@@ -20,6 +20,9 @@ jobs:
 
       - name: Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # без пакета 'tools': он исключён из репозитория Google и ломает установку
+          packages: "platform-tools platforms;android-36 build-tools;36.0.0"
 
       - name: Кэш Gradle
         uses: actions/cache@v4
