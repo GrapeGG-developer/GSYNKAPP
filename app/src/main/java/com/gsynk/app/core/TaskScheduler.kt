@@ -126,6 +126,24 @@ object TaskScheduler {
         val now = System.currentTimeMillis()
         tasks.filter { it.enabled && it.triggerAt > now }.forEach { schedule(context, it) }
     }
+
+    /** Что делать со списком задач после перезагрузки или обновления приложения. */
+    data class Restore(
+        /** Задачи, которые ещё впереди — их надо заново поставить в будильник. */
+        val future: List<ScheduledTask>,
+        /** Просроченные и выключенные — их будильники уже не нужны. */
+        val expired: List<ScheduledTask>
+    )
+
+    /**
+     * Будильники не переживают перезагрузку телефона и обновление приложения,
+     * поэтому при старте список делится на «ещё актуальные» и «отработанные».
+     */
+    fun restore(tasks: List<ScheduledTask>, now: Long = System.currentTimeMillis()): Restore {
+        val future = tasks.filter { it.enabled && it.triggerAt > now }
+        val expired = tasks.filterNot { it.enabled && it.triggerAt > now }
+        return Restore(future = future, expired = expired)
+    }
 }
 
 /** Выполняет задачу в назначенное время. */

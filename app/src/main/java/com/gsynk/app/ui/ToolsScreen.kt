@@ -18,21 +18,30 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.MainMode
+import com.gsynk.app.core.Permissions
 import com.gsynk.app.core.ScheduledTask
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBgAlt
@@ -62,6 +71,24 @@ fun ToolsScreen(
     val settings by vm.settings.collectAsStateWithLifecycle()
 
     val full = device.isFull
+
+    // разрешение на звонки: без него задача только откроет набор номера
+    val context = LocalContext.current
+    var callAllowed by remember { mutableStateOf(Permissions.hasCallPermission(context)) }
+    val callLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> callAllowed = granted }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                callAllowed = Permissions.hasCallPermission(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     GrapeScreen(title = "Инструменты", onBack = onBack) {
         // ————— быстрые действия —————
@@ -169,6 +196,35 @@ fun ToolsScreen(
         if (full) {
             SectionTitle("Отложенные задачи")
             Spacer(Modifier.height(8.dp))
+            if (!callAllowed) {
+                SurfaceCard(corner = 18.dp, contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "Нужно разрешение на звонки",
+                                color = TextPrimary,
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Text(
+                                "Без него задача откроет набор номера, но не позвонит сама.",
+                                color = TextDim,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(GrapeViolet)
+                                .clickable { callLauncher.launch(Manifest.permission.CALL_PHONE) }
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text("Разрешить", color = Color(0xFF120720), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+            }
             TaskComposer(
                 canCall = true,
                 onCreate = { title, kind, number, phrase, delay -> vm.addTask(title, kind, number, phrase, delay) },

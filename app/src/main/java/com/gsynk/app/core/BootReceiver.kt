@@ -11,7 +11,7 @@ import java.time.ZonedDateTime
 /**
  * Перезагрузка телефона, обновление приложения, смена времени или часового пояса,
  * а также выдача доступа к точным будильникам — во всех этих случаях расписание
- * нужно пересобрать.
+ * и отложенные задачи нужно пересобрать.
  */
 class BootReceiver : BroadcastReceiver() {
 
@@ -32,6 +32,20 @@ class BootReceiver : BroadcastReceiver() {
                 val settings = repository.currentSettings()
                 val rules = repository.currentRules()
 
+                // ————— задачи (звонок, озвучка, розыгрыш) —————
+                // Будильники не выживают перезагрузку и обновление приложения:
+                // актуальные ставим заново, просроченные убираем из списка.
+                val taskRepository = TaskRepository(appContext)
+                val tasks = taskRepository.current()
+                if (tasks.isNotEmpty()) {
+                    val plan = TaskScheduler.restore(tasks)
+                    TaskScheduler.scheduleAll(appContext, plan.future)
+                    if (plan.expired.isNotEmpty()) {
+                        taskRepository.save(plan.future)
+                    }
+                }
+
+                // ————— правила яркости и громкости —————
                 if (!settings.autopilot) {
                     rules.forEach { RuleScheduler.cancel(appContext, it.id) }
                     return@launch

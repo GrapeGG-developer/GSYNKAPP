@@ -349,21 +349,24 @@ object IslandOverlay {
             )
         )
 
-        // тонкая полоса прогресса
-        val progress = View(context).apply {
-            tag = TAG_PROGRESS
-            background = GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(COLOR_VIOLET, COLOR_GREEN)
-            ).apply { cornerRadius = dp(context, 2f) }
+        // тонкая полоса прогресса — только у временной капсулы,
+        // у постоянного острова она смысла не имеет
+        if (!persistent) {
+            val progress = View(context).apply {
+                tag = TAG_PROGRESS
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.LEFT_RIGHT,
+                    intArrayOf(COLOR_VIOLET, COLOR_GREEN)
+                ).apply { cornerRadius = dp(context, 2f) }
+            }
+            inner.addView(
+                progress,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    dp(context, 2.5f).toInt().coerceAtLeast(1)
+                ).apply { topMargin = dp(context, 5f).toInt() }
+            )
         }
-        inner.addView(
-            progress,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(context, 2.5f).toInt().coerceAtLeast(1)
-            ).apply { topMargin = dp(context, 5f).toInt() }
-        )
 
         // раскрытая строка (для постоянного острова)
         val expandedView = TextView(context).apply {

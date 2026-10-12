@@ -3,6 +3,7 @@ package com.gsynk.app
 import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.NfcLink
 import com.gsynk.app.core.ScheduledTask
+import com.gsynk.app.core.TaskScheduler
 import com.gsynk.app.core.UpdateChecker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -180,6 +181,43 @@ class MultiToolTest {
         assertTrue(task.triggerAt <= before + 65_000L)
         assertEquals(ScheduledTask.KIND_SPEAK, task.kind)
         assertTrue(task.id.isNotBlank())
+    }
+
+    // ————— восстановление задач после перезагрузки и обновления —————
+
+    @Test
+    fun `будущие задачи восстанавливаются после перезагрузки`() {
+        val now = 1_000_000L
+        val future = ScheduledTask(title = "Позвонить", triggerAt = now + 120_000L, kind = ScheduledTask.KIND_CALL)
+        val plan = TaskScheduler.restore(listOf(future), now)
+        assertEquals(1, plan.future.size)
+        assertEquals(future.id, plan.future.first().id)
+        assertTrue(plan.expired.isEmpty())
+    }
+
+    @Test
+    fun `просроченные и выключенные задачи убираются`() {
+        val now = 2_000_000L
+        val past = ScheduledTask(triggerAt = now - 1L)
+        val exactly = ScheduledTask(triggerAt = now)
+        val off = ScheduledTask(triggerAt = now + 60_000L, enabled = false)
+        val future = ScheduledTask(triggerAt = now + 1L)
+
+        val plan = TaskScheduler.restore(listOf(past, exactly, off, future), now)
+
+        assertEquals(1, plan.future.size)
+        assertEquals(future.id, plan.future.first().id)
+        assertEquals(3, plan.expired.size)
+        assertTrue(plan.expired.any { it.id == past.id })
+        assertTrue(plan.expired.any { it.id == exactly.id })
+        assertTrue(plan.expired.any { it.id == off.id })
+    }
+
+    @Test
+    fun `пустой список задач переживает восстановление`() {
+        val plan = TaskScheduler.restore(emptyList(), 5L)
+        assertTrue(plan.future.isEmpty())
+        assertTrue(plan.expired.isEmpty())
     }
 
     @Test

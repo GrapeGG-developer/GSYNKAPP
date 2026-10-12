@@ -60,6 +60,12 @@ object Permissions {
             true
         }
 
+    /** Разрешение на сами звонки (для задач «позвонить и сказать фразу»). */
+    fun hasCallPermission(context: Context): Boolean = runCatching {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) ==
+            PackageManager.PERMISSION_GRANTED
+    }.getOrDefault(false)
+
     fun batteryExempt(context: Context): Boolean = runCatching {
         context.getSystemService(PowerManager::class.java)
             ?.isIgnoringBatteryOptimizations(context.packageName) ?: false
