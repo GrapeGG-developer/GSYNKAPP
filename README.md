@@ -14,6 +14,7 @@
 | Файл | Версия | Размер |
 |---|---|---|
 | `apk/GSYNK-v2.0.0-debug.apk` | 2.0.0 (versionCode 5) | ~32.5 МБ |
+| `apk/GSYNK-v1.2.0-debug.apk` | 1.2.0 (versionCode 4) | ~31.9 МБ — оставлен для проверки OTA-обновления |
 
 Пакет: `com.gsynk.app.debug` (debug-сборка, ставится рядом с обычной версией).
 Минимальная версия — Android 11 (API 30), целевая — Android 16 (API 36).
@@ -229,7 +230,7 @@ GSYNK/
 │                                HomeTiles, Components, theme/
 ├── app/src/test/java/com/gsynk/app/   RuleLogicTest (22), MultiToolTest (16)
 ├── app/src/main/res/xml/        apduservice (HCE), file_paths (OTA), backup-правила
-├── apk/                         готовые сборки
+├── apk/                         готовые сборки (локально; на GitHub — во вкладке Releases)
 ├── branding/                    мастер-иконка и превью
 ├── check.sh                     тесты + lint + APK одной командой
 └── build_toolchain.sh           установка JDK 17 и Android SDK

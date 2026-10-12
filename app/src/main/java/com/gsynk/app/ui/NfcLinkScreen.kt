@@ -127,7 +127,26 @@ fun NfcLinkScreen(onBack: () -> Unit) {
                 context,
                 NfcLink.buildMessage(NfcLink.Payload(kind, title, body), context.packageName)
             )
-            onDispose { NdefHceService.clear(context) }
+            // Просим систему отдавать NDEF именно нам: иначе Android спросит,
+            // каким приложением обслуживать метку, и касание сорвётся.
+            if (activity != null) {
+                runCatching {
+                    val emulation = android.nfc.cardemulation.CardEmulation.getInstance(adapter)
+                    emulation?.setPreferredService(
+                        activity,
+                        android.content.ComponentName(context, NdefHceService::class.java)
+                    )
+                }
+            }
+            onDispose {
+                if (activity != null) {
+                    runCatching {
+                        android.nfc.cardemulation.CardEmulation.getInstance(adapter)
+                            ?.unsetPreferredService(activity)
+                    }
+                }
+                NdefHceService.clear(context)
+            }
         } else {
             onDispose { }
         }
