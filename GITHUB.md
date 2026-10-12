@@ -1,82 +1,72 @@
-# GSYNK на GitHub: репозиторий и релизы
+# GSYNK на GitHub: репозиторий, CI и релизы
 
-**Готово:** код опубликован в
-[https://github.com/GrapeGG-developer/GSYNKAPP](https://github.com/GrapeGG-developer/GSYNKAPP)
-(ветка `main`). Релизы с APK живут во вкладке
-[Releases](https://github.com/GrapeGG-developer/GSYNKAPP/releases) — именно их
-видят телефоны при обновлении по воздуху.
+- Код: **https://github.com/GrapeGG-developer/GSYNKAPP** (ветка `main`)
+- Релизы с APK: **https://github.com/GrapeGG-developer/GSYNKAPP/releases**
+- CI: **https://github.com/GrapeGG-developer/GSYNKAPP/actions** — при теге и по кнопке
+  запускает тесты, lint и сборку.
 
-Ниже — как выпускать следующие версии и, при необходимости, как отправить код заново.
-
-## Вариант 1. Через веб-интерфейс (самый простой)
-
-1. Откройте https://github.com/new
-2. Имя: `GSYNK` (или любое), видимость — **Public** (нужно для бесплатных релизов
-   с APK) → **Create repository**. Не добавляйте README/LICENSE — они уже есть.
-3. Скопируйте адрес вида `https://github.com/ВАШ_ЛОГИН/GSYNK.git` и выполните:
-
-```bash
-cd GSYNK
-git remote add origin https://github.com/ВАШ_ЛОГИН/GSYNK.git
-git branch -M main
-git push -u origin main
-```
-
-Git попросит логин и **токен** вместо пароля:
-GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) →
-Generate new token → выберите галочку `repo` → скопируйте токен и вставьте его вместо пароля.
-
-## Вариант 2. Через GitHub CLI (gh)
-
-```bash
-gh auth login
-cd GSYNK
-gh repo create GSYNK --public --source=. --push
-```
-
-## Вариант 3. Через встроенный скрипт
-
-```bash
-cd GSYNK
-bash push_to_github.sh ВАШ_ЛОГИН/GSYNK
-```
-
-Скрипт сам добавит remote `origin` и запушит ветку `main`.
+Именно релизы видит телефон при обновлении по воздуху: GSYNK запрашивает
+«последний релиз» репозитория и берёт из него APK.
 
 ---
 
-## Как выпускать релиз (для OTA-обновления)
+## Как выпустить следующую версию
 
-Обновление внутри приложения работает через **Releases** репозитория:
+1. **Поднять версию** в `app/build.gradle.kts`:
+   `versionCode` +1 (обязательно, Android не даст поставить APK с меньшим кодом)
+   и `versionName` — например `2.0.2`.
+2. **Написать, что нового** — создайте `docs/release-notes-2.0.2.md` по образцу
+   существующих файлов (этот текст увидят пользователи прямо в приложении).
+3. **Собрать и проверить**:
+   ```bash
+   bash check.sh            # тесты + lint + APK
+   ```
+4. **Закоммитить и отправить код**:
+   ```bash
+   git add -A && git commit -m "2.0.2: …"
+   git push origin main
+   git tag v2.0.2 && git push origin v2.0.2     # тег запустит CI
+   ```
+5. **Опубликовать релиз с APK** (нужен токен с правом `repo`):
+   ```bash
+   cp app/build/outputs/apk/debug/app-debug.apk apk/GSYNK-v2.0.2-debug.apk
+   GH_TOKEN=<токен> bash release_github.sh v2.0.2 \
+       apk/GSYNK-v2.0.2-debug.apk "GSYNK 2.0.2" docs/release-notes-2.0.2.md
+   ```
+   Тег в релизе создаётся автоматически. Если хотите привязать тег к конкретному
+   коммиту, передайте **полный** 40-символьный SHA последним аргументом
+   (короткий SHA GitHub отклоняет).
 
-1. Поднимите версию в `app/build.gradle.kts` (`versionCode` +1, `versionName`).
-2. Соберите APK: `bash check.sh` (или `bash gradlew assembleDebug`).
-3. GitHub → Releases → **Draft a new release**:
-   - Tag: `v2.0.1` (тег обязан начинаться с `v` или с цифры);
-   - прикрепите файл `app/build/outputs/apk/debug/app-debug.apk`
-     (можно переименовать в `GSYNK-v2.0.1.apk`);
-   - текст релиза попадёт в GSYNK как «что нового» — пишите по-русски.
-4. Опубликуйте релиз.
-5. В приложении: **Инструменты → Обновление GSYNK**, укажите `ВАШ_ЛОГИН/GSYNK`,
-   нажмите «Проверить обновление» → «Скачать и установить».
-
-Совет: чтобы протестировать OTA, опубликуйте релиз `v2.0.0` с приложенным APK,
-установите на телефон `apk/GSYNK-v1.2.0-debug.apk`, выпустите релиз `v2.0.1` —
-и обновитесь изнутри приложения.
-
-В папке `apk/` лежат обе сборки: `GSYNK-v1.2.0-debug.apk` (старая) и
-`GSYNK-v2.0.0-debug.apk` (текущая) — удобно для проверки обновления.
+Через несколько минут в Releases появится APK, и все телефоны увидят обновление.
 
 ---
 
-## Готовый сценарий сборки на GitHub
+## Почему APK в релиз кладём вручную, а не из CI
 
-Файл `.github/workflows/build.yml` собирает APK на каждый тег и прикрепляет его
-к релизу: ничего не нужно делать вручную, кроме `git tag` и `git push`.
+Android разрешает обновление «поверх» только при совпадении подписи. Debug-сборка
+на сервере GitHub подписывается ключом, который генерируется заново на каждом
+прогоне, поэтому её APK не установится поверх вашей локальной сборки
+(«приложение не установлено», ошибка подписи). В релизы кладём APK, собранный
+локально — все такие сборки подписаны одним debug-ключом, и обновления
+2.0.0 → 2.0.1 → … ставятся как обычное обновление приложения.
+
+CI при этом полезен: он проверяет, что код в репозитории собирается, проходят тесты
+и lint, а собранный им APK лежит в артефактах прогона (не в релизах).
+
+---
+
+## Отправка кода, если настраиваете новый компьютер
 
 ```bash
-git tag v2.0.1
-git push origin v2.0.1
+git clone https://github.com/GrapeGG-developer/GSYNKAPP.git
+cd GSYNKAPP
+bash build_toolchain.sh      # JDK 17 + Android SDK (один раз)
+bash check.sh                # тесты + lint + APK
 ```
 
-Через несколько минут в Releases появится APK, который GSYNK увидит изнутри.
+Для пуша в свой репозиторий нужен Personal Access Token (GitHub → Settings →
+Developer settings → Personal access tokens → галочка `repo`):
+`bash push_to_github.sh GrapeGG-developer/GSYNKAPP`.
+
+> Токен — это пароль. Не публикуйте его в переписке и не вставляйте в код;
+> если он утёк — отзовите и создайте новый.
