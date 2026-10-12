@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+app/build/
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Ключи подписи и секреты
+*.jks
+*.keystore
+keystore.properties
+
+# Системный мусор
+.DS_Store
+Thumbs.db
+*.log
+captures/
+
+# Готовые сборки (лежат локально, на GitHub — через Releases)
+apk/
