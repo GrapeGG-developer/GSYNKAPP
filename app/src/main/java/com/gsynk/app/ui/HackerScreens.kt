@@ -521,7 +521,11 @@ fun SysDashboardScreen(onBack: () -> Unit) {
                 )
                 BarIndicator(100 - data.storageUsedPercent, TileBrush.Cyan)
                 Spacer(Modifier.height(12.dp))
-                InfoRow("Батарея", "${data.batteryPercent}% • %.1f °C".format(data.batteryTempC))
+                InfoRow(
+                            "Батарея",
+                            data.batteryPercent.toString() + "% • " +
+                                "%.1f".format(data.batteryTempC) + " °C"
+                        )
                 BarIndicator(data.batteryPercent, TileBrush.Green)
                 Spacer(Modifier.height(12.dp))
                 InfoRow("Аптайм", "${data.uptimeHours} ч")

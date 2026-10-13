@@ -69,21 +69,33 @@ object ReportUploader {
         reports.forEach { item ->
             val body = ReportSanitizer.scrub(AppLog.read(item.file))
             val response = put(repo, token, "${FOLDER}/${item.file.name}", body)
-            if (response.first) {
-                uploaded++
-                markUploaded(item.file)
-            } else {
-                failed++
-                if (errors.size < 2) errors.add("${item.file.name}: ${response.second}")
+            when {
+                response.first -> {
+                    uploaded++
+                    markUploaded(item.file)
+                }
+                // файл уже лежит в репозитории — значит он отправлен;
+                // раньше это считалось ошибкой и сыпало лишние сообщения
+                response.second.contains("422") -> {
+                    markUploaded(item.file)
+                }
+                else -> {
+                    failed++
+                    if (errors.size < 2) errors.add("${item.file.name}: ${response.second}")
+                }
             }
         }
 
-        // журнал событий уходит отдельным файлом — он помогает понять контекст
-        val journal = AppLog.journalTail(context, 200)
+        // журнал событий уходит одним файлом на день: имя постоянное,
+        // поэтому повторная отправка просто подтверждает, что он уже там
+        val journal = ReportSanitizer.scrub(AppLog.journalTail(context, 200))
         if (journal.isNotBlank()) {
-            val stamp = java.text.SimpleDateFormat("yyyyMMdd-HHmmss", java.util.Locale.US)
+            val day = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US)
                 .format(java.util.Date())
-            put(repo, token, "$FOLDER/journal-$stamp.txt", journal)
+            val response = put(repo, token, "$FOLDER/journal-$day.txt", journal)
+            if (!response.first && !response.second.contains("422")) {
+                if (errors.size < 2) errors.add("журнал: ${response.second}")
+            }
         }
 
         val message = when {

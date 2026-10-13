@@ -222,7 +222,7 @@ object AppLog {
     fun reports(app: Context): List<ReportItem> = runCatching {
         val dir = reportsDir(app)
         dir.listFiles()
-            ?.filter { it.isFile && it.name.endsWith(".txt") && it.name != JOURNAL_NAME }
+            ?.filter { it.isFile && it.name.endsWith(".txt") && !it.name.startsWith("journal") }
             ?.sortedByDescending { it.lastModified() }
             ?.map { file ->
                 ReportItem(

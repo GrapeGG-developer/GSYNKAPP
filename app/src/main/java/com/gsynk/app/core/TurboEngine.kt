@@ -154,11 +154,12 @@ class TurboEngine(private val context: Context) {
                 TurboState.progress.value = (TurboState.progress.value + speed) % 1f
 
                 if (frame % 45L == 0L) {
+                    val sure = (prediction[best] * 100).toInt()
+                    val speedText = "%.1f".format(TurboState.cpuGflops.value)
                     AppLog.event(
                         "Турбо",
-                        "режим ${RealtimeAi.modeName(best)} (уверенность " +
-                            "${(prediction[best] * 100).toInt()}%), ${"%.1f".format(TurboState.cpuGflops.value)} " +
-                            "млрд оп/с, ${TurboState.gpuFps.value.toInt()} кадров/с"
+                        "режим ${RealtimeAi.modeName(best)} (уверенность $sure проц.), " +
+                            "$speedText млрд оп/с, ${TurboState.gpuFps.value.toInt()} кадров/с"
                     )
                 }
                 frame++

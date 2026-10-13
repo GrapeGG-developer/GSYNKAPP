@@ -480,7 +480,12 @@ fun ToolsScreen(
                 InfoRow("Накопитель", "свободно %.1f ГБ".format(snapshot.storageFreeGb))
                 BarIndicator(percent = 100 - snapshot.storageUsedPercent, brush = TileBrush.Cyan)
                 Spacer(Modifier.height(10.dp))
-                InfoRow("Батарея", "${snapshot.batteryPercent}% • %.1f°C".format(snapshot.batteryTempC))
+                // процент и форматирование разделены: «%» рядом со «•» валил приложение
+                InfoRow(
+                    "Батарея",
+                    snapshot.batteryPercent.toString() + "% • " +
+                        "%.1f".format(snapshot.batteryTempC) + "°C"
+                )
                 BarIndicator(percent = snapshot.batteryPercent, brush = TileBrush.Green)
                 Spacer(Modifier.height(12.dp))
                 InfoRow("Ядер", snapshot.cores.toString())
