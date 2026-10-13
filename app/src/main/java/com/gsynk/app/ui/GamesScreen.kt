@@ -66,7 +66,11 @@ import kotlin.random.Random
  * «Реакция», «Память» (повтори последовательность) и «2048».
  */
 @Composable
-fun GamesScreen(onBack: () -> Unit) {
+fun GamesScreen(
+    onBack: () -> Unit,
+    /** Подземелье: null — одиночная игра, true — сопряжение для двух телефонов. */
+    onDungeon: (Boolean) -> Unit = {}
+) {
     val context = LocalContext.current
     val scores = remember { GameScores(context) }
     var open by remember { mutableStateOf<String?>(null) }
@@ -96,6 +100,28 @@ fun GamesScreen(onBack: () -> Unit) {
     if (open != null) return
 
     GrapeScreen(title = "Мини-игры", subtitle = "рекорды сохраняются на телефоне", onBack = onBack) {
+        LiveTile(
+            title = "Подземелье GSYNK",
+            subtitle = "комнаты, враги и босс — поле у камеры",
+            brush = TileBrush.Red,
+            iconRes = R.drawable.ic_bolt,
+            liveText = "играть одному или на два телефона",
+            height = 112.dp,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { onDungeon(false) }
+        )
+        Spacer(Modifier.height(10.dp))
+        LiveTile(
+            title = "Два телефона по Wi-Fi",
+            subtitle = "NFC — знакомство, игра — по сети",
+            brush = TileBrush.Green,
+            iconRes = R.drawable.ic_devices,
+            liveText = "каждый ведёт своего героя",
+            height = 112.dp,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { onDungeon(true) }
+        )
+        Spacer(Modifier.height(14.dp))
         LiveTile(
             title = "Реакция",
             subtitle = "насколько быстрая рука",

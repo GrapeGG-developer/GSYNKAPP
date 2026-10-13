@@ -129,6 +129,10 @@ fun MainScreen(vm: MainViewModel) {
     var showDiagnostics by remember { mutableStateOf(false) }
     var showRogue by remember { mutableStateOf(false) }
     var rogueInvite by remember { mutableStateOf<NfcLinkInvite?>(null) }
+    // подземелье на два телефона: сопряжение NFC + игра по Wi-Fi
+    var showCoop by remember { mutableStateOf(false) }
+    var coopInvite by remember { mutableStateOf<com.gsynk.app.core.NfcLink.GameInvite?>(null) }
+    var coopRole by remember { mutableStateOf<com.gsynk.app.core.WifiCoop.Role?>(null) }
     val profile = remember { DeviceProfile.detect(context) }
 
     // пересчёт разрешений при возвращении из системных экранов
@@ -426,7 +430,20 @@ fun MainScreen(vm: MainViewModel) {
     }
 
     if (showGames) {
-        GamesScreen(onBack = { showGames = false })
+        GamesScreen(
+            onBack = { showGames = false },
+            onDungeon = { coop ->
+                showGames = false
+                if (coop) {
+                    coopInvite = null
+                    showCoop = true
+                } else {
+                    rogueInvite = null
+                    coopRole = null
+                    showRogue = true
+                }
+            }
+        )
     }
 
     if (showNfc) {
@@ -435,16 +452,48 @@ fun MainScreen(vm: MainViewModel) {
             onPlayGame = { seed ->
                 rogueInvite = seed?.let { NfcLinkInvite(it, profile.model.ifBlank { "второй телефон" }) }
                 showRogue = true
+            },
+            onPlayOnline = { invite ->
+                coopInvite = invite
+                showNfc = false
+                showCoop = true
+            }
+        )
+    }
+
+    if (showCoop) {
+        CoopScreen(
+            onBack = {
+                showCoop = false
+                coopInvite = null
+            },
+            autoInvite = coopInvite,
+            onPlay = { role, seed ->
+                coopRole = role
+                rogueInvite = NfcLinkInvite(seed, profile.model.ifBlank { "второй телефон" })
+                showCoop = false
+                showRogue = true
             }
         )
     }
 
     if (showRogue) {
         RogueScreen(
-            onBack = { showRogue = false },
-            invite = rogueInvite, onInviteByNfc = {
+            onBack = {
+                if (coopRole != null) com.gsynk.app.core.WifiCoop.stop()
+                coopRole = null
+                showRogue = false
+            },
+            invite = rogueInvite,
+            onInviteByNfc = {
                 showRogue = false
                 showNfc = true
+            },
+            coop = coopRole,
+            onCoopSetup = {
+                showRogue = false
+                coopInvite = null
+                showCoop = true
             }
         )
     }

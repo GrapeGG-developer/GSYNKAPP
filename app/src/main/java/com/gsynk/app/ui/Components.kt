@@ -123,8 +123,8 @@ fun AnimatedGrapeBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    // Пока считает «турбо», фон переливается: фазу задаёт нейросеть,
-    // которая крутится на процессоре в реальном времени.
+    // Фон переливается ВСЕГДА — независимо от нейросети. Пока идёт нагрузка,
+    // фазу дополнительно подгоняет «турбо», поэтому поток бежит быстрее.
     val turboActive by TurboState.active.collectAsState()
     val turboPhase by TurboState.progress.collectAsState()
     val aiMode by TurboState.aiMode.collectAsState()
@@ -137,6 +137,16 @@ fun AnimatedGrapeBackground(
             repeatMode = RepeatMode.Reverse
         ),
         label = "breath"
+    )
+    // постоянное переливание: сквозная циклическая фаза для бегущей волны и полосы
+    val shimmer by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6_500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer"
     )
     val drift by transition.animateFloat(
         initialValue = 0f,
@@ -192,13 +202,14 @@ fun AnimatedGrapeBackground(
                     )
                 )
 
-                // циклическое переливание во время нагрузки: слой, который
-                // проносится по экрану и меняет оттенок вместе с режимом ИИ
-                if (turboActive) {
-                    val phase = turboPhase
-                    val accent = when (aiMode) {
-                        RealtimeAi.MODE_ACTIVE -> Color(0xFF7C3AED)
-                        RealtimeAi.MODE_NIGHT -> Color(0xFF1E3A8A)
+                // Переливание идёт всегда — фон должен быть живым сам по себе.
+                // Нейросеть лишь ускоряет и подкрашивает поток, когда идёт нагрузка.
+                run {
+                    val phase = if (turboActive) turboPhase else shimmer
+                    val accent = when {
+                        !turboActive -> Color(0xFF7C3AED)
+                        aiMode == RealtimeAi.MODE_ACTIVE -> Color(0xFF7C3AED)
+                        aiMode == RealtimeAi.MODE_NIGHT -> Color(0xFF1E3A8A)
                         else -> Color(0xFF22C55E)
                     }
                     val travel = phase * size.height * 1.6f - size.height * 0.3f

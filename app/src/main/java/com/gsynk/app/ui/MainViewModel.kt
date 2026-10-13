@@ -552,13 +552,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
     }
 
-    fun setIslandWide(wide: Boolean) = viewModelScope.launch {
-        guarded {
-            repository.saveSettings(repository.currentSettings().copy(islandWide = wide))
-            if (settings.value.islandPersistent) IslandService.start(app()) else fullIslandPreview()
-        }
-    }
-
     fun setIslandCompact(compact: Boolean) = viewModelScope.launch {
         guarded {
             repository.saveSettings(repository.currentSettings().copy(islandCompact = compact))

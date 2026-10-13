@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.gsynk.app.core.AppLog
 import com.gsynk.app.core.GameScores
 import com.gsynk.app.core.RogueGame
+import com.gsynk.app.core.WifiCoop
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBg
@@ -77,14 +79,24 @@ import kotlinx.coroutines.launch
 fun RogueScreen(
     onBack: () -> Unit,
     invite: NfcLinkInvite? = null,
-    onInviteByNfc: (seed: Long) -> Unit = {}
+    onInviteByNfc: (seed: Long) -> Unit = {},
+    /** Сетевой режим: хозяин считает мир, гость его рисует. Null — как раньше, на одном телефоне. */
+    coop: WifiCoop.Role? = null,
+    /** Из сетевого режима: перейти к сопряжению (кнопка «позвать по Wi-Fi»). */
+    onCoopSetup: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scores = remember { GameScores(context) }
     val scope = rememberCoroutineScope()
 
-    var players by remember { mutableIntStateOf(if (invite != null) 2 else 1) }
-    var seed by remember { mutableStateOf(invite?.seed ?: RogueGame.newSeed()) }
+    val coopStatus by WifiCoop.status.collectAsState()
+    val coopSeed by WifiCoop.seed.collectAsState()
+    var players by remember {
+        mutableIntStateOf(if (invite != null || coop != null) 2 else 1)
+    }
+    var seed by remember {
+        mutableStateOf(invite?.seed ?: coopSeed.takeIf { it > 0 } ?: RogueGame.newSeed())
+    }
     var world by remember { mutableStateOf<RogueGame.World?>(null) }
     var best by remember { mutableIntStateOf(0) }
     var savedResult by remember { mutableStateOf(false) }
@@ -100,24 +112,67 @@ fun RogueScreen(
     }
 
     // ————— игровой цикл: кадр в кадр, как настоящий движок —————
-    LaunchedEffect(world != null) {
+    LaunchedEffect(world != null, coop) {
+        if (coop == WifiCoop.Role.GUEST) return@LaunchedEffect
         if (world == null) return@LaunchedEffect
         var previous = 0L
+        var lastSent = 0L
         while (isActive) {
             withFrameNanos { now ->
                 if (previous == 0L) previous = now
                 val dt = ((now - previous) / 1_000_000_000f).coerceAtMost(0.05f)
                 previous = now
                 val current = world ?: return@withFrameNanos
-                world = RogueGame.step(
-                    current,
-                    dt,
-                    listOf(
-                        RogueGame.Input(moveOneX, moveOneY, shooting = kotlin.math.hypot(moveOneX, moveOneY) > 0.15f),
-                        RogueGame.Input(moveTwoX, moveTwoY, shooting = kotlin.math.hypot(moveTwoX, moveTwoY) > 0.15f)
-                    )
+                val myInput = RogueGame.Input(
+                    moveOneX,
+                    moveOneY,
+                    shooting = kotlin.math.hypot(moveOneX, moveOneY) > 0.15f
                 )
+                val secondInput = if (coop == WifiCoop.Role.HOST) {
+                    WifiCoop.peerInput.value
+                } else {
+                    RogueGame.Input(
+                        moveTwoX,
+                        moveTwoY,
+                        shooting = kotlin.math.hypot(moveTwoX, moveTwoY) > 0.15f
+                    )
+                }
+                val next = RogueGame.step(current, dt, listOf(myInput, secondInput))
+                world = next
+                // хозяин рассылает картину комнаты тридцать раз в секунду — этого хватает,
+                // чтобы гость видел плавную картинку и не жевал батарею
+                if (coop == WifiCoop.Role.HOST && now - lastSent > 33_000_000L) {
+                    lastSent = now
+                    WifiCoop.publish(next)
+                }
             }
+        }
+    }
+
+    // ————— гость: свой стик уходит хозяину, мир приходит от него —————
+    LaunchedEffect(coop) {
+        if (coop != WifiCoop.Role.GUEST) return@LaunchedEffect
+        var lastSent = 0L
+        while (isActive) {
+            withFrameNanos { now ->
+                if (now - lastSent > 33_000_000L) {
+                    lastSent = now
+                    WifiCoop.sendInput(
+                        RogueGame.Input(
+                            moveOneX,
+                            moveOneY,
+                            shooting = kotlin.math.hypot(moveOneX, moveOneY) > 0.15f
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(coop) {
+        if (coop != WifiCoop.Role.GUEST) return@LaunchedEffect
+        WifiCoop.remoteWorld.collect { remote ->
+            if (remote != null) world = remote
         }
     }
 
@@ -206,18 +261,36 @@ fun RogueScreen(
             ) {
                 val current = world
                 if (current == null) {
-                    StartPanel(
-                        seed = seed,
-                        players = players,
-                        onPlayers = { players = it },
-                        onSeed = { seed = it },
-                        onInvite = { onInviteByNfc(seed) },
-                        onStart = {
-                            AppLog.event("Игра", "стартуем подземелье, игроков: $players, ключ $seed")
-                            world = RogueGame.start(seed, players)
-                            savedResult = false
-                        }
-                    )
+                    if (coop == WifiCoop.Role.GUEST) {
+                        WaitingPanel(
+                            status = coopStatus,
+                            onCoopSetup = onCoopSetup,
+                            onLeave = {
+                                WifiCoop.stop()
+                                onBack()
+                            }
+                        )
+                    } else {
+                        StartPanel(
+                            seed = seed,
+                            players = players,
+                            coop = coop,
+                            peerName = (coopStatus as? WifiCoop.Status.Live)?.peer.orEmpty(),
+                            onPlayers = { players = it },
+                            onSeed = { seed = it },
+                            onInvite = { onInviteByNfc(seed) },
+                            onCoop = onCoopSetup,
+                            onStart = {
+                                AppLog.event("Игра", "стартуем подземелье, игроков: $players, ключ $seed")
+                                val count = if (coop != null) 2 else players
+                                world = RogueGame.start(seed, count)
+                                savedResult = false
+                                if (coop == WifiCoop.Role.HOST) {
+                                    WifiCoop.publish(world ?: RogueGame.start(seed, count))
+                                }
+                            }
+                        )
+                    }
                 } else if (current.over) {
                     FinishPanel(
                         world = current,
@@ -238,8 +311,13 @@ fun RogueScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Joystick(
-                            label = if (players > 1) "игрок 1" else "ход",
-                            color = if (players > 1) GrapeBlue else GrapeViolet,
+                            label = when {
+                                coop == WifiCoop.Role.GUEST -> "мой герой"
+                                coop == WifiCoop.Role.HOST -> "я, хозяин"
+                                players > 1 -> "игрок 1"
+                                else -> "ход"
+                            },
+                            color = if (players > 1 || coop != null) GrapeBlue else GrapeViolet,
                             modifier = Modifier.weight(1f),
                             onMove = { x, y -> moveOneX = x; moveOneY = y }
                         )
@@ -255,7 +333,10 @@ fun RogueScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                                 SortChip("Пауза", selected = false) { world = null }
                                 SortChip("Заново", selected = false) {
-                                    world = RogueGame.start(seed, players)
+                                    val count = if (coop != null) 2 else players
+                                    val fresh = RogueGame.start(seed, count)
+                                    world = fresh
+                                    if (coop == WifiCoop.Role.HOST) WifiCoop.publish(fresh)
                                 }
                             }
                             Text(
@@ -264,7 +345,49 @@ fun RogueScreen(
                                 style = MaterialTheme.typography.labelSmall
                             )
                         }
-                        if (players > 1) {
+                        if (coop != null) {
+                            Column(
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "второй герой — на своём телефоне",
+                                    color = GrapePink,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Text(
+                                    text = when (val st = coopStatus) {
+                                        is WifiCoop.Status.Live ->
+                                            if (coop == WifiCoop.Role.HOST) "подключён: ${st.peer}"
+                                            else "хозяин: ${st.peer}"
+                                        is WifiCoop.Status.Failed -> st.reason
+                                        else -> "связь по Wi-Fi"
+                                    },
+                                    color = TextDim,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                Box(
+                                    Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .border(1.dp, ChipBorder, RectangleShape)
+                                        .clickable {
+                                            WifiCoop.stop()
+                                            onBack()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "выйти\nиз сети",
+                                        color = GrapeRed,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
+                            }
+                        } else if (players > 1) {
                             Joystick(
                                 label = "игрок 2",
                                 color = GrapePink,
@@ -294,6 +417,40 @@ fun RogueScreen(
     }
 }
 
+/** Гость ещё не получил комнату: хозяин либо не нажал «в бой», либо связь пропала. */
+@Composable
+private fun WaitingPanel(
+    status: WifiCoop.Status,
+    onCoopSetup: () -> Unit,
+    onLeave: () -> Unit
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = "ждём хозяина",
+            color = TextPrimary,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Light
+        )
+        Text(
+            text = "Как только на телефоне-хозяине нажмут «в бой», комната прилетит сюда " +
+                "целиком: камни, враги, слёзы. Ваш стик уже работает — он уходит хозяину.",
+            color = TextDim,
+            style = MaterialTheme.typography.bodySmall
+        )
+        SurfaceCard(borderColor = ChipBorder) {
+            InfoRow("Состояние", when (status) {
+                is WifiCoop.Status.Live -> "связь есть, ждём старт"
+                is WifiCoop.Status.Connecting -> "подключаемся"
+                is WifiCoop.Status.Failed -> status.reason
+                is WifiCoop.Status.Listening -> "хозяин открыл комнату"
+                WifiCoop.Status.Idle -> "связи нет"
+            }, GrapeCyan)
+        }
+        PrimaryButton(text = "К сопряжению", onClick = onCoopSetup, modifier = Modifier.fillMaxWidth())
+        SecondaryButton(text = "Выйти из сети", onClick = onLeave, modifier = Modifier.fillMaxWidth())
+    }
+}
+
 /** Приглашение, пришедшее по NFC: ключ подземелья и имя отправителя. */
 data class NfcLinkInvite(val seed: Long, val from: String)
 
@@ -301,9 +458,12 @@ data class NfcLinkInvite(val seed: Long, val from: String)
 private fun StartPanel(
     seed: Long,
     players: Int,
+    coop: WifiCoop.Role?,
+    peerName: String,
     onPlayers: (Int) -> Unit,
     onSeed: (Long) -> Unit,
     onInvite: () -> Unit,
+    onCoop: () -> Unit,
     onStart: () -> Unit
 ) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -314,26 +474,55 @@ private fun StartPanel(
             fontWeight = FontWeight.Light
         )
         Text(
-            text = "Комнаты, камни, враги и босс сверху вниз — настоящая игра, а не проверка " +
-                "реакции. Поле живёт в полосе фронтальной камеры, управление — под большими пальцами.",
+            text = if (coop == null) {
+                "Комнаты, камни, враги и босс сверху вниз — настоящая игра, а не проверка " +
+                    "реакции. Поле живёт в полосе фронтальной камеры, управление — под большими пальцами."
+            } else {
+                "Сетевой бой: мир считает хозяин, второй телефон ведёт своего героя по Wi-Fi. " +
+                    "Поле живёт в полосе фронтальной камеры у обоих."
+            },
             color = TextDim,
             style = MaterialTheme.typography.bodySmall
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            SortChip("один игрок", players == 1) { onPlayers(1) }
-            SortChip("вдвоём за телефоном", players == 2) { onPlayers(2) }
+        if (coop == null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                SortChip("один игрок", players == 1) { onPlayers(1) }
+                SortChip("вдвоём за телефоном", players == 2) { onPlayers(2) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                SortChip("новый ключ", selected = false) { onSeed(RogueGame.newSeed()) }
+                SortChip("пригласить по nfc", selected = false) { onInvite() }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                SortChip("два телефона по wi-fi", selected = false) { onCoop() }
+            }
+            Text(
+                text = "оба телефона с одним ключом получают одинаковое подземелье",
+                color = TextDim,
+                style = MaterialTheme.typography.labelSmall
+            )
+        } else {
+            SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.5f)) {
+                Text(
+                    text = if (coop == WifiCoop.Role.HOST) "Вы хозяин мира" else "Вы гость",
+                    color = GrapeGreen,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = if (coop == WifiCoop.Role.HOST) {
+                        "Второй герой ведётся с телефона " + peerName.ifBlank { "соседа" } +
+                            ". Ключ подземелья у обоих один."
+                    } else {
+                        "Мир считает хозяйский телефон. Ваш стик уходит ему, а сюда приходит готовая комната."
+                    },
+                    color = TextDim,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            SortChip("новый ключ", selected = false) { onSeed(RogueGame.newSeed()) }
-            SortChip("пригласить по nfc", selected = false) { onInvite() }
-        }
-        Text(
-            text = "оба телефона с одним ключом получают одинаковое подземелье",
-            color = TextDim,
-            style = MaterialTheme.typography.labelSmall
-        )
         PrimaryButton(
-            text = "Играть · ключ $seed",
+            text = if (coop != null) "В бой · ключ $seed" else "Играть · ключ $seed",
             onClick = onStart,
             modifier = Modifier.fillMaxWidth()
         )

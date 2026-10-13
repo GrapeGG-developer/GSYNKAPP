@@ -38,11 +38,22 @@ object NfcLink {
         val isProfile: Boolean get() = kind == KIND_PROFILE
     }
 
+    /**
+     * Приглашение в подземелье.
+     *
+     * Если заполнены [host], [port] и [code] — это сетевой вызов: NFC поработал
+     * знакомством, а игра пойдёт по Wi-Fi, каждый на своём телефоне.
+     */
     data class GameInvite(
         val game: String,
         val from: String,
-        val seed: Long
-    )
+        val seed: Long,
+        val host: String = "",
+        val port: Int = 0,
+        val code: String = ""
+    ) {
+        val isWifi: Boolean get() = host.isNotBlank() && port > 0
+    }
 
     /** Доступные типы для экрана передачи. */
     val TRANSFER_KINDS = listOf(
@@ -82,7 +93,18 @@ object NfcLink {
     }
 
     fun buildGameInvite(invite: GameInvite, appPackage: String): NdefMessage =
-        buildMessage(Payload(KIND_GAME, "GSYNK-игра", "${invite.game};${invite.from};${invite.seed}"), appPackage)
+        buildMessage(Payload(KIND_GAME, "GSYNK-игра", gameInviteBody(invite)), appPackage)
+
+    /** Тело вызова: игра;отправитель;ключ;адрес;порт;код комнаты. */
+    fun gameInviteBody(invite: GameInvite): String =
+        listOf(
+            invite.game,
+            invite.from,
+            invite.seed.toString(),
+            invite.host,
+            invite.port.toString(),
+            invite.code
+        ).joinToString(";")
 
     private fun mime(type: String, body: String): NdefRecord =
         NdefRecord(
@@ -149,7 +171,10 @@ object NfcLink {
         GameInvite(
             game = parts.getOrNull(0).orEmpty(),
             from = parts.getOrNull(1).orEmpty(),
-            seed = parts.getOrNull(2)?.toLongOrNull() ?: System.currentTimeMillis()
+            seed = parts.getOrNull(2)?.toLongOrNull() ?: System.currentTimeMillis(),
+            host = parts.getOrNull(3).orEmpty(),
+            port = parts.getOrNull(4)?.toIntOrNull() ?: 0,
+            code = parts.getOrNull(5).orEmpty()
         )
     }.getOrNull()
 
@@ -160,7 +185,9 @@ object NfcLink {
         KIND_PASSWORD -> "Пароль можно скопировать в буфер"
         KIND_GEO -> "Координаты: откроются на карте"
         KIND_PROFILE -> "Профиль GSYNK: импортируйте правила расписания"
-        KIND_GAME -> "Вызов в игру"
+        KIND_GAME -> if (parseGameInvite(payload.body)?.isWifi == true)
+            "Вызов в подземелье на два телефона — подключение по Wi-Fi"
+        else "Вызов в игру"
         else -> "Текстовое сообщение"
     }
 }

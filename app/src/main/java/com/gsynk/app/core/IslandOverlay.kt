@@ -12,7 +12,6 @@ import android.provider.Settings
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
-import android.widget.FrameLayout
 import android.view.WindowManager
 import android.view.animation.OvershootInterpolator
 import android.widget.ImageView
@@ -69,14 +68,13 @@ object IslandOverlay {
         position: Int = IslandPosition.TOP_CENTER,
         durationMs: Long = 3200L,
         compact: Boolean = true,
-        offsetY: Int = 0,
-        wide: Boolean = true
+        offsetY: Int = 0
     ) {
         val app = context.applicationContext
         if (!isAvailable(app)) return
         handler.post {
             runCatching {
-                showInternal(app, iconRes, title, subtitle, position, durationMs, false, "", false, compact, offsetY, wide)
+                showInternal(app, iconRes, title, subtitle, position, durationMs, false, "", false, compact, offsetY)
             }
         }
     }
@@ -89,15 +87,14 @@ object IslandOverlay {
         expandedText: String,
         position: Int,
         compact: Boolean = true,
-        offsetY: Int = 0,
-        wide: Boolean = true
+        offsetY: Int = 0
     ) {
         val app = context.applicationContext
         if (!isAvailable(app)) return
         persistent = true
         handler.post {
             runCatching {
-                showInternal(app, 0, title, subtitle, position, 0L, true, expandedText, true, compact, offsetY, wide)
+                showInternal(app, 0, title, subtitle, position, 0L, true, expandedText, true, compact, offsetY)
             }
         }
     }
@@ -109,14 +106,13 @@ object IslandOverlay {
         expandedText: String,
         position: Int,
         compact: Boolean = true,
-        offsetY: Int = 0,
-        wide: Boolean = true
+        offsetY: Int = 0
     ) {
         if (!persistent) return
         val app = context.applicationContext
         handler.post {
             runCatching {
-                showInternal(app, 0, title, subtitle, position, 0L, true, expandedText, true, compact, offsetY, wide)
+                showInternal(app, 0, title, subtitle, position, 0L, true, expandedText, true, compact, offsetY)
             }
         }
     }
@@ -158,8 +154,7 @@ object IslandOverlay {
         expandedText: String,
         keepIcons: Boolean,
         compact: Boolean,
-        offsetY: Int,
-        wide: Boolean = true
+        offsetY: Int
     ) {
         val existing = root
         if (existing != null && existing.parent != null) {
@@ -202,14 +197,16 @@ object IslandOverlay {
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
         val view = buildView(context, iconRes, title, subtitle, expandedText, persistent, compact)
 
-        var flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+        // Остров никогда не перехватывает касания: окно крошечное (по содержимому)
+        // и помечено как «не для пальца». Иначе полоса поверх экрана блокировала бы
+        // нажатия — именно это и случилось в 2.2.0.
+        val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        if (!persistent) flags = flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
 
-        // Остров широкий и низкий: одна строка на всю ширину экрана.
-        val screenWidth = context.resources.displayMetrics.widthPixels
+        // Капсула ровно по содержимому: ничего лишнего на экране не висит.
         val params = WindowManager.LayoutParams(
-            if (wide) (screenWidth * 0.90f).toInt() else WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             flags,
@@ -329,7 +326,7 @@ object IslandOverlay {
 
     /**
      * Широкая низкая капсула: в одну строку иконка, название и значение справа.
-     * Поверх содержимого лежит [IslandShimmerView] — бегущий блик и дышащая рамка.
+     * Снизу — тонкая полоса активности, она бежит строго внутри капсулы.
      */
     private fun buildView(
         context: Context,
@@ -387,9 +384,16 @@ object IslandOverlay {
             ellipsize = android.text.TextUtils.TruncateAt.END
             includeFontPadding = false
         }
+        // ширина капсулы — по содержимому: название ограничиваем,
+        // а не растягиваем весом (иначе окно снова станет во весь экран)
+        val maxText = (context.resources.displayMetrics.widthPixels * 0.42f).toInt()
+        titleView.maxWidth = maxText
         row.addView(
             titleView,
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         )
 
         // значение справа — то, ради чего остров и нужен: заряд, часы, счётчик
@@ -418,7 +422,7 @@ object IslandOverlay {
             )
         )
 
-        // раскрытая строка постоянного острова (по касанию)
+        // (раскрытая строка оставлена в разметке только для совместимости тегов)
         val expandedView = TextView(context).apply {
             tag = TAG_EXPANDED
             text = expandedText
@@ -437,72 +441,45 @@ object IslandOverlay {
             ).apply { topMargin = dp(context, 3f).toInt() }
         )
 
-        if (!persistent) {
-            val progress = View(context).apply {
+        // Полоса внизу капсулы: у вспышки она показывает время, у постоянного
+        // острова — просто бежит внутри своей же полосы (за границы не выходит,
+        // поэтому никаких «рамок» и «прямоугольников» на экране не появляется).
+        val progress = View(context).apply {
                 tag = TAG_PROGRESS
                 background = GradientDrawable(
                     GradientDrawable.Orientation.LEFT_RIGHT,
                     intArrayOf(0xFFA855F7.toInt(), COLOR_GREEN)
                 ).apply { cornerRadius = 0f }
             }
-            outer.addView(
-                progress,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    dp(context, 2f).toInt().coerceAtLeast(1)
-                ).apply { topMargin = dp(context, 3f).toInt() }
-            )
-        }
-
-        val container = FrameLayout(context).apply {
-            addView(
-                outer,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT
-                )
-            )
-            addView(
-                IslandShimmerView(context),
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
-            )
-        }
+        outer.addView(
+            progress,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(context, 2f).toInt().coerceAtLeast(1)
+            ).apply { topMargin = dp(context, 3f).toInt() }
+        )
 
         if (persistent) {
-            container.isClickable = true
-            container.setOnClickListener { tapped ->
-                tapped.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                tapped.animate().cancel()
-                tapped.animate()
-                    .scaleX(1.04f).scaleY(1.04f)
-                    .setDuration(100)
-                    .withEndAction {
-                        tapped.animate().scaleX(1f).scaleY(1f)
-                            .setDuration(170)
-                            .setInterpolator(OvershootInterpolator(1.6f))
-                            .start()
+            // постоянный остров: полоса мягко гуляет по капсуле, показывая, что он жив
+            progress.post(object : Runnable {
+                private var direction = 1f
+                override fun run() {
+                    // окно могли убрать (правило кончилось) — тогда цикл не продлеваем
+                    if (progress.parent == null) return
+                    val width = progress.width.toFloat()
+                    if (width > 0f) {
+                        progress.translationX += direction * 2.2f * context.resources.displayMetrics.density
+                        if (progress.translationX > width * 0.55f) direction = -1f
+                        if (progress.translationX < 0f) direction = 1f
                     }
-                    .start()
-
-                val expanded = tapped.findViewWithTag<TextView>(TAG_EXPANDED)
-                if (expanded != null) {
-                    if (expanded.isVisible) {
-                        expanded.animate().alpha(0f).setDuration(120).withEndAction {
-                            expanded.isVisible = false
-                        }.start()
-                    } else {
-                        expanded.isVisible = true
-                        expanded.alpha = 0f
-                        expanded.animate().alpha(1f).setDuration(180).start()
-                    }
+                    progress.postDelayed(this, 16L)
                 }
-            }
+            })
+            progress.scaleX = 0.45f
+            progress.pivotX = 0f
         }
 
-        return container
+        return outer
     }
 
     private fun dp(context: Context, value: Float): Float =

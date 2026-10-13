@@ -71,7 +71,8 @@ import kotlin.random.Random
 @Composable
 fun NfcLinkScreen(
     onBack: () -> Unit,
-    onPlayGame: (seed: Long?) -> Unit = {}
+    onPlayGame: (seed: Long?) -> Unit = {},
+    onPlayOnline: (invite: NfcLink.GameInvite?) -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -242,27 +243,40 @@ fun NfcLinkScreen(
                         modifier = Modifier.weight(1f)
                     )
                     SecondaryButton(
-                        text = "Пригласить по NFC",
-                        onClick = {
-                            val seed = com.gsynk.app.core.RogueGame.newSeed()
-                            val card = NfcLink.GameInvite("rogue", android.os.Build.MODEL ?: "GSYNK", seed)
-                            prepareTransfer(
-                                NfcLink.Payload(
-                                    NfcLink.KIND_GAME,
-                                    "Подземелье",
-                                    "${card.game};${card.from};${card.seed}"
-                                )
-                            )
-                            status = "Ключ подземелья $seed отправлен по NFC. Второй телефон начнёт ту же игру."
-                        }
+                        text = "Сопряжение Wi-Fi",
+                        onClick = { onPlayOnline(null) }
                     )
+                }
+                Spacer(Modifier.height(10.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RectangleShape)
+                        .background(TileBrush.Green)
+                        .clickable { onPlayOnline(null) }
+                        .padding(18.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = "ДВА ТЕЛЕФОНА ПО WI-FI",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "NFC — знакомство: хозяин отдаёт адрес комнаты касанием. " +
+                                "Игра идёт по локальной сети, каждый ведёт своего героя со своего телефона.",
+                            color = Color.White.copy(alpha = 0.88f),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
                 SurfaceCard(borderColor = CardBorder) {
                     Text("Как это работает", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(6.dp))
                     InfoRow("Один экран", "вдвоём за одним телефоном: левый и правый стик")
-                    InfoRow("Два телефона", "ключ подземелья уходит по NFC — карта одинаковая")
+                    InfoRow("Два телефона", "касание NFC — знакомство, игра идёт по Wi-Fi, каждый со своего экрана")
                     InfoRow("Сравнение", "у кого больше убийств и счёт, тот и победил")
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -278,11 +292,23 @@ fun NfcLinkScreen(
                         Text("Вызов по NFC", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall)
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = "Ключ ${invite?.seed} от «${invite?.from}» — подземелье уже готово.",
+                            text = if (invite?.isWifi == true)
+                                "Хозяин «${invite?.from}» ждёт на ${invite?.host}:${invite?.port}. " +
+                                    "Ключ подземелья ${invite?.seed}."
+                            else
+                                "Ключ ${invite?.seed} от «${invite?.from}» — подземелье уже готово.",
                             color = TextPrimary,
                             style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(Modifier.height(10.dp))
+                        if (invite?.isWifi == true) {
+                            PrimaryButton(
+                                text = "Подключиться и играть",
+                                onClick = { onPlayOnline(invite) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
                         PrimaryButton(
                             text = "Играть на этом ключе",
                             onClick = { onPlayGame(invite?.seed) },
