@@ -679,9 +679,14 @@ private fun SensorsScreen(onBack: () -> Unit) {
 
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
         }
-        sensors.forEach { sensor ->
-            runCatching { manager?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI) }
-        }
+        // Слушаем только те датчики, на которые обычному приложению дают право.
+        // Приватные и «always-on» датчики Android 16 отдают лишь системе: попытка
+        // подписки роняет процесс с SecurityException (был такой вылет из отчёта).
+        sensors
+            .filterNot { DeviceLab.isSystemOnlySensor(it.type, it.name, it.stringType.orEmpty()) }
+            .forEach { sensor ->
+                runCatching { manager?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI) }
+            }
         onDispose { runCatching { manager?.unregisterListener(listener) } }
     }
 
@@ -700,6 +705,39 @@ private fun SensorsScreen(onBack: () -> Unit) {
                 style = MaterialTheme.typography.labelSmall
             )
         }
+        // ————— системные датчики: показываем, что они есть, но не читаем —————
+        val systemOnly = sensors.filter {
+            DeviceLab.isSystemOnlySensor(it.type, it.name, it.stringType.orEmpty())
+        }
+        if (systemOnly.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            SurfaceCard(borderColor = GrapeAmber.copy(alpha = 0.45f)) {
+                Text(
+                    text = "Только для системы: " + systemOnly.size,
+                    color = GrapeAmber,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Эти датчики (приватные и «always-on») Android 16 отдаёт только системным " +
+                        "службам: подписка из обычного приложения запрещена и раньше роняла GSYNK. " +
+                        "Показываем список — читать их нельзя ни одному приложению, и это правильно.",
+                    color = TextDim,
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Spacer(Modifier.height(8.dp))
+                systemOnly.take(12).forEach { sensor ->
+                    Row(Modifier.padding(vertical = 2.dp)) {
+                        Text(
+                            text = "• " + sensor.name,
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
         val magnetic = sensors.firstOrNull { it.type == Sensor.TYPE_MAGNETIC_FIELD }
         val pressure = sensors.firstOrNull { it.type == Sensor.TYPE_PRESSURE }

@@ -447,6 +447,50 @@ object DeviceLab {
         return (20f * kotlin.math.log10(amplitude.toDouble())).toFloat()
     }
 
+    /**
+     * Какие датчики приложение имеет право слушать.
+     *
+     * Android 16 завёл «always-on» датчики (AON): их регистрация идёт через системную
+     * службу и требует прав системы — обычному приложению это запрещено, и попытка
+     * роняет процесс с `SecurityException: ... registerAonListener ... asks to run as
+     * user -2`. Поэтому слушаем только публичные типы датчиков и никогда — те, что
+     * помечены как AON или отданы производителем (тип от 0x10000).
+     */
+    private val readableTypes = setOf(
+        android.hardware.Sensor.TYPE_ACCELEROMETER,
+        android.hardware.Sensor.TYPE_AMBIENT_TEMPERATURE,
+        android.hardware.Sensor.TYPE_GAME_ROTATION_VECTOR,
+        android.hardware.Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR,
+        android.hardware.Sensor.TYPE_GRAVITY,
+        android.hardware.Sensor.TYPE_GYROSCOPE,
+        android.hardware.Sensor.TYPE_GYROSCOPE_UNCALIBRATED,
+        android.hardware.Sensor.TYPE_HEART_RATE,
+        android.hardware.Sensor.TYPE_LIGHT,
+        android.hardware.Sensor.TYPE_LINEAR_ACCELERATION,
+        android.hardware.Sensor.TYPE_MAGNETIC_FIELD,
+        android.hardware.Sensor.TYPE_MAGNETIC_FIELD_UNCALIBRATED,
+        android.hardware.Sensor.TYPE_PRESSURE,
+        android.hardware.Sensor.TYPE_PROXIMITY,
+        android.hardware.Sensor.TYPE_RELATIVE_HUMIDITY,
+        android.hardware.Sensor.TYPE_ROTATION_VECTOR,
+        android.hardware.Sensor.TYPE_STEP_COUNTER,
+        android.hardware.Sensor.TYPE_STEP_DETECTOR
+    )
+
+    /** Крупный шаг для «особых» датчиков производителя: всё, что выше, — системное. */
+    const val VENDOR_SENSOR_BASE = 0x10000
+
+    fun canReadSensorType(type: Int): Boolean = type in readableTypes
+
+    /** Датчик, который система не пустит слушать простое приложение. */
+    fun isSystemOnlySensor(type: Int, name: String, stringType: String): Boolean {
+        if (type >= VENDOR_SENSOR_BASE) return true
+        val haystack = (name + " " + stringType).lowercase()
+        if (haystack.contains("aon")) return true
+        if (haystack.contains("always on") || haystack.contains("always-on")) return true
+        return !canReadSensorType(type)
+    }
+
     fun hyperOs(context: Context): Boolean = runCatching {
         val version = Build.VERSION.RELEASE.orEmpty()
         val brand = (Build.BRAND ?: "").lowercase()

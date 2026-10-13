@@ -198,4 +198,69 @@ class LabToolsTest {
         assertTrue(DeviceProfile.feature(mi, DeviceProfile.Feature.HYPEROS))
         assertTrue(!DeviceProfile.feature(other, DeviceProfile.Feature.HYPEROS))
     }
+
+    // ————— системные и «always-on» датчики: их нельзя слушать (вылет 2.3.0) —————
+    //
+    // Отчёт с телефона: `SecurityException: service ... asks to run as user -2`,
+    // внутри `SystemSensorManagerImpl.registerAonListener`. Android 16 отдаёт такие
+    // датчики только системе, поэтому мы обязаны их отфильтровать до подписки.
+
+    @Test
+    fun ordinarySensorsAreReadable() {
+        listOf(
+            android.hardware.Sensor.TYPE_ACCELEROMETER,
+            android.hardware.Sensor.TYPE_MAGNETIC_FIELD,
+            android.hardware.Sensor.TYPE_GYROSCOPE,
+            android.hardware.Sensor.TYPE_LIGHT,
+            android.hardware.Sensor.TYPE_PROXIMITY,
+            android.hardware.Sensor.TYPE_PRESSURE,
+            android.hardware.Sensor.TYPE_ROTATION_VECTOR,
+            android.hardware.Sensor.TYPE_STEP_COUNTER,
+            android.hardware.Sensor.TYPE_HEART_RATE
+        ).forEach { type ->
+            assertTrue("публичный датчик $type доступен", DeviceLab.canReadSensorType(type))
+            assertTrue(
+                "публичный датчик $type не считается системным",
+                !DeviceLab.isSystemOnlySensor(type, "обычный датчик", "android.sensor.accelerometer")
+            )
+        }
+    }
+
+    @Test
+    fun vendorSensorsAreSystemOnly() {
+        val vendor = DeviceLab.VENDOR_SENSOR_BASE + 42
+        assertTrue("датчик производителя", DeviceLab.isSystemOnlySensor(vendor, "Xiaomi private", ""))
+        assertTrue("недоступный тип", DeviceLab.isSystemOnlySensor(12345, "что-то", ""))
+        assertTrue("типов производителя не бывает ниже базы", vendor >= DeviceLab.VENDOR_SENSOR_BASE)
+    }
+
+    @Test
+    fun alwaysOnSensorsAreFilteredByName() {
+        listOf("AML AON sensor", "Always-On Motion", "gravity always on", "step aon").forEach { name ->
+            assertTrue(
+                "«$name» — системный",
+                DeviceLab.isSystemOnlySensor(1, name, "")
+            )
+        }
+        assertTrue(
+            "обычное имя не отсекается",
+            !DeviceLab.isSystemOnlySensor(1, "Accelerometer", "android.sensor.accelerometer")
+        )
+    }
+
+    @Test
+    fun filterDropsAonButKeepsPublicInRealList() {
+        // Смешанный список как с телефона: публичные + приватные.
+        val sensors = listOf(
+            1 to "Accelerometer",
+            2 to "Magnetic Field",
+            4 to "Gyroscope",
+            5 to "Light",
+            (DeviceLab.VENDOR_SENSOR_BASE + 1) to "Xiaomi AON",
+            (DeviceLab.VENDOR_SENSOR_BASE + 2) to "Smart Gesture"
+        )
+        val readable = sensors.filterNot { (type, name) -> DeviceLab.isSystemOnlySensor(type, name, "") }
+        assertEquals("читаемы только публичные", 4, readable.size)
+        assertTrue("приватные отсечены", readable.none { it.first >= DeviceLab.VENDOR_SENSOR_BASE })
+    }
 }
