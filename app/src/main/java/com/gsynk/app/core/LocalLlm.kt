@@ -29,12 +29,29 @@ object LocalLlm {
         return file.length() / 1024.0 / 1024 / 1024
     }
 
-    /** Копирует выбранный файл модели в приватную папку приложения. */
+    /**
+     * Копирует выбранный файл модели в приватную папку приложения.
+     *
+     * Сначала пишем во временный файл и только после успешной копии заменяем модель:
+     * если пользователь передумает на середине, прежняя модель останется рабочей.
+     */
     fun import(context: Context, source: java.io.InputStream, name: String): File? = runCatching {
         val directory = File(context.filesDir, "models").apply { mkdirs() }
-        directory.listFiles()?.forEach { it.delete() }
-        val target = File(directory, name.substringAfterLast('/').ifBlank { "model.task" })
-        source.use { input -> target.outputStream().use { output -> input.copyTo(output, 1 shl 16) } }
+        val cleanName = name.substringAfterLast('/').ifBlank { "model.task" }
+        val target = File(directory, cleanName)
+        val temporary = File(directory, cleanName + ".part")
+
+        source.use { input -> temporary.outputStream().use { output -> input.copyTo(output, 1 shl 16) } }
+        if (temporary.length() < 1_000_000L) {
+            temporary.delete()
+            return@runCatching null
+        }
+        directory.listFiles()?.filter { it != temporary }?.forEach { it.delete() }
+        runCatching { target.delete() }
+        if (!temporary.renameTo(target)) {
+            temporary.delete()
+            return@runCatching null
+        }
         target
     }.getOrNull()
 

@@ -1,5 +1,6 @@
 package com.gsynk.app.core
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -25,6 +26,7 @@ import androidx.core.view.isVisible
  * выбранной информацией (часы, заряд, ближайшее правило, счётчик NFC, рекорд).
  * Размер компактный: капсула не должна спорить с системным вырезом камеры.
  */
+@SuppressLint("StaticFieldLeak")
 object IslandOverlay {
 
     private val handler = Handler(Looper.getMainLooper())
@@ -46,6 +48,12 @@ object IslandOverlay {
     private var windowManager: WindowManager? = null
     private var hideTask: Runnable? = null
     private var persistent = false
+    /**
+     * Ссылка на оконный менеджер — единственный «контекстный» объект в этом
+     * синглтоне. Он берётся от application-контекста и переживает активности.
+     */
+    /** Что сейчас на экране: постоянная капсула или вспышка. */
+    private var rootPersistent = false
 
     fun isAvailable(context: Context): Boolean = runCatching {
         Settings.canDrawOverlays(context)
@@ -111,7 +119,8 @@ object IslandOverlay {
 
     fun hidePersistent() {
         persistent = false
-        hide()
+        val view = root
+        if (view != null) removeNow(view)
     }
 
     fun isShownPersistent(): Boolean = persistent && root?.parent != null
@@ -125,6 +134,7 @@ object IslandOverlay {
         hideTask = null
         val view = root ?: return
         root = null
+        rootPersistent = false
         view.animate()
             .alpha(0f)
             .translationY(-dp(view.context, 8f))
@@ -148,20 +158,40 @@ object IslandOverlay {
     ) {
         val existing = root
         if (existing != null && existing.parent != null) {
-            existing.findViewWithTag<TextView>(TAG_TITLE)?.text = title
-            existing.findViewWithTag<TextView>(TAG_SUBTITLE)?.text = subtitle
-            if (expandedText.isNotBlank()) {
-                existing.findViewWithTag<TextView>(TAG_EXPANDED)?.text = expandedText
+            // Постоянный остров и вспышка правила делят одно окно.
+            // Вспышка поверх постоянного острова только обновляет текст и мигает —
+            // иначе капсула исчезала бы на 15 секунд до следующего обновления службы.
+            val flashOverPersistent = rootPersistent && !persistent
+            if (rootPersistent != persistent && !flashOverPersistent) {
+                removeNow(existing)
+            } else {
+                existing.findViewWithTag<TextView>(TAG_TITLE)?.text = title
+                existing.findViewWithTag<TextView>(TAG_SUBTITLE)?.text = subtitle
+                if (expandedText.isNotBlank()) {
+                    existing.findViewWithTag<TextView>(TAG_EXPANDED)?.text = expandedText
+                }
+                if (iconRes != 0 && !keepIcons) {
+                    existing.findViewWithTag<ImageView>(TAG_ICON)?.setImageResource(iconRes)
+                }
+                applyPosition(existing, position, offsetY)
+                if (flashOverPersistent) {
+                    // мягкий импульс: видно, что правило сработало, капсула остаётся
+                    existing.animate().cancel()
+                    existing.scaleX = 1.06f
+                    existing.scaleY = 1.06f
+                    existing.animate().scaleX(1f).scaleY(1f)
+                        .setDuration(260)
+                        .setInterpolator(OvershootInterpolator(1.8f))
+                        .start()
+                    schedulePersistentRestore()
+                    return
+                }
+                if (!persistent) {
+                    restartProgress(existing, durationMs)
+                    scheduleHide(durationMs)
+                }
+                return
             }
-            if (iconRes != 0 && !keepIcons) {
-                existing.findViewWithTag<ImageView>(TAG_ICON)?.setImageResource(iconRes)
-            }
-            applyPosition(existing, position, offsetY)
-            if (!persistent) {
-                restartProgress(existing, durationMs)
-                scheduleHide(durationMs)
-            }
-            return
         }
 
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return
@@ -184,6 +214,7 @@ object IslandOverlay {
         view.translationY = -dp(context, 14f)
         runCatching { wm.addView(view, params) }
         root = view
+        rootPersistent = persistent
         windowManager = wm
 
         view.animate().alpha(1f).translationY(0f).setDuration(200).start()
@@ -192,6 +223,34 @@ object IslandOverlay {
             restartProgress(view, durationMs)
             scheduleHide(durationMs)
         }
+    }
+
+    /** Убрать окно немедленно (без анимации) — при смене режима. */
+    private fun removeNow(view: View) {
+        hideTask?.let { handler.removeCallbacks(it) }
+        hideTask = null
+        root = null
+        runCatching { windowManager?.removeView(view) }
+    }
+
+    /**
+     * Через несколько секунд возвращаем текст постоянного острова:
+     * служба острова обновляет его раз в 15 секунд, а вспышка правила могла
+     * подменить подпись — без этого капсула «залипала» бы с текстом правила.
+     */
+    private fun schedulePersistentRestore() {
+        hideTask?.let { handler.removeCallbacks(it) }
+        val task = Runnable {
+            if (persistent && root?.parent != null) {
+                val view = root ?: return@Runnable
+                view.findViewWithTag<TextView>(TAG_TITLE)?.text =
+                    view.context.getString(com.gsynk.app.R.string.island_default_title)
+                view.findViewWithTag<TextView>(TAG_SUBTITLE)?.text =
+                    view.context.getString(com.gsynk.app.R.string.island_refreshing)
+            }
+        }
+        hideTask = task
+        handler.postDelayed(task, 3_400L)
     }
 
     private fun scheduleHide(durationMs: Long) {
@@ -243,10 +302,13 @@ object IslandOverlay {
         runCatching { windowManager?.updateViewLayout(view, params) }
     }
 
-    private fun statusBarPx(context: Context): Int {
-        val id = context.resources.getIdentifier("status_bar_height", "dimen", "android")
-        return if (id > 0) context.resources.getDimensionPixelSize(id) else dp(context, 28f).toInt()
-    }
+    /** Высота строки состояния из системных инсетов (без чтения скрытых ресурсов). */
+    private fun statusBarPx(context: Context): Int = runCatching {
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val insets = windowManager.currentWindowMetrics.windowInsets
+            .getInsetsIgnoringVisibility(android.view.WindowInsets.Type.statusBars())
+        insets.top.takeIf { it > 0 } ?: dp(context, 28f).toInt()
+    }.getOrDefault(dp(context, 28f).toInt())
 
     // ————— построение вида —————
 

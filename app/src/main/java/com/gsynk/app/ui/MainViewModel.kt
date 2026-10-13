@@ -257,13 +257,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val updateProgress: StateFlow<Int> = _updateProgress.asStateFlow()
 
     /** Баннер обновления показываем только когда оно реально есть. */
-    val updateAvailable: StateFlow<Boolean> = _update
-        .let { flow ->
-            kotlinx.coroutines.flow.combine(flow, settings) { result, _ ->
-                result?.updateAvailable == true
-            }
-        }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val updateAvailable: StateFlow<Boolean> =
+        kotlinx.coroutines.flow.combine(_update, settings) { result, current ->
+            result?.updateAvailable == true && result.latestTag != current.seenVersion
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     init {
         initUpdateCheck()
@@ -285,7 +282,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun checkUpdate(silent: Boolean = false) = viewModelScope.launch {
         val repo = repository.currentSettings().updateRepo
-        if (repo.isBlank()) return@launch
+        if (repo.isBlank()) {
+            if (!silent) _message.value = "Укажите репозиторий обновлений"
+            return@launch
+        }
         val result = withContext(Dispatchers.IO) { UpdateChecker.check(app(), repo) }
         _update.value = result
         repository.saveSettings(
@@ -296,11 +296,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Пользователь закрыл панель: больше не показываем баннер для этой версии. */
     fun dismissUpdate() = viewModelScope.launch {
         guarded {
             val version = _update.value?.latestTag.orEmpty()
             repository.saveSettings(repository.currentSettings().copy(seenVersion = version))
-            _update.value = null
         }
     }
 

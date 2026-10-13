@@ -117,13 +117,13 @@ fun PasswordToolScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Text("Длина: $length", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.height(7.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                listOf(8, 12, 16, 24, 32).forEach { option ->
+            ChipFlow {
+                listOf(8, 12, 16, 24, 32, 48).forEach { option ->
                     SortChip(label = option.toString(), selected = length == option) { length = option }
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            ChipFlow {
                 SortChip("Буквы", letters) { letters = !letters }
                 SortChip("Цифры", digits) { digits = !digits }
                 SortChip("Символы", symbols) { symbols = !symbols }
@@ -223,6 +223,14 @@ fun MorseToolScreen(onBack: () -> Unit) {
         isSending = false
     }
 
+    // уходим со страницы — гасим фонарик, чтобы он не горел до утра
+    DisposableEffect(Unit) {
+        onDispose {
+            isSending = false
+            com.gsynk.app.core.AutomationActions.setTorch(context, false)
+        }
+    }
+
     GrapeScreen(title = "Морзянка", subtitle = "передача миганием", onBack = onBack) {
         SurfaceCard {
             Text(
@@ -290,6 +298,12 @@ fun MetalDetectorScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(14.dp))
             InfoRow("Максимум", "${peak.roundToInt()} мкТл")
             InfoRow("Спокойный фон", "40–60 мкТл")
+            Spacer(Modifier.height(10.dp))
+            SecondaryButton(
+                text = "Сбросить пик",
+                onClick = { peak = 0f },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(Modifier.height(10.dp))
             Text(
                 text = if (!compass.supported) "У этого телефона нет магнитометра" else
@@ -383,14 +397,35 @@ fun SoundMeterScreen(onBack: () -> Unit) {
         ActivityResultContracts.RequestPermission()
     ) { granted = it }
 
-    val recorder = remember {
-        runCatching { android.media.MediaRecorder() }.getOrNull()?.also { recorder ->
-            recorder.setAudioSource(android.media.MediaRecorder.AudioSource.MIC)
-            recorder.setOutputFormat(android.media.MediaRecorder.OutputFormat.THREE_GPP)
-            recorder.setAudioEncoder(android.media.MediaRecorder.AudioEncoder.AMR_NB)
-            recorder.setOutputFile("/dev/null")
-            runCatching { recorder.prepare() }
-            runCatching { recorder.start() }
+    var recorderError by remember { mutableStateOf("") }
+    var recorder by remember { mutableStateOf<android.media.MediaRecorder?>(null) }
+
+    LaunchedEffect(granted) {
+        if (!granted) {
+            request.launch(Manifest.permission.RECORD_AUDIO)
+            return@LaunchedEffect
+        }
+        // Пишем во временный файл приложения, а не в /dev/null: часть прошивок
+        // отказывается стартовать запись в /dev/null и микрофон молчит.
+        val file = java.io.File(context.cacheDir, "gsynk_noise.3gp")
+        val fresh = runCatching {
+            android.media.MediaRecorder().apply {
+                setAudioSource(android.media.MediaRecorder.AudioSource.MIC)
+                setOutputFormat(android.media.MediaRecorder.OutputFormat.THREE_GPP)
+                setAudioEncoder(android.media.MediaRecorder.AudioEncoder.AMR_NB)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+        }.getOrNull()
+        recorder = fresh
+        recorderError = if (fresh == null) "Микрофон недоступен — возможно, его занял другой сервис" else ""
+        while (true) {
+            val amplitude = runCatching { fresh?.maxAmplitude ?: 0 }.getOrDefault(0)
+            val value = Sensors.amplitudeToDb(amplitude.toDouble())
+            db = value
+            if (value > peak) peak = value
+            delay(180L)
         }
     }
 
@@ -398,20 +433,8 @@ fun SoundMeterScreen(onBack: () -> Unit) {
         onDispose {
             runCatching { recorder?.stop() }
             runCatching { recorder?.release() }
-        }
-    }
-
-    LaunchedEffect(granted) {
-        if (!granted) {
-            request.launch(Manifest.permission.RECORD_AUDIO)
-            return@LaunchedEffect
-        }
-        while (true) {
-            val amplitude = runCatching { recorder?.maxAmplitude ?: 0 }.getOrDefault(0)
-            val value = Sensors.amplitudeToDb(amplitude.toDouble())
-            db = value
-            if (value > peak) peak = value
-            delay(180L)
+            recorder = null
+            java.io.File(context.cacheDir, "gsynk_noise.3gp").delete()
         }
     }
 
@@ -441,6 +464,10 @@ fun SoundMeterScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(14.dp))
             InfoRow("Пик", "$peak дБ")
             InfoRow("Безопасный предел", "до 85 дБ")
+            if (recorderError.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(recorderError, color = GrapeRed, style = MaterialTheme.typography.labelSmall)
+            }
             Spacer(Modifier.height(10.dp))
             Text(
                 text = "Оценка приблизительная: считается по амплитуде микрофона, калибровки нет.",
@@ -521,7 +548,7 @@ fun EncoderScreen(onBack: () -> Unit) {
 
     GrapeScreen(title = "Кодер", subtitle = "быстрые преобразования", onBack = onBack) {
         SurfaceCard {
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            ChipFlow {
                 listOf("Base64", "URL", "HEX", "Двоичный").forEachIndexed { index, label ->
                     SortChip(label = label, selected = mode == index) { mode = index }
                 }
@@ -605,8 +632,8 @@ fun SubnetScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Text("Маска: /$prefix", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.height(7.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(8, 16, 24, 26, 30).forEach { value ->
+            ChipFlow {
+                listOf(8, 16, 22, 24, 25, 26, 27, 28, 30, 31).forEach { value ->
                     SortChip(label = "/$value", selected = prefix == value) { prefix = value }
                 }
             }

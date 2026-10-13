@@ -3,6 +3,7 @@ package com.gsynk.app.ui
 import android.app.Activity
 import android.nfc.NfcAdapter
 import android.nfc.Tag
+import androidx.core.net.toUri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -81,7 +82,7 @@ fun NfcLinkScreen(onBack: () -> Unit) {
     var body by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
-    var received by remember { mutableStateOf<NfcLink.Payload?>(null) }
+    var received by remember { mutableStateOf(PendingNfcPayload.take()) }
     var duel by remember { mutableStateOf<NfcLink.GameInvite?>(null) }
     var touches by remember { mutableIntStateOf(0) }
 
@@ -140,6 +141,8 @@ fun NfcLinkScreen(onBack: () -> Unit) {
             NfcAdapter.FLAG_READER_NFC_V or
             NfcAdapter.FLAG_READER_NFC_BARCODE
         if (activity != null && nfc != null && (mode == 1 || mode == 2)) {
+            // приём и эмуляция карты мешают друг другу: в режиме приёма передачу гасим
+            NdefHceService.setEnabled(context, false)
             runCatching { nfc.enableReaderMode(activity, callback, flags, android.os.Bundle()) }
         }
         onDispose {
@@ -207,10 +210,8 @@ fun NfcLinkScreen(onBack: () -> Unit) {
                 Spacer(Modifier.height(14.dp))
                 SectionTitle("Что передаём")
                 Spacer(Modifier.height(9.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    NfcLink.TRANSFER_KINDS.chunked(2).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            row.forEach { option ->
+                ChipFlow {
+                    NfcLink.TRANSFER_KINDS.forEach { option ->
                                 SortChip(
                                     label = option.title,
                                     selected = kind == option.kind
@@ -238,8 +239,6 @@ fun NfcLinkScreen(onBack: () -> Unit) {
                                         }
                                     }
                                 }
-                            }
-                        }
                     }
                 }
 
@@ -445,7 +444,7 @@ private fun ReceivedCard(payload: NfcLink.Payload, onImported: (String) -> Unit)
                 onClick = {
                     runCatching {
                         context.startActivity(
-                            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(payload.body))
+                            android.content.Intent(android.content.Intent.ACTION_VIEW, payload.body.toUri())
                         )
                     }
                     onImported("Ссылка открыта")
@@ -475,7 +474,7 @@ private fun ReceivedCard(payload: NfcLink.Payload, onImported: (String) -> Unit)
                         context.startActivity(
                             android.content.Intent(
                                 android.content.Intent.ACTION_VIEW,
-                                android.net.Uri.parse("geo:" + payload.body + "?q=" + payload.body)
+                                ("geo:" + payload.body + "?q=" + payload.body).toUri()
                             )
                         )
                     }

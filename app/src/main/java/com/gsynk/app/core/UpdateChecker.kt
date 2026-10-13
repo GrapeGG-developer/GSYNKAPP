@@ -170,7 +170,7 @@ object UpdateChecker {
             context.startActivity(
                 android.content.Intent(
                     android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse("https://github.com/$repo")
+                    "https://github.com/$repo".toUri()
                 ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
             )
         }

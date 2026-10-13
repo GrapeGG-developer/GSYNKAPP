@@ -49,19 +49,17 @@ object AutomationActions {
     }
 
     fun isDndOn(context: Context): Boolean = runCatching {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !dndGranted(context)) return false
+        if (!dndGranted(context)) return false
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         nm.currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL
     }.getOrDefault(false)
 
     fun openDndSettings(context: Context) {
         runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                context.startActivity(
-                    Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                )
-            }
+            context.startActivity(
+                Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
         }
     }
 
@@ -92,9 +90,7 @@ object AutomationActions {
     fun vibrate(context: Context, ms: Long = 60) {
         runCatching {
             val vibrator = context.getSystemService(Vibrator::class.java) ?: return
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
-            }
+            vibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
         }
     }
 

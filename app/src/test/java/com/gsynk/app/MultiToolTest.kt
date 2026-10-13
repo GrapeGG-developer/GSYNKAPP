@@ -8,6 +8,7 @@ import com.gsynk.app.core.Passwords
 import com.gsynk.app.core.PayloadCodec
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleSort
+import com.gsynk.app.core.TileGame
 import com.gsynk.app.core.UpdateChecker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -166,6 +167,79 @@ class MultiToolTest {
     fun islandWidgets_allHaveLabels() {
         assertTrue(IslandWidget.ALL.isNotEmpty())
         IslandWidget.ALL.forEach { assertTrue(IslandWidget.label(it).isNotBlank()) }
+    }
+
+    // ————— 2048 —————
+
+    @Test
+    fun tiles_mergeAndScore() {
+        val board = listOf(
+            2, 2, 4, 4,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0
+        )
+        val (moved, gained) = TileGame.slide(board, TileGame.LEFT)
+        assertEquals(listOf(4, 8, 0, 0), moved.take(4))
+        assertEquals(12, gained)
+    }
+
+    @Test
+    fun tiles_doNotMergeTwiceInARow() {
+        val board = listOf(
+            2, 2, 2, 2,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0
+        )
+        val (moved, gained) = TileGame.slide(board, TileGame.LEFT)
+        assertEquals(listOf(4, 4, 0, 0), moved.take(4))
+        assertEquals(8, gained)
+    }
+
+    @Test
+    fun tiles_slideIsDirectional() {
+        val board = listOf(
+            2, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0
+        )
+        // плитка «2» из левого верхнего угла уезжает в нужный край
+        assertEquals(2, TileGame.slide(board, TileGame.RIGHT).first[3])
+        assertEquals(2, TileGame.slide(board, TileGame.LEFT).first[0])
+        assertEquals(2, TileGame.slide(board, TileGame.UP).first[0])
+        assertEquals(2, TileGame.slide(board, TileGame.DOWN).first[12])
+    }
+
+    @Test
+    fun tiles_stuckWhenFullAndNoMerges() {
+        val full = listOf(
+            2, 4, 2, 4,
+            4, 2, 4, 2,
+            2, 4, 2, 4,
+            4, 2, 4, 2
+        )
+        assertTrue(TileGame.isStuck(full))
+        val withPair = full.toMutableList().also { it[1] = 2 }
+        assertFalse(TileGame.isStuck(withPair))
+    }
+
+    @Test
+    fun tiles_spawnAddsOneTile() {
+        val board = List(16) { 0 }
+        val next = TileGame.spawn(board)
+        assertEquals(1, next.count { it != 0 })
+        assertTrue(next.all { it == 0 || it == 2 || it == 4 })
+        val started = TileGame.start()
+        assertEquals(2, started.count { it != 0 })
+    }
+
+    @Test
+    fun tiles_winFlag() {
+        assertTrue(TileGame.hasReached(listOf(2048) + List(15) { 0 }))
+        assertFalse(TileGame.hasReached(listOf(1024) + List(15) { 0 }))
+        assertEquals(2048, TileGame.maxTile(listOf(2, 2048, 4)))
     }
 
     // ————— пароли —————

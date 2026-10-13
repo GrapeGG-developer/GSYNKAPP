@@ -54,7 +54,9 @@ class ApplyService : Service() {
                     if (rule != null) {
                         val result = RuleEngine.apply(applicationContext, rule)
                         if (settings.islandEnabled && (result.brightness || result.volume)) {
-                            islandShown = showIsland(rule, result, settings.islandPosition)
+                            islandShown = showIsland(
+                                rule, result, settings.islandPosition, settings.islandCompact, settings.islandOffsetY
+                            )
                         }
                         // разовое правило (с конкретными датами) отработало — выключаем его,
                         // чтобы оно не срабатывало в эти же дни недели каждую неделю
@@ -76,7 +78,13 @@ class ApplyService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun showIsland(rule: Rule, result: RuleEngine.Applied, position: Int): Boolean {
+    private fun showIsland(
+        rule: Rule,
+        result: RuleEngine.Applied,
+        position: Int,
+        compact: Boolean,
+        offsetY: Int
+    ): Boolean {
         val parts = buildList {
             if (result.brightness) add("Яркость ${rule.brightness}%")
             if (result.volume) add("Звук ${rule.volume}%")
@@ -88,7 +96,9 @@ class ApplyService : Service() {
             iconRes = icon,
             title = rule.name,
             subtitle = parts.joinToString(" • "),
-            position = position
+            position = position,
+            compact = compact,
+            offsetY = offsetY
         )
         return true
     }

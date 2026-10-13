@@ -861,8 +861,8 @@ fun BarIndicator(percent: Int, brush: Brush, modifier: Modifier = Modifier) {
 fun GlowIconButton(
     iconRes: Int,
     onClick: () -> Unit,
-    tint: Color = TextPrimary,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tint: Color = TextPrimary
 ) {
     Box(
         modifier
@@ -879,5 +879,50 @@ fun GlowIconButton(
             tint = tint,
             modifier = Modifier.size(19.dp)
         )
+    }
+}
+
+/**
+ * Поток элементов с переносом (чипы, кнопки-капсулы).
+ *
+ * Своя раскладка вместо жёстких рядов: на узких экранах чипы переносятся на новую
+ * строку, а не уезжают за правый край — именно из-за этого часть кнопок раньше
+ * оказывалась недоступной.
+ */
+@Composable
+fun ChipFlow(
+    modifier: Modifier = Modifier,
+    horizontalGap: Dp = 7.dp,
+    verticalGap: Dp = 6.dp,
+    content: @Composable () -> Unit
+) {
+    androidx.compose.ui.layout.Layout(modifier = modifier, content = content) { measurables, constraints ->
+        val hGap = horizontalGap.roundToPx()
+        val vGap = verticalGap.roundToPx()
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
+
+        val positions = mutableListOf<Pair<Int, Int>>()
+        var x = 0
+        var y = 0
+        var lineHeight = 0
+        var totalHeight = 0
+
+        placeables.forEach { placeable ->
+            if (x > 0 && x + placeable.width > constraints.maxWidth) {
+                x = 0
+                y += lineHeight + vGap
+                lineHeight = 0
+            }
+            positions.add(x to y)
+            x += placeable.width + hGap
+            lineHeight = maxOf(lineHeight, placeable.height)
+            totalHeight = maxOf(totalHeight, y + placeable.height)
+        }
+
+        layout(constraints.maxWidth, totalHeight) {
+            placeables.forEachIndexed { index, placeable ->
+                placeable.placeRelative(positions[index].first, positions[index].second)
+            }
+        }
     }
 }

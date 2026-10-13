@@ -11,6 +11,7 @@ import android.os.Build
 import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
+import androidx.core.graphics.withRotation
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
@@ -58,10 +59,13 @@ class NfcBurstOverlay(private val context: Context) {
         windowManager = null
     }
 
-    private fun statusBarHeight(): Int {
-        val id = context.resources.getIdentifier("status_bar_height", "dimen", "android")
-        return if (id > 0) context.resources.getDimensionPixelSize(id) else dp(28)
-    }
+    /** Высота строки состояния из системных инсетов — без чтения скрытых ресурсов. */
+    private fun statusBarHeight(): Int = runCatching {
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val insets = wm.currentWindowMetrics.windowInsets
+            .getInsetsIgnoringVisibility(android.view.WindowInsets.Type.statusBars())
+        insets.top.takeIf { it > 0 } ?: dp(28)
+    }.getOrDefault(dp(28))
 
     private fun dp(value: Int): Int =
         (value * context.resources.displayMetrics.density).toInt()
@@ -70,6 +74,9 @@ class NfcBurstOverlay(private val context: Context) {
     private class NfcBurstView(context: Context, private val durationMs: Long) : View(context) {
 
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private var coreShader: RadialGradient? = null
+        private var coreShaderWidth = 0
+        private var coreShaderHeight = 0
         private val startedAt = System.currentTimeMillis()
         private val particles = List(140) {
             Particle(
@@ -108,20 +115,28 @@ class NfcBurstOverlay(private val context: Context) {
             val cy = height * 0.42f
             val unit = width / 26f
 
-            // 1) светящееся ядро
+            // 1) светящееся ядро: градиент пересобираем только при смене размера кадра,
+            // а яркость задаём альфой краски — иначе объект создавался 60 раз в секунду
+            if (coreShader == null || coreShaderWidth != width || coreShaderHeight != height) {
+                coreShader = RadialGradient(
+                    cx, cy, unit * 5.2f,
+                    intArrayOf(
+                        argb(1f, 255, 255, 255),
+                        argb(0.5f, 160, 120, 255),
+                        argb(0f, 120, 80, 255)
+                    ),
+                    floatArrayOf(0f, 0.45f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+                coreShaderWidth = width
+                coreShaderHeight = height
+            }
             paint.style = Paint.Style.FILL
-            paint.shader = RadialGradient(
-                cx, cy, unit * 5.2f,
-                intArrayOf(
-                    argb(0.85f * fade, 255, 255, 255),
-                    argb(0.45f * fade, 160, 120, 255),
-                    argb(0f, 120, 80, 255)
-                ),
-                floatArrayOf(0f, 0.45f, 1f),
-                Shader.TileMode.CLAMP
-            )
+            paint.shader = coreShader
+            paint.alpha = (255 * 0.85f * fade).toInt().coerceIn(0, 255)
             canvas.drawCircle(cx, cy, unit * 5.2f, paint)
             paint.shader = null
+            paint.alpha = 255
 
             // 2) расходящиеся волны
             repeat(3) { index ->
@@ -141,11 +156,10 @@ class NfcBurstOverlay(private val context: Context) {
                 paint.strokeWidth = unit * 0.10f
                 paint.color = argb(0.5f * fade, 120, 255, 190)
                 val rotation = t * 360f * (if (index % 2 == 0) 1f else -1f) + index * 90f
-                canvas.save()
-                canvas.rotate(rotation, cx, cy)
-                canvas.drawArc(cx - sweep, cy - sweep, cx + sweep, cy + sweep, 0f, 70f, false, paint)
-                canvas.drawArc(cx - sweep, cy - sweep, cx + sweep, cy + sweep, 180f, 70f, false, paint)
-                canvas.restore()
+                canvas.withRotation(rotation, cx, cy) {
+                    drawArc(cx - sweep, cy - sweep, cx + sweep, cy + sweep, 0f, 70f, false, paint)
+                    drawArc(cx - sweep, cy - sweep, cx + sweep, cy + sweep, 180f, 70f, false, paint)
+                }
             }
 
             // 4) частицы

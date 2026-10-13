@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gsynk.app.R
 import com.gsynk.app.core.GameScores
+import com.gsynk.app.core.TileGame
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBorder
@@ -76,11 +77,15 @@ fun GamesScreen(onBack: () -> Unit) {
     var bestReaction by remember { mutableIntStateOf(0) }
     var bestMemory by remember { mutableIntStateOf(0) }
     var bestTiles by remember { mutableIntStateOf(0) }
+    var played by remember { mutableIntStateOf(0) }
+    var duelWins by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         launch { reactionFlow.collect { bestReaction = it } }
         launch { memoryFlow.collect { bestMemory = it } }
         launch { tilesFlow.collect { bestTiles = it } }
+        launch { scores.played.collect { played = it } }
+        launch { scores.wins.collect { duelWins = it } }
     }
 
     when (open) {
@@ -125,9 +130,12 @@ fun GamesScreen(onBack: () -> Unit) {
         )
         Spacer(Modifier.height(14.dp))
         SurfaceCard {
+            InfoRow("Сыграно партий", played.toString())
+            InfoRow("Побед в дуэлях", duelWins.toString())
+            Spacer(Modifier.height(6.dp))
             Text(
-                text = "Рекорды попадают на остров и в главный экран — можно мериться с друзьями " +
-                    "через Grape Link.",
+                text = "Рекорды хранятся на телефоне и показываются на острове. " +
+                    "Вызвать друга на дуэль можно касанием в Grape Link.",
                 color = TextDim,
                 style = MaterialTheme.typography.labelSmall
             )
@@ -352,64 +360,14 @@ private fun MemoryGame(scores: GameScores, onBack: () -> Unit) {
 //  3. 2048: складываем плитки свайпами
 // ————————————————————————————————————————————————
 
-private fun mergeLine(line: List<Int>): Pair<List<Int>, Int> {
-    val compact = line.filter { it != 0 }
-    val result = mutableListOf<Int>()
-    var gained = 0
-    var index = 0
-    while (index < compact.size) {
-        if (index + 1 < compact.size && compact[index] == compact[index + 1]) {
-            val merged = compact[index] * 2
-            result.add(merged)
-            gained += merged
-            index += 2
-        } else {
-            result.add(compact[index])
-            index++
-        }
-    }
-    while (result.size < 4) result.add(0)
-    return result to gained
-}
 
-private fun move(board: List<Int>, direction: Int): Pair<List<Int>, Int> {
-    // direction: 0 влево, 1 вправо, 2 вверх, 3 вниз
-    val grid = board.toMutableList()
-    var gained = 0
-    repeat(4) { line ->
-        val cells = when (direction) {
-            0, 1 -> (0 until 4).map { grid[line * 4 + it] }
-            else -> (0 until 4).map { grid[it * 4 + line] }
-        }
-        val oriented = if (direction == 1 || direction == 3) cells.reversed() else cells
-        val (merged, gain) = mergeLine(oriented)
-        gained += gain
-        val back = if (direction == 1 || direction == 3) merged.reversed() else merged
-        repeat(4) { position ->
-            if (direction == 0 || direction == 1) {
-                grid[line * 4 + position] = back[position]
-            } else {
-                grid[position * 4 + line] = back[position]
-            }
-        }
-    }
-    return grid to gained
-}
 
-private fun spawnTile(board: List<Int>): List<Int> {
-    val empty = board.indices.filter { board[it] == 0 }
-    if (empty.isEmpty()) return board
-    val target = empty.random()
-    val next = board.toMutableList()
-    next[target] = if (Random.nextInt(10) == 0) 4 else 2
-    return next
-}
 
 @Composable
 private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
-    var board by remember { mutableStateOf(spawnTile(spawnTile(List(16) { 0 }))) }
+    var board by remember { mutableStateOf(TileGame.start()) }
     var score by remember { mutableIntStateOf(0) }
     var best by remember { mutableIntStateOf(0) }
     var over by remember { mutableStateOf(false) }
@@ -421,17 +379,14 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
 
     fun slide(direction: Int) {
         if (over) return
-        val (moved, gained) = move(board, direction)
+        val (moved, gained) = TileGame.slide(board, direction)
         if (moved == board) return
-        val withTile = spawnTile(moved)
+        val withTile = TileGame.spawn(moved)
         board = withTile
         score += gained
         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         scope.launch { scores.saveTiles(score) }
-        val stuck = (0..3).all { directionIndex ->
-            move(withTile, directionIndex).first == withTile
-        }
-        if (stuck) {
+        if (TileGame.isStuck(withTile)) {
             over = true
             scope.launch { scores.saveTiles(score); scores.addPlayed() }
         }
@@ -523,7 +478,7 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
                         .clip(RoundedCornerShape(20.dp))
                         .background(Color(0xE60B0714))
                         .clickable {
-                            board = spawnTile(spawnTile(List(16) { 0 }))
+                            board = TileGame.start()
                             score = 0
                             over = false
                         },

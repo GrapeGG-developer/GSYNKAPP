@@ -2,8 +2,6 @@
 
 package com.gsynk.app.ui
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -139,16 +137,16 @@ fun MainScreen(vm: MainViewModel) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // автопроверка перед установкой обновления из системы
-    val installLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { vm.checkUpdate(silent = true) }
-
     LaunchedEffect(message) {
         message?.let {
             snackbar.showSnackbar(it)
             vm.clearMessage()
         }
+    }
+
+    // пришли по касанию метки — открываем Grape Link сразу
+    LaunchedEffect(Unit) {
+        if (PendingNfcPayload.payload != null) showNfc = true
     }
 
     LaunchedEffect(hasUpdate) {

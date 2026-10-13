@@ -153,7 +153,7 @@ fun SettingsSheet(
             )
 
             Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            ChipFlow {
                 SortChip("Выше", settings.islandOffsetY < 0) {
                     vm.setIslandOffset(settings.islandOffsetY - 4)
                 }
@@ -166,32 +166,24 @@ fun SettingsSheet(
             Spacer(Modifier.height(12.dp))
             Text("Расположение", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.height(7.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                IslandPosition.ALL.chunked(4).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        row.forEach { position ->
-                            SortChip(
-                                label = shortPosition(position),
-                                selected = settings.islandPosition == position
-                            ) { vm.setIslandPosition(position) }
-                        }
-                    }
+            ChipFlow {
+                IslandPosition.ALL.forEach { position ->
+                    SortChip(
+                        label = shortPosition(position),
+                        selected = settings.islandPosition == position
+                    ) { vm.setIslandPosition(position) }
                 }
             }
 
             Spacer(Modifier.height(12.dp))
             Text("Что показывать", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.height(7.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                IslandWidget.ALL.chunked(3).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        row.forEach { widget ->
-                            SortChip(
-                                label = IslandWidget.label(widget),
-                                selected = widget in settings.islandWidgets
-                            ) { vm.toggleIslandWidget(widget, widget !in settings.islandWidgets) }
-                        }
-                    }
+            ChipFlow {
+                IslandWidget.ALL.forEach { widget ->
+                    SortChip(
+                        label = IslandWidget.label(widget),
+                        selected = widget in settings.islandWidgets
+                    ) { vm.toggleIslandWidget(widget, widget !in settings.islandWidgets) }
                 }
             }
 

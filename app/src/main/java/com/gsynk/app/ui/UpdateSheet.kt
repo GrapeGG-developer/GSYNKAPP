@@ -47,6 +47,10 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (update == null) vm.checkUpdate(silent = true)
+    }
+
     GrapeScreen(title = "Обновления", subtitle = "версия ${BuildConfig.VERSION_NAME}", onBack = onDismiss) {
         SurfaceCard(borderColor = if (update?.updateAvailable == true) GrapeGreen.copy(alpha = 0.5f) else CardBorder) {
             when {

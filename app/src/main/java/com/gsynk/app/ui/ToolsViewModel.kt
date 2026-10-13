@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.gsynk.app.core.AutomationActions
 import com.gsynk.app.core.DeviceStats
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,21 +35,26 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message.asStateFlow()
 
+    private var statsJob: Job? = null
+
     init {
         refreshDnd()
-        viewModelScope.launch {
+    }
+
+    /** Дашборд обновляем только пока экран открыт — фоном батарею не тратим. */
+    fun startStats() {
+        if (statsJob?.isActive == true) return
+        statsJob = viewModelScope.launch {
             while (true) {
                 _stats.value = withContext(Dispatchers.IO) { DeviceStats.snapshot(getApplication()) }
                 delay(2_000L)
             }
         }
-        // если сервис сирены остановлен системой — снимаем флаг
-        viewModelScope.launch {
-            while (true) {
-                delay(1_500L)
-                if (_siren.value && !AutomationActions.isSirenRunning()) _siren.value = false
-            }
-        }
+    }
+
+    fun stopStats() {
+        statsJob?.cancel()
+        statsJob = null
     }
 
     fun toggleTorch() = viewModelScope.launch {
@@ -75,14 +81,29 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
         _dnd.value = AutomationActions.isDndOn(getApplication())
     }
 
+    private var sirenJob: Job? = null
+
     fun toggleSiren() = viewModelScope.launch {
         if (_siren.value) {
             AutomationActions.stopSiren()
             _siren.value = false
-        } else {
-            AutomationActions.startSiren().let { }
+            sirenJob?.cancel()
+            sirenJob = null
+        } else if (AutomationActions.startSiren()) {
             _siren.value = true
             _message.value = "Сирена: нажмите ещё раз, чтобы выключить"
+            // если звук прибила система — честно снимаем флаг
+            sirenJob = viewModelScope.launch {
+                while (true) {
+                    delay(1_500L)
+                    if (!AutomationActions.isSirenRunning()) {
+                        _siren.value = false
+                        break
+                    }
+                }
+            }
+        } else {
+            _message.value = "Не удалось включить сирену"
         }
     }
 

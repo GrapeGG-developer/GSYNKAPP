@@ -76,6 +76,7 @@ fun ChatScreen(onBack: () -> Unit) {
     var modelName by remember { mutableStateOf(LocalLlm.modelFile(context)?.name ?: "") }
     var modelLoaded by remember { mutableStateOf(LlmEngine.isLoaded) }
     var status by remember { mutableStateOf("") }
+    val mainHandler = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
 
     val importer = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -104,6 +105,31 @@ fun ChatScreen(onBack: () -> Unit) {
         }
     }
 
+    // модель уже в памяти телефона — загружаем её без лишних нажатий
+    LaunchedEffect(Unit) {
+        if (!LlmEngine.isLoaded && LocalLlm.isReady(context)) {
+            busy = true
+            status = "Загружаю модель «$modelName» в память…"
+            val error = LlmEngine.load(context, LocalLlm.modelFile(context)!!)
+            modelLoaded = error == null
+            status = error ?: "Модель готова: $modelName"
+            busy = false
+        }
+    }
+
+    // модель уже лежит в телефоне — загружаем её без лишних нажатий
+    LaunchedEffect(Unit) {
+        val file = LocalLlm.modelFile(context)
+        if (!LlmEngine.isLoaded && file != null) {
+            busy = true
+            status = "Загружаю модель «${file.name}» в память…"
+            val error = LlmEngine.load(context, file)
+            modelLoaded = error == null
+            status = error ?: "Модель готова: ${file.name}"
+            busy = false
+        }
+    }
+
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
@@ -120,7 +146,12 @@ fun ChatScreen(onBack: () -> Unit) {
             val index = messages.lastIndex
             if (modelLoaded) {
                 LlmEngine.askStreaming(text) { partial ->
-                    messages[index] = ChatMessage(partial, fromUser = false, pending = true)
+                    // модель зовёт слушателя из своего потока: в UI пускаем через главный
+                    mainHandler.post {
+                        if (index <= messages.lastIndex) {
+                            messages[index] = ChatMessage(partial, fromUser = false, pending = true)
+                        }
+                    }
                 }.let { answer ->
                     messages[index] = ChatMessage(answer, fromUser = false)
                 }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +59,11 @@ fun ToolsScreen(
     var showChat by remember { mutableStateOf(false) }
     var showUpdate by remember { mutableStateOf(false) }
     var showScreensaver by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        tools.startStats()
+        onDispose { tools.stopStats() }
+    }
 
     LaunchedEffect(Unit) {
         if (toolsMessage != null) {
@@ -180,7 +186,10 @@ fun ToolsScreen(
                 badge = if (updateAvailable) "новое" else null,
                 liveText = if (updateAvailable) "Обновить" else "Проверить",
                 modifier = Modifier.weight(1f),
-                onClick = { showUpdate = true }
+                onClick = {
+                    vm.checkUpdate(silent = true)
+                    showUpdate = true
+                }
             )
         }
 
@@ -274,16 +283,20 @@ fun ToolsScreen(
         Spacer(Modifier.height(18.dp))
         SectionTitle("Системные экраны")
         Spacer(Modifier.height(9.dp))
-        TileRow {
-            SortChip(label = "Звук", selected = false) { tools.openSettings("sound") }
-            SortChip(label = "Батарея", selected = false) { tools.openSettings("battery") }
-            SortChip(label = "NFC", selected = false) { tools.openSettings("nfc") }
-        }
-        Spacer(Modifier.height(7.dp))
-        TileRow {
-            SortChip(label = "Wi-Fi", selected = false) { tools.openSettings("wifi") }
-            SortChip(label = "Bluetooth", selected = false) { tools.openSettings("bluetooth") }
-            SortChip(label = "Геолокация", selected = false) { tools.openSettings("location") }
+        ChipFlow {
+            listOf(
+                "Звук" to "sound",
+                "Батарея" to "battery",
+                "NFC" to "nfc",
+                "Wi-Fi" to "wifi",
+                "Bluetooth" to "bluetooth",
+                "Геолокация" to "location",
+                "Дисплей" to "display",
+                "Данные" to "data",
+                "Приложения" to "apps"
+            ).forEach { (title, key) ->
+                SortChip(label = title, selected = false) { tools.openSettings(key) }
+            }
         }
 
         // ————— постоянный остров —————
@@ -313,33 +326,25 @@ fun ToolsScreen(
             Spacer(Modifier.height(12.dp))
             Text("Показывать:", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.height(7.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                IslandWidget.ALL.chunked(3).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        row.forEach { widget ->
-                            SortChip(
-                                label = IslandWidget.label(widget),
-                                selected = widget in settings.islandWidgets
-                            ) { vm.toggleIslandWidget(widget, widget !in settings.islandWidgets) }
-                        }
-                    }
+            ChipFlow {
+                IslandWidget.ALL.forEach { widget ->
+                    SortChip(
+                        label = IslandWidget.label(widget),
+                        selected = widget in settings.islandWidgets
+                    ) { vm.toggleIslandWidget(widget, widget !in settings.islandWidgets) }
                 }
             }
             Spacer(Modifier.height(12.dp))
             Text("Расположение:", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.height(7.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                com.gsynk.app.core.IslandPosition.ALL.chunked(3).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        row.forEach { position ->
-                            SortChip(
-                                label = com.gsynk.app.core.IslandPosition.label(position)
-                                    .replace("Сверху ", "")
-                                    .replace("По центру ", "центр "),
-                                selected = settings.islandPosition == position
-                            ) { vm.setIslandPosition(position) }
-                        }
-                    }
+            ChipFlow {
+                com.gsynk.app.core.IslandPosition.ALL.forEach { position ->
+                    SortChip(
+                        label = com.gsynk.app.core.IslandPosition.label(position)
+                            .replace("Сверху ", "")
+                            .replace("По центру ", "центр "),
+                        selected = settings.islandPosition == position
+                    ) { vm.setIslandPosition(position) }
                 }
             }
             Spacer(Modifier.height(12.dp))
