@@ -1,0 +1,57 @@
+GSYNK 2.3.0 (versionCode 12)
+Тип: сбой приложения
+Время: 13.10.2026 19:29:44
+Поток: main (главный: true)
+
+— Устройство —
+Модель: Xiaomi 2602BPC18G
+Android: 16 (SDK 36), прошивка BP2A.250605.031.A3
+Экран: 1280x2772 @ 3.25
+Профиль: full — Android 16 и NFC: полный набор
+Память процесса: 32 из 256 МБ
+Аптайм системы: 20469 мин
+Правил: 4, активных: 4
+Настройки: автопилот=false, остров=false, позиция=Сверху по центру, компактный=true, автопроверка=true
+Счётчик NFC: 0
+Доступы: Точные будильники, Изменение системных настроек, Без ограничений батареи, Уведомления, Остров поверх приложений, Микрофон (шумомер)
+Сейчас выдано: Точные будильники, Изменение системных настроек, Без ограничений батареи, Уведомления, Остров поверх приложений, Микрофон (шумомер)
+Модель ИИ: GrapeBot: команды, модель не требуется
+
+
+
+— Последние события (5) —
+19:29:35 [App] запуск 2.3.0 (12)
+19:29:35 [Разрешения] все доступы выданы (7 из 7)
+19:29:37 [Tools] открыт раздел «Инструменты»
+19:29:43 [Reports] Отправлено отчётов: 1
+19:29:43 [Reports] автоотправка: Отправлено отчётов: 1
+
+— Исключение —
+java.lang.SecurityException: Permission Denial: service from com.gsynk.app.debug asks to run as user -2 but is calling from uid u0a576; this requires android.permission.INTERACT_ACROSS_USERS_FULL or android.permission.INTERACT_ACROSS_USERS
+	at android.os.Parcel.createExceptionOrNull(Parcel.java:3361)
+	at android.os.Parcel.createException(Parcel.java:3345)
+	at android.os.Parcel.readException(Parcel.java:3328)
+	at android.os.Parcel.readException(Parcel.java:3270)
+	at android.app.IActivityManager$Stub$Proxy.bindServiceInstance(IActivityManager.java:7096)
+	at android.app.ContextImpl.bindServiceCommon(ContextImpl.java:2241)
+	at android.app.ContextImpl.bindServiceAsUser(ContextImpl.java:2154)
+	at android.content.ContextWrapper.bindServiceAsUser(ContextWrapper.java:938)
+	at android.hardware.SystemSensorManagerImpl.bindAonService(SystemSensorManagerImpl.java:173)
+	at android.hardware.SystemSensorManagerImpl.registerAonListener(SystemSensorManagerImpl.java:223)
+	at android.hardware.SystemSensorManagerImpl.-$$Nest$mregisterAonListener(SystemSensorManagerImpl.java:0)
+	at android.hardware.SystemSensorManagerImpl$1.handleMessage(SystemSensorManagerImpl.java:94)
+	at android.os.Handler.dispatchMessage(Handler.java:114)
+	at android.os.Looper.loopOnce(Looper.java:274)
+	at android.os.Looper.loop(Looper.java:369)
+	at android.app.ActivityThread.main(ActivityThread.java:10089)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:616)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1137)
+Caused by: android.os.RemoteException: Remote stack trace:
+	at com.android.server.am.UserController.handleIncomingUser(UserController.java:3007)
+	at com.android.server.am.ActiveServices.retrieveServiceLocked(ActiveServices.java:4954)
+	at com.android.server.am.ActiveServices.bindServiceLocked(ActiveServices.java:4326)
+	at com.android.server.am.ActivityManagerService.bindServiceInstance(ActivityManagerService.java:15513)
+	at com.android.server.am.ActivityManagerService.bindServiceInstance(ActivityManagerService.java:15466)
+
+
