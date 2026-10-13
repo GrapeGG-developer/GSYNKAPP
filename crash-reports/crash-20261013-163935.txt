@@ -1,0 +1,73 @@
+GSYNK 2.1.1 (versionCode 9)
+Тип: сбой приложения
+Время: 13.10.2026 16:39:35
+Поток: main (главный: true)
+
+— Устройство —
+Модель: Xiaomi 2602BPC18G
+Android: 16 (SDK 36), прошивка BP2A.250605.031.A3
+Экран: 1280x2772 @ 3.25
+Профиль: full — Android 16 и NFC: полный набор
+Память процесса: 28 из 256 МБ
+Аптайм системы: 20299 мин
+Правил: 4, активных: 4
+Настройки: автопилот=true, остров=false, позиция=Сверху по центру, компактный=true, автопроверка=true
+Счётчик NFC: 0
+Доступы: Точные будильники, Изменение системных настроек, Без ограничений батареи, Уведомления, Остров поверх приложений, Микрофон (шумомер)
+Сейчас выдано: Точные будильники, Изменение системных настроек, Без ограничений батареи, Уведомления, Остров поверх приложений, Микрофон (шумомер)
+Модель ИИ: не импортирована
+
+
+
+— Последние события (4) —
+16:37:42 [App] запуск 2.1.1 (9)
+16:38:43 [Reports] Отправлено отчётов: 4
+16:38:46 [Reports] Не удалось отправить: report-[число скрыто]-163748.txt: файл уже существует (422)
+16:39:35 [Tools] открыт раздел «Инструменты»
+
+— Исключение —
+java.util.UnknownFormatConversionException: Conversion = '•'
+	at java.util.Formatter$FormatSpecifier.conversion(Formatter.java:3011)
+	at java.util.Formatter$FormatSpecifier.<init>(Formatter.java:3049)
+	at java.util.Formatter$FormatSpecifierParser.<init>(Formatter.java:2802)
+	at java.util.Formatter.parse(Formatter.java:2735)
+	at java.util.Formatter.format(Formatter.java:2684)
+	at java.util.Formatter.format(Formatter.java:2638)
+	at java.lang.String.format(String.java:4714)
+	at com.gsynk.app.ui.ToolsScreenKt.ToolsScreen$lambda$42$12(ToolsScreen.kt:445)
+	at com.gsynk.app.ui.ToolsScreenKt.$r8$lambda$8oCaovkd__zRKdgmjO64eFgwsiU(ToolsScreen.kt:0)
+	at com.gsynk.app.ui.ToolsScreenKt$$ExternalSyntheticLambda19.invoke(D8$$SyntheticClass:0)
+	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke(ComposableLambda.kt:130)
+	at androidx.compose.runtime.internal.ComposableLambdaImpl.invoke$lambda$0(ComposableLambda.kt:132)
+	at androidx.compose.runtime.internal.ComposableLambdaImpl.$r8$lambda$qz3voikrQeNn5XJEtUlXR2wfzBw(ComposableLambda.kt:0)
+	at androidx.compose.runtime.internal.ComposableLambdaImpl$$ExternalSyntheticLambda16.invoke(D8$$SyntheticClass:0)
+	at androidx.compose.runtime.RecomposeScopeImpl.compose(RecomposeScopeImpl.kt:196)
+	at androidx.compose.runtime.ComposerImpl.recomposeToGroupEnd(Composer.kt:2895)
+	at androidx.compose.runtime.ComposerImpl.skipCurrentGroup(Composer.kt:3231)
+	at androidx.compose.runtime.ComposerImpl.doCompose-aFTiNEg(Composer.kt:3855)
+	at androidx.compose.runtime.ComposerImpl.recompose-aFTiNEg$runtime(Composer.kt:3779)
+	at androidx.compose.runtime.CompositionImpl.recompose(Composition.kt:1075)
+	at androidx.compose.runtime.Recomposer.performRecompose(Recomposer.kt:1373)
+	at androidx.compose.runtime.Recomposer.access$performRecompose(Recomposer.kt:156)
+	at androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2.invokeSuspend$lambda$22(Recomposer.kt:627)
+	at androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2.$r8$lambda$OqADLCDYmRw1RgNUvn1CR0kX32M(Recomposer.kt:0)
+	at androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+	at androidx.compose.ui.platform.AndroidUiFrameClock$withFrameNanos$2$callback$1.doFrame(AndroidUiFrameClock.android.kt:39)
+	at androidx.compose.ui.platform.AndroidUiDispatcher.performFrameDispatch(AndroidUiDispatcher.android.kt:108)
+	at androidx.compose.ui.platform.AndroidUiDispatcher.access$performFrameDispatch(AndroidUiDispatcher.android.kt:41)
+	at androidx.compose.ui.platform.AndroidUiDispatcher$dispatchCallback$1.doFrame(AndroidUiDispatcher.android.kt:69)
+	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:2086)
+	at android.view.Choreographer$CallbackRecord.run(Choreographer.java:2097)
+	at android.view.Choreographer.doCallbacks(Choreographer.java:1572)
+	at android.view.Choreographer.doFrame(Choreographer.java:1429)
+	at android.view.Choreographer$FrameDisplayEventReceiver.run(Choreographer.java:2051)
+	at android.os.Handler.handleCallback(Handler.java:1029)
+	at android.os.Handler.dispatchMessage(Handler.java:107)
+	at android.os.Looper.loopOnce(Looper.java:274)
+	at android.os.Looper.loop(Looper.java:369)
+	at android.app.ActivityThread.main(ActivityThread.java:10089)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:616)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1137)
+	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [androidx.compose.runtime.PausableMonotonicFrameClock@9ce06b1, androidx.compose.ui.platform.MotionDurationScaleImpl@a8f796, StandaloneCoroutine{Cancelling}@7654f17, AndroidUiDispatcher@705df04]
+
