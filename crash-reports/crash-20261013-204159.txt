@@ -1,0 +1,97 @@
+GSYNK 3.0 (versionCode 14)
+Тип: сбой приложения
+Время: 13.10.2026 20:41:59
+Поток: DefaultDispatcher-worker-7 (главный: false)
+
+— Устройство —
+Модель: Xiaomi 2602BPC18G
+Android: 16 (SDK 36), прошивка BP2A.250605.031.A3
+Экран: 1280x2772 @ 3.25
+Профиль: full — Android 16 и NFC: полный набор
+Память процесса: 12 из 256 МБ
+Аптайм системы: 20542 мин
+Правил: 4, активных: 4
+Настройки: автопилот=true, остров=false, позиция=Сверху по центру, компактный=false, автопроверка=true
+Счётчик NFC: 0
+Доступы: Точные будильники, Изменение системных настроек, Без ограничений батареи, Уведомления, Остров поверх приложений, Микрофон (шумомер)
+Сейчас выдано: Точные будильники, Изменение системных настроек, Без ограничений батареи, Уведомления, Остров поверх приложений, Микрофон (шумомер)
+Модель ИИ: GrapeBot: команды, модель не требуется
+
+
+
+— Последние события (50) —
+20:31:51 [App] запуск 3.0 (14)
+20:31:52 [Разрешения] все доступы выданы (7 из 7)
+20:31:54 [Tools] открыт раздел «Инструменты»
+20:32:01 [Рядом] Найдено сопряжённых: 1
+20:32:02 [Reports] Отправлено отчётов: 1
+20:32:02 [Reports] автоотправка: Отправлено отчётов: 1
+20:32:06 [Рядом] Связь установлена: POCO X3 Pro (Bluetooth)
+20:32:06 [Рядом] На связи: gsynk-M2102J20SG
+20:32:06 [Рядом] Друг ответил: M2102J20SG
+20:33:21 [Рядом] Показ: салют
+20:33:22 [Рядом] Показ: салют
+20:33:27 [Grape Link] подземелье по Wi-Fi: комната открыта на 192.168.0.148:45991
+20:35:45 [Grape Link] в касание положено: show
+20:35:49 [Grape Link] в касание положено: show
+20:36:01 [Grape Link] подземелье по Wi-Fi: комната открыта на 192.168.0.148:45991
+20:37:07 [Grape Link] в касание положено: text
+20:37:11 [Grape Link] в касание положено: text
+20:37:16 [Grape Link] в касание положено: text
+20:37:20 [Grape Link] в касание положено: text
+20:37:31 [Grape Link] в касание положено: text
+20:37:41 [Grape Link] в касание положено: text
+20:37:47 [Grape Link] в касание положено: text
+20:37:58 [Grape Link] в касание положено: text
+20:38:07 [Grape Link] в касание положено: show
+20:38:25 [Grape Link] в касание положено: show
+20:38:31 [Grape Link] в касание положено: show
+20:38:31 [Grape Link] в касание положено: show
+20:38:34 [Grape Link] в касание положено: show
+20:38:34 [Grape Link] в касание положено: show
+20:38:35 [Grape Link] в касание положено: show
+20:38:35 [Grape Link] в касание положено: show
+20:38:35 [Grape Link] в касание положено: show
+20:38:35 [Grape Link] в касание положено: show
+20:38:35 [Grape Link] в касание положено: show
+20:38:36 [Grape Link] в касание положено: show
+20:39:31 [Рядом] Найдено сопряжённых: 1
+20:39:41 [Рядом] Найдено сопряжённых: 1
+20:39:42 [Рядом] Найдено сопряжённых: 1
+20:39:44 [Рядом] Связь установлена: POCO X3 Pro (Bluetooth)
+20:39:44 [Рядом] На связи: gsynk-M2102J20SG
+20:39:44 [Рядом] Друг ответил: M2102J20SG
+20:39:49 [Рядом] Связь установлена: POCO X3 Pro (Bluetooth)
+20:39:49 [Рядом] На связи: gsynk-M2102J20SG
+20:39:49 [Рядом] Друг ответил: M2102J20SG
+20:39:54 [Рядом] Связь установлена: POCO X3 Pro (Bluetooth)
+20:39:54 [Рядом] На связи: gsynk-M2102J20SG
+20:39:54 [Рядом] Друг ответил: M2102J20SG
+20:40:59 [Grape Link] подземелье по Wi-Fi: комната открыта на 192.168.0.148:45991
+20:41:37 [Grape Link] подключился второй телефон: M2102J20SG
+20:41:39 [Игра] касание принято — подземелье началось, ключ [число скрыто]
+
+— Исключение —
+java.net.SocketException: Socket closed
+	at java.net.SocketInputStream.socketRead0(Native Method)
+	at java.net.SocketInputStream.socketRead(SocketInputStream.java:118)
+	at java.net.SocketInputStream.read(SocketInputStream.java:173)
+	at java.net.SocketInputStream.read(SocketInputStream.java:143)
+	at sun.nio.cs.StreamDecoder.readBytes(StreamDecoder.java:309)
+	at sun.nio.cs.StreamDecoder.implRead(StreamDecoder.java:373)
+	at sun.nio.cs.StreamDecoder.read(StreamDecoder.java:183)
+	at java.io.InputStreamReader.read(InputStreamReader.java:177)
+	at java.io.BufferedReader.fill(BufferedReader.java:172)
+	at java.io.BufferedReader.readLine(BufferedReader.java:337)
+	at java.io.BufferedReader.readLine(BufferedReader.java:403)
+	at com.gsynk.app.core.WifiCoop$host$1$1$1.invokeSuspend(WifiCoop.kt:178)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:99)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:811)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:715)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+	Suppressed: kotlinx.coroutines.internal.DiagnosticCoroutineContextException: [StandaloneCoroutine{Cancelling}@2aa717, Dispatchers.IO]
+
