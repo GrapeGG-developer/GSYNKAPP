@@ -27,6 +27,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -71,6 +78,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -701,4 +709,175 @@ fun GrapeTextField(
         ),
         modifier = modifier.fillMaxWidth()
     )
+}
+
+
+// ————————————————————————————————————————————————
+//  Полноэкранный раздел: безопасные отступы, тонкий заголовок, свой фон
+// ————————————————————————————————————————————————
+
+@Composable
+fun GrapeScreen(
+    title: String,
+    onBack: () -> Unit,
+    subtitle: String? = null,
+    actions: @Composable RowScope.() -> Unit = {},
+    content: @Composable ColumnScope.() -> Unit
+) {
+    AnimatedGrapeBackground {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(horizontal = 16.dp)
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(CardBg)
+                        .border(1.dp, ChipBorder, RoundedCornerShape(50))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onBack() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("←", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    GradientText(
+                        text = title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        brush = GrapeGradient
+                    )
+                    if (subtitle != null) {
+                        Text(subtitle, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                actions()
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                content()
+                Spacer(Modifier.height(28.dp))
+            }
+        }
+    }
+}
+
+// ————————————————————————————————————————————————
+//  Мелкие элементы нового стиля
+// ————————————————————————————————————————————————
+
+/** Чип выбора (сортировка, фильтр, режим). */
+@Composable
+fun SortChip(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(50)
+    val bg by animateColorAsState(
+        targetValue = if (selected) GrapeVioletDeep else ChipBg,
+        animationSpec = tween(180),
+        label = "sortBg"
+    )
+    Box(
+        modifier
+            .clip(shape)
+            .background(bg)
+            .border(1.dp, if (selected) GrapeViolet else ChipBorder, shape)
+            .clickable { onClick() }
+            .padding(horizontal = 13.dp, vertical = 7.dp)
+    ) {
+        Text(
+            text = label,
+            color = if (selected) TextPrimary else TextSecondary,
+            style = MaterialTheme.typography.labelMedium
+        )
+    }
+}
+
+/** Строка «подпись — значение» для дашбордов и карточек. */
+@Composable
+fun InfoRow(label: String, value: String, accent: Color = TextPrimary) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            color = TextDim,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f)
+        )
+        Text(value, color = accent, style = MaterialTheme.typography.titleSmall)
+    }
+}
+
+/** Полоса-индикатор заполнения (память, батарея, уровень сигнала). */
+@Composable
+fun BarIndicator(percent: Int, brush: Brush, modifier: Modifier = Modifier) {
+    val animated by animateFloatAsState(
+        targetValue = percent.coerceIn(0, 100) / 100f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "bar"
+    )
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(7.dp)
+            .clip(RoundedCornerShape(50))
+            .background(TrackBg)
+    ) {
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(animated.coerceAtLeast(0.01f))
+                .clip(RoundedCornerShape(50))
+                .background(brush)
+        )
+    }
+}
+
+/** Иконка-кнопка круглой формы. */
+@Composable
+fun GlowIconButton(
+    iconRes: Int,
+    onClick: () -> Unit,
+    tint: Color = TextPrimary,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(50))
+            .background(CardBg)
+            .border(1.dp, ChipBorder, RoundedCornerShape(50))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(iconRes),
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(19.dp)
+        )
+    }
 }

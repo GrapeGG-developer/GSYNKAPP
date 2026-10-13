@@ -4,16 +4,15 @@ import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
-import androidx.core.net.toUri
+import android.media.ToneGenerator
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.Settings
-import android.speech.tts.TextToSpeech
-import java.util.Locale
-
-/** Русский голос для синтеза речи (современный способ вместо конструктора Locale). */
-private val RUSSIAN: Locale = Locale.forLanguageTag("ru-RU")
+import androidx.core.net.toUri
 
 /**
- * Быстрые действия мультитула: фонарик, «Не беспокоить», звонок, синтез речи.
+ * Быстрые действия мультитула: фонарик, «Не беспокоить», сирена, вибрация.
  * Все методы безопасны: при отсутствии доступа просто возвращают ошибку, не падая.
  */
 object AutomationActions {
@@ -29,9 +28,6 @@ object AutomationActions {
         cm.setTorchMode(id, on)
         true
     }.getOrDefault(false)
-
-    // В Android 16 метод getTorchMode убран из публичного API, поэтому состояние
-    // фонарика отслеживает интерфейс через CameraManager.registerTorchCallback.
 
     // ————— «Не беспокоить» —————
 
@@ -53,85 +49,80 @@ object AutomationActions {
     }
 
     fun isDndOn(context: Context): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !dndGranted(context)) return false
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         nm.currentInterruptionFilter != android.app.NotificationManager.INTERRUPTION_FILTER_ALL
     }.getOrDefault(false)
 
     fun openDndSettings(context: Context) {
         runCatching {
-            context.startActivity(
-                Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                context.startActivity(
+                    Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
         }
     }
 
-    // ————— звонок —————
+    // ————— звук и вибрация —————
 
-    /** Позвонить по номеру (нужно разрешение CALL_PHONE). */
-    fun call(context: Context, number: String): Boolean {
-        val clean = number.filter { it.isDigit() || it == '+' }
-        if (clean.length < 4) return false
-        return runCatching {
-            context.startActivity(
-                Intent(Intent.ACTION_CALL, "tel:$clean".toUri())
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-            true
-        }.getOrDefault(false)
-    }
+    private var tone: ToneGenerator? = null
 
-    /** Открыть набор номера (без разрешения CALL_PHONE — пользователь жмёт «вызов» сам). */
-    fun dial(context: Context, number: String): Boolean = runCatching {
-        context.startActivity(
-            Intent(Intent.ACTION_DIAL, "tel:${number.filter { it.isDigit() || it == '+' }}".toUri())
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        )
+    /** Сирена «найди телефон»: громкий сигнал, пока не остановят. */
+    fun startSiren(): Boolean = runCatching {
+        stopSiren()
+        val generator = ToneGenerator(AudioManager.STREAM_ALARM, 100)
+        generator.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 20 * 60 * 1000)
+        tone = generator
         true
     }.getOrDefault(false)
 
-    // ————— синтез речи —————
+    /** Крутится ли сирена прямо сейчас. */
+    fun isSirenRunning(): Boolean = tone != null
 
-    private var tts: TextToSpeech? = null
-    private var ttsReady = false
-
-    fun speak(context: Context, phrase: String, forceSpeaker: Boolean = true) {
-        if (phrase.isBlank()) return
-        val app = context.applicationContext
-        val engine = tts ?: TextToSpeech(app) { status ->
-            ttsReady = status == TextToSpeech.SUCCESS
-            if (ttsReady) {
-                tts?.language = RUSSIAN
-            }
-        }.also { tts = it }
-
-        if (forceSpeaker) {
-            runCatching {
-                val am = app.getSystemService(AudioManager::class.java)
-                am?.mode = AudioManager.MODE_NORMAL
-            }
+    fun stopSiren() {
+        runCatching {
+            tone?.stopTone()
+            tone?.release()
         }
-        // если движок ещё инициализируется — подождём немного и повторим
-        if (!ttsReady) {
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                if (ttsReady) {
-                    engine.language = RUSSIAN
-                    engine.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "gsynk")
-                }
-            }, 900)
-        } else {
-            engine.language = RUSSIAN
-            engine.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "gsynk")
+        tone = null
+    }
+
+    fun vibrate(context: Context, ms: Long = 60) {
+        runCatching {
+            val vibrator = context.getSystemService(Vibrator::class.java) ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
+            }
         }
     }
 
-    fun stopSpeaking() {
-        runCatching { tts?.stop() }
+    /** Открыть системный экран по ключу: звук, батарея, приложения, дисплей. */
+    fun openSettings(context: Context, key: String) {
+        val action = when (key) {
+            "sound" -> Settings.ACTION_SOUND_SETTINGS
+            "battery" -> Settings.ACTION_BATTERY_SAVER_SETTINGS
+            "apps" -> Settings.ACTION_APPLICATION_SETTINGS
+            "display" -> Settings.ACTION_DISPLAY_SETTINGS
+            "data" -> Settings.ACTION_DATA_USAGE_SETTINGS
+            "nfc" -> Settings.ACTION_NFC_SETTINGS
+            "wifi" -> Settings.ACTION_WIFI_SETTINGS
+            "bluetooth" -> Settings.ACTION_BLUETOOTH_SETTINGS
+            "location" -> Settings.ACTION_LOCATION_SOURCE_SETTINGS
+            else -> Settings.ACTION_SETTINGS
+        }
+        runCatching {
+            context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
     }
 
-    fun shutdownTts() {
-        runCatching { tts?.shutdown() }
-        tts = null
-        ttsReady = false
+    fun openAppSettings(context: Context) {
+        runCatching {
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri())
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
     }
 }

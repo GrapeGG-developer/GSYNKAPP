@@ -126,6 +126,23 @@ class NdefHceService : HostApduService() {
         private fun payloadFile(context: Context) = File(context.filesDir, "grape_link_ndef.bin")
 
         /** Подготовить данные, которые телефон будет отдавать при касании. */
+        /** Включить или выключить эмуляцию карты (компонент HCE). */
+        fun setEnabled(context: Context, enabled: Boolean) {
+            runCatching {
+                val component = android.content.ComponentName(context, NdefHceService::class.java)
+                val state = if (enabled) {
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                } else {
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                }
+                context.packageManager.setComponentEnabledSetting(
+                    component,
+                    state,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+            }
+        }
+
         fun store(context: Context, message: NdefMessage) {
             runCatching { payloadFile(context).writeBytes(message.toByteArray()) }
         }

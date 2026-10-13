@@ -1,20 +1,8 @@
 package com.gsynk.app.ui
 
 import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.nfc.Tag
-import android.os.Handler
-import android.os.Looper
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,13 +11,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,531 +24,603 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.gsynk.app.core.AutomationActions
+import com.gsynk.app.core.GameScores
 import com.gsynk.app.core.NdefHceService
+import com.gsynk.app.core.NfcBurstOverlay
 import com.gsynk.app.core.NfcLink
-import com.gsynk.app.ui.theme.CardBgAlt
+import com.gsynk.app.core.NfcReader
+import com.gsynk.app.core.RuleRepository
+import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBorder
+import com.gsynk.app.ui.theme.GrapeCyan
 import com.gsynk.app.ui.theme.GrapeGreen
 import com.gsynk.app.ui.theme.GrapeGreenSoft
+import com.gsynk.app.ui.theme.GrapeRed
 import com.gsynk.app.ui.theme.GrapeViolet
 import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
+import com.gsynk.app.ui.theme.TileBrush
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 /**
- * «Grape Link» — связка двух телефонов касанием.
+ * Grape Link — обмен данными по NFC.
  *
- * Один телефон держит приём и читает метку, второй работает самой меткой:
- * в Android 16 Beam убрали, поэтому GSYNK отдаёт данные через HCE (см. NdefHceService).
+ * Ключевое отличие от версии 2.0: приём идёт через [NfcReader] — сначала системный
+ * NDEF, затем чтение файла NDEF через APDU (Type 4). Именно это лечит прежнюю
+ * ошибку «метка подключена, а данных нет». Каждое удачное касание сопровождается
+ * тяжёлой анимацией вспышки у фронтальной камеры.
  */
 @Composable
 fun NfcLinkScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val activity = remember(context) { context.findActivity() }
+    val activity = context as? Activity
+    val scope = rememberCoroutineScope()
     val adapter = remember(context) { runCatching { NfcAdapter.getDefaultAdapter(context) }.getOrNull() }
+    val burst = remember(context) { NfcBurstOverlay(context) }
 
-    var mode by remember { mutableStateOf("receive") }
+    var mode by remember { mutableIntStateOf(0) } // 0 передать, 1 принять, 2 дуэль
     var kind by remember { mutableStateOf(NfcLink.KIND_TEXT) }
-    var title by remember { mutableStateOf("Привет от GSYNK") }
+    var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
-    var received by remember { mutableStateOf<NfcLink.Payload?>(null) }
-    var receiving by remember { mutableStateOf(false) }
-    var celebrating by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
-    var duel by remember { mutableStateOf(false) }
+    var sending by remember { mutableStateOf(false) }
+    var received by remember { mutableStateOf<NfcLink.Payload?>(null) }
+    var duel by remember { mutableStateOf<NfcLink.GameInvite?>(null) }
+    var touches by remember { mutableIntStateOf(0) }
 
-    val handler = remember { Handler(Looper.getMainLooper()) }
-    val nfcOn = adapter != null && adapter.isEnabled
-
-    // приём: слушаем любые метки, пока экран открыт
-    DisposableEffect(activity, receiving) {
-        if (activity != null && adapter != null && receiving) {
-            val callback = NfcAdapter.ReaderCallback { tag ->
-                val payload = readTag(tag)
-                handler.post {
-                    if (payload != null) {
-                        received = payload
-                        celebrating = true
-                        status = "Получено по NFC"
-                    } else {
-                        status = "Метка есть, но данных GSYNK в ней нет"
-                    }
-                }
-            }
-            val flags = NfcAdapter.FLAG_READER_NFC_A or
-                NfcAdapter.FLAG_READER_NFC_B or
-                NfcAdapter.FLAG_READER_NFC_F or
-                NfcAdapter.FLAG_READER_NFC_V or
-                NfcAdapter.FLAG_READER_NFC_BARCODE
-            runCatching { adapter.enableReaderMode(activity, callback, flags, android.os.Bundle()) }
-            onDispose { runCatching { adapter.disableReaderMode(activity) } }
-        } else {
-            onDispose { }
+    LaunchedEffect(Unit) {
+        touches = withContext(Dispatchers.IO) {
+            RuleRepository(context).currentSettings().nfcTouches
         }
     }
 
-    // передача: телефон работает NDEF-меткой с нашими данными
-    DisposableEffect(mode, kind, title, body) {
-        if (mode == "send" && body.isNotBlank()) {
-            NdefHceService.store(
-                context,
-                NfcLink.buildMessage(NfcLink.Payload(kind, title, body), context.packageName)
-            )
-            // Просим систему отдавать NDEF именно нам: иначе Android спросит,
-            // каким приложением обслуживать метку, и касание сорвётся.
-            if (activity != null) {
-                runCatching {
-                    val emulation = android.nfc.cardemulation.CardEmulation.getInstance(adapter)
-                    emulation?.setPreferredService(
-                        activity,
-                        android.content.ComponentName(context, NdefHceService::class.java)
+    fun registerTouch() {
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                val repository = RuleRepository(context)
+                repository.saveSettings(
+                    repository.currentSettings().copy(nfcTouches = repository.currentSettings().nfcTouches + 1)
+                )
+            }
+            touches++
+        }
+    }
+
+    // ————— приём меток —————
+    DisposableEffect(activity, mode) {
+        val nfc = adapter
+        val callback = NfcAdapter.ReaderCallback { tag: Tag ->
+            val result = runCatching { NfcReader.read(tag) }.getOrElse { NfcReader.Result.Failed("ошибка чтения") }
+            activity?.runOnUiThread {
+                when (result) {
+                    is NfcReader.Result.Ok -> {
+                        val payload = NfcLink.parse(result.message)
+                        if (payload == null) {
+                            status = "Метка прочитана, но формат GSYNK не распознан"
+                        } else {
+                            received = payload
+                            burst.show(3_400L)
+                            AutomationActions.vibrate(context, 120L)
+                            registerTouch()
+                            duel = if (payload.kind == NfcLink.KIND_GAME) {
+                                NfcLink.parseGameInvite(payload.body)
+                            } else {
+                                null
+                            }
+                            status = "Получено: " + payload.title
+                        }
+                    }
+
+                    is NfcReader.Result.Failed -> {
+                        status = "Метка подключена, но данных нет: " + result.reason
+                    }
+                }
+            }
+        }
+        val flags = NfcAdapter.FLAG_READER_NFC_A or
+            NfcAdapter.FLAG_READER_NFC_B or
+            NfcAdapter.FLAG_READER_NFC_F or
+            NfcAdapter.FLAG_READER_NFC_V or
+            NfcAdapter.FLAG_READER_NFC_BARCODE
+        if (activity != null && nfc != null && (mode == 1 || mode == 2)) {
+            runCatching { nfc.enableReaderMode(activity, callback, flags, android.os.Bundle()) }
+        }
+        onDispose {
+            if (activity != null && nfc != null) runCatching { nfc.disableReaderMode(activity) }
+        }
+    }
+
+    fun prepareTransfer(payload: NfcLink.Payload) {
+        sending = true
+        val message = NfcLink.buildMessage(payload, context.packageName)
+        NdefHceService.store(context, message)
+        NdefHceService.setEnabled(context, true)
+        status = "Готово. Приложите второй телефон к задней панели — и держите до вспышки."
+        burst.show(2_600L)
+    }
+
+    GrapeScreen(
+        title = "Grape Link",
+        subtitle = "касаний: $touches • NFC ${if (adapter == null) "не найден" else "готов"}",
+        onBack = onBack
+    ) {
+        // ————— состояние NFC —————
+        SurfaceCard(
+            borderColor = when {
+                adapter == null -> GrapeRed.copy(alpha = 0.5f)
+                adapter.isEnabled -> GrapeGreen.copy(alpha = 0.45f)
+                else -> GrapeViolet.copy(alpha = 0.5f)
+            }
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = when {
+                            adapter == null -> "NFC не поддерживается"
+                            adapter.isEnabled -> "NFC включён"
+                            else -> "NFC выключен"
+                        },
+                        color = TextPrimary,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Анимация подключения появляется у фронтальной камеры",
+                        color = TextDim,
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
-            }
-            onDispose {
-                if (activity != null) {
-                    runCatching {
-                        android.nfc.cardemulation.CardEmulation.getInstance(adapter)
-                            ?.unsetPreferredService(activity)
-                    }
-                }
-                NdefHceService.clear(context)
-            }
-        } else {
-            onDispose { }
-        }
-    }
-
-    if (duel) {
-        NfcDuel(
-            opponent = received?.let { NfcLink.parseGameInvite(it.body) },
-            onCancel = { duel = false },
-            onStoreResult = { score ->
-                mode = "send"
-                kind = NfcLink.KIND_GAME
-                title = "Дуэль GSYNK"
-                body = "плитки-tap;${android.os.Build.MODEL ?: "GSYNK"};$score"
-                duel = false
-                status = "Результат готов: приложите телефон к сопернику"
-            }
-        )
-        return
-    }
-
-    GrapeScreen(title = "Grape Link", onBack = onBack) {
-        SurfaceCard(corner = 22.dp) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = when {
-                        adapter == null -> "NFC недоступен"
-                        nfcOn -> "NFC включён"
-                        else -> "NFC выключен"
-                    },
-                    color = if (nfcOn) GrapeGreen else TextSecondary,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.weight(1f))
                 if (adapter != null && !adapter.isEnabled) {
-                    SmallChip("Включить NFC") {
+                    SortChip(label = "Включить", selected = false) {
                         runCatching { context.startActivity(NfcLink.openNfcSettingsIntent()) }
                     }
                 }
             }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = "Один телефон прикладывается к другому: первый отдаёт данные как метка, " +
-                    "второй их читает. Так передаются текст, ссылки и вызовы в игру. " +
-                    "Большие файлы по NFC физически не пройдут — для них нужен Wi-Fi Direct.",
-                color = TextDim,
-                style = MaterialTheme.typography.labelSmall
-            )
-
-            Spacer(Modifier.height(14.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallChip("Принимаю", selected = mode == "receive") {
-                    mode = "receive"
-                    receiving = true
-                    status = "Жду касания…"
-                }
-                SmallChip("Передаю", selected = mode == "send") {
-                    mode = "send"
-                    receiving = false
-                    if (NdefHceService.hasPayload(context)) {
-                        status = "Готово: приложите телефон к сопернику"
-                    } else {
-                        status = "Заполните данные ниже"
-                    }
-                }
-            }
         }
 
-        Spacer(Modifier.height(14.dp))
+        // ————— режимы —————
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            SortChip("Передать", mode == 0) { mode = 0 }
+            SortChip("Принять", mode == 1) { mode = 1 }
+            SortChip("Дуэль", mode == 2) { mode = 2 }
+        }
 
-        if (mode == "send") {
-            SurfaceCard(corner = 22.dp) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SmallChip("Текст", selected = kind == NfcLink.KIND_TEXT) { kind = NfcLink.KIND_TEXT }
-                    SmallChip("Ссылка", selected = kind == NfcLink.KIND_URL) { kind = NfcLink.KIND_URL }
-                    SmallChip("Визитка", selected = kind == NfcLink.KIND_CONTACT) { kind = NfcLink.KIND_CONTACT }
+        when (mode) {
+            0 -> {
+                Spacer(Modifier.height(14.dp))
+                SectionTitle("Что передаём")
+                Spacer(Modifier.height(9.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    NfcLink.TRANSFER_KINDS.chunked(2).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            row.forEach { option ->
+                                SortChip(
+                                    label = option.title,
+                                    selected = kind == option.kind
+                                ) {
+                                    kind = option.kind
+                                    when (option.kind) {
+                                        NfcLink.KIND_PASSWORD -> {
+                                            title = "Пароль"
+                                            body = com.gsynk.app.core.Passwords.generate()
+                                        }
+
+                                        NfcLink.KIND_PROFILE -> {
+                                            title = "Профиль GSYNK"
+                                            body = ""
+                                        }
+
+                                        NfcLink.KIND_GAME -> {
+                                            title = "Дуэль"
+                                            body = ""
+                                        }
+
+                                        else -> {
+                                            title = ""
+                                            body = ""
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                Spacer(Modifier.height(12.dp))
-                GrapeTextField(
-                    value = title,
-                    onValueChange = { title = it.take(60) },
-                    label = "Заголовок"
-                )
-                Spacer(Modifier.height(10.dp))
-                GrapeTextField(
-                    value = body,
-                    onValueChange = { body = it.take(600) },
-                    label = when (kind) {
-                        NfcLink.KIND_URL -> "Ссылка: https://…"
-                        NfcLink.KIND_CONTACT -> "Телефон и имя: +7… Иванов"
-                        else -> "Текст для передачи"
-                    },
-                    singleLine = false
-                )
-                Spacer(Modifier.height(12.dp))
-                PrimaryButton(
-                    text = "Готов держать",
-                    onClick = { status = "Теперь коснитесь этим телефоном второго" },
-                    enabled = body.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Держите экран включённым: телефон отдаёт данные, пока приложение открыто.",
-                    color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-        } else {
-            SurfaceCard(corner = 22.dp) {
-                Text(
-                    text = if (receiving) "Приём включён" else "Включите приём",
-                    color = TextPrimary,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = "Приложите телефон к чужой метке или к телефону с открытой передачей GSYNK.",
-                    color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
-                )
-                if (!receiving) {
-                    Spacer(Modifier.height(12.dp))
+
+                Spacer(Modifier.height(14.dp))
+                SurfaceCard {
+                    Text(
+                        text = NfcLink.option(kind).hint,
+                        color = GrapeVioletSoft,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    if (kind != NfcLink.KIND_PROFILE && kind != NfcLink.KIND_GAME) {
+                        GrapeTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            label = "Заголовок (необязательно)"
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        GrapeTextField(
+                            value = body,
+                            onValueChange = { body = it },
+                            label = "Содержимое",
+                            singleLine = false
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    } else if (kind == NfcLink.KIND_PROFILE) {
+                        Text(
+                            text = "Правила расписания уедут целиком — второй телефон импортирует их одним касанием.",
+                            color = TextDim,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    } else {
+                        Text(
+                            text = "Вызов: второй телефон получит приглашение и сразу начнёт дуэль на реакцию.",
+                            color = TextDim,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
+
                     PrimaryButton(
-                        text = "Принимаю",
+                        text = if (sending) "Обновить передачу" else "Включить передачу",
                         onClick = {
-                            receiving = true
-                            status = "Жду касания…"
+                            if (kind == NfcLink.KIND_PROFILE) {
+                                scope.launch {
+                                    val rulesPayload = withContext(Dispatchers.IO) { profilePayload(context) }
+                                    prepareTransfer(
+                                        NfcLink.Payload(
+                                            kind,
+                                            title.ifBlank { NfcLink.option(kind).title },
+                                            rulesPayload
+                                        )
+                                    )
+                                }
+                            } else {
+                                val finalBody = if (kind == NfcLink.KIND_GAME) "" else body
+                                prepareTransfer(
+                                    NfcLink.Payload(kind, title.ifBlank { NfcLink.option(kind).title }, finalBody)
+                                )
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    if (sending) {
+                        Spacer(Modifier.height(10.dp))
+                        SecondaryButton(
+                            text = "Выключить передачу",
+                            onClick = {
+                                sending = false
+                                NdefHceService.setEnabled(context, false)
+                                NdefHceService.clear(context)
+                                status = "Передача выключена"
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
-                Spacer(Modifier.height(10.dp))
-                SecondaryButton(
-                    text = "Дуэль по касанию",
-                    onClick = { duel = true },
-                    modifier = Modifier.fillMaxWidth()
+
+                Spacer(Modifier.height(12.dp))
+                SurfaceCard {
+                    Text("Что уходит по NFC", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(6.dp))
+                    NfcLink.TRANSFER_KINDS.forEach { option ->
+                        InfoRow(option.title, option.hint)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Ограничение протокола: до ~800 байт на касание. Фотографии, музыка " +
+                            "и большие файлы по NFC не передаются — для них нужен Wi-Fi Direct.",
+                        color = TextDim,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
+
+            1 -> {
+                Spacer(Modifier.height(14.dp))
+                SurfaceCard(borderColor = GrapeCyan.copy(alpha = 0.45f)) {
+                    Text("Режим приёма включён", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Приложите телефон к метке или ко второму телефону с включённой передачей. " +
+                            "Держите, пока не появится вспышка у камеры.",
+                        color = TextDim,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
+                if (received != null) {
+                    Spacer(Modifier.height(12.dp))
+                    ReceivedCard(
+                        payload = received!!,
+                        onImported = { status = it }
+                    )
+                }
+            }
+
+            else -> {
+                Spacer(Modifier.height(14.dp))
+                DuelPanel(
+                    invite = duel,
+                    onInviteOpponent = {
+                        val invite = NfcLink.GameInvite("reaction", android.os.Build.MODEL ?: "GSYNK", Random.nextLong())
+                        prepareTransfer(
+                            NfcLink.Payload(NfcLink.KIND_GAME, "Дуэль", "${invite.game};${invite.from};${invite.seed}")
+                        )
+                    },
+                    onWin = {
+                        scope.launch {
+                            withContext(Dispatchers.IO) { GameScores(context).saveWin() }
+                            status = "Победа записана!"
+                        }
+                    }
                 )
             }
         }
 
         if (status.isNotBlank()) {
             Spacer(Modifier.height(12.dp))
-            Text(status, color = GrapeVioletSoft, style = MaterialTheme.typography.labelMedium)
-        }
-
-        val data = received
-        if (data != null) {
-            Spacer(Modifier.height(12.dp))
-            SurfaceCard(corner = 22.dp) {
-                Text("Получено", color = GrapeGreen, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
-                Text(data.title.ifBlank { "Без заголовка" }, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
-                Spacer(Modifier.height(4.dp))
-                Text(data.body, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
-
-                val invite = if (data.kind == NfcLink.KIND_GAME) NfcLink.parseGameInvite(data.body) else null
-                if (invite != null) {
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = "Вызов от «${invite.from}» • результат соперника: ${invite.seed}",
-                        color = GrapeGreenSoft,
-                        style = MaterialTheme.typography.labelMedium
+            SurfaceCard(borderColor = CardBorder) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(GrapeGreen)
                     )
-                    Spacer(Modifier.height(10.dp))
-                    PrimaryButton(
-                        text = "Ответить вызовом",
-                        onClick = { duel = true },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Spacer(Modifier.width(9.dp))
+                    Text(status, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
 
-        Spacer(Modifier.height(24.dp))
-        SecondaryButton(text = "Назад", onClick = onBack, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(12.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(TileBrush.Cyan)
+                .clickable { burst.show(3_400L) },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Показать анимацию подключения",
+                color = Color(0xFF06283A),
+                style = MaterialTheme.typography.titleSmall
+            )
+        }
     }
 
-    if (celebrating) {
-        LiquidGlassLink(onDone = { celebrating = false })
+    DisposableEffect(Unit) {
+        onDispose { burst.hide() }
     }
 }
 
-// ————————————————————————————————————————————————
-//  Мини-дуэль: кто быстрее нащёлкает 20 плиток
-// ————————————————————————————————————————————————
-
+/** Карточка полученных данных: у каждого типа своё действие. */
 @Composable
-private fun NfcDuel(
-    opponent: NfcLink.GameInvite?,
-    onCancel: () -> Unit,
-    onStoreResult: (Long) -> Unit
-) {
-    var started by remember { mutableStateOf(false) }
-    var finished by remember { mutableStateOf(false) }
-    var hits by remember { mutableIntStateOf(0) }
-    var startedAt by remember { mutableLongStateOf(0L) }
-    var result by remember { mutableLongStateOf(0L) }
+private fun ReceivedCard(payload: NfcLink.Payload, onImported: (String) -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    GrapeScreen(title = "Дуэль по касанию", onBack = onCancel) {
-        SurfaceCard(corner = 22.dp) {
-            Text(
-                text = if (opponent != null) {
-                    "Соперник: ${opponent.from} • ${opponent.seed} мс"
-                } else {
-                    "Соревнование без соперника: сыграйте и передайте свой результат касанием."
-                },
-                color = if (opponent != null) GrapeGreenSoft else TextSecondary,
-                style = MaterialTheme.typography.labelMedium
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Правило: быстрее всех нажать 20 плиток. Время пойдёт с первого касания.",
-                color = TextDim,
-                style = MaterialTheme.typography.labelSmall
-            )
+    SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.5f)) {
+        Text(payload.title.ifBlank { "Без названия" }, color = TextPrimary, style = MaterialTheme.typography.titleLarge)
+        Text(NfcLink.describe(payload), color = GrapeGreenSoft, style = MaterialTheme.typography.labelSmall)
+        Spacer(Modifier.height(10.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF0B0714))
+                .border(1.dp, ChipBorder, RoundedCornerShape(16.dp))
+                .padding(12.dp)
+        ) {
+            Text(payload.body.ifBlank { "—" }, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
         }
+        Spacer(Modifier.height(12.dp))
 
-        Spacer(Modifier.height(14.dp))
-
-        if (!started) {
-            PrimaryButton(
-                text = "Начать",
+        when (payload.kind) {
+            NfcLink.KIND_URL -> PrimaryButton(
+                text = "Открыть ссылку",
                 onClick = {
-                    started = true
-                    finished = false
-                    hits = 0
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(payload.body))
+                        )
+                    }
+                    onImported("Ссылка открыта")
                 },
                 modifier = Modifier.fillMaxWidth()
             )
-        } else if (!finished) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(20) { index ->
-                    Box(
-                        Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (index % 3 == 0) GrapeViolet else GrapeGreen)
-                            .clickable {
-                                if (hits == 0) startedAt = System.currentTimeMillis()
-                                hits += 1
-                                if (hits >= 20) {
-                                    result = System.currentTimeMillis() - startedAt
-                                    finished = true
-                                }
-                            }
-                    )
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Text("Нажато: $hits / 20", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
-        } else {
-            SurfaceCard(corner = 22.dp) {
-                Text("Ваше время: $result мс", color = TextPrimary, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                val opponentScore = opponent?.seed ?: 0L
-                if (opponentScore > 0) {
-                    Spacer(Modifier.height(6.dp))
-                    val win = result < opponentScore
-                    Text(
-                        text = if (win) "Победа! Соперник: $opponentScore мс" else "В этот раз быстрее был соперник: $opponentScore мс",
-                        color = if (win) GrapeGreen else TextSecondary,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                PrimaryButton(
-                    text = "Передать результат касанием",
-                    onClick = { onStoreResult(result) },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
-                SecondaryButton(text = "Заново", onClick = {
-                    started = false
-                    finished = false
-                    hits = 0
-                }, modifier = Modifier.fillMaxWidth())
-            }
+
+            NfcLink.KIND_CONTACT -> PrimaryButton(
+                text = "Добавить контакт",
+                onClick = {
+                    val parts = payload.body.split("|")
+                    val intent = android.content.Intent(android.content.Intent.ACTION_INSERT).apply {
+                        type = android.provider.ContactsContract.Contacts.CONTENT_TYPE
+                        putExtra(android.provider.ContactsContract.Intents.Insert.NAME, parts.getOrNull(0))
+                        putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, parts.getOrNull(1))
+                    }
+                    runCatching { context.startActivity(intent) }
+                    onImported("Открыл карточку контакта")
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            NfcLink.KIND_GEO -> PrimaryButton(
+                text = "Показать на карте",
+                onClick = {
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("geo:" + payload.body + "?q=" + payload.body)
+                            )
+                        )
+                    }
+                    onImported("Координаты открыты")
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            NfcLink.KIND_PASSWORD -> PrimaryButton(
+                text = "Скопировать пароль",
+                onClick = {
+                    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("GSYNK", payload.body))
+                    onImported("Пароль в буфере обмена")
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            NfcLink.KIND_PROFILE -> PrimaryButton(
+                text = "Импортировать правила",
+                onClick = {
+                    scope.launch {
+                        val count = withContext(Dispatchers.IO) {
+                            runCatching {
+                                val repository = RuleRepository(context)
+                                val incoming = com.gsynk.app.core.PayloadCodec.decodeRules(payload.body)
+                                if (incoming.isEmpty()) return@runCatching 0
+                                val existing = repository.currentRules()
+                                val merged = (existing + incoming.filterNot { new ->
+                                    existing.any { it.id == new.id }
+                                })
+                                repository.saveRules(merged)
+                                incoming.size
+                            }.getOrDefault(0)
+                        }
+                        onImported(if (count > 0) "Добавлено правил: $count" else "Не удалось разобрать профиль")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            else -> PrimaryButton(
+                text = "Скопировать текст",
+                onClick = {
+                    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("GSYNK", payload.body))
+                    onImported("Скопировано")
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
 
-/** Чтение NDEF-сообщения с метки или с чужого телефона. */
-private fun readTag(tag: Tag): NfcLink.Payload? {
-    val ndef = runCatching { android.nfc.tech.Ndef.get(tag) }.getOrNull() ?: return null
-    runCatching { ndef.cachedNdefMessage }.getOrNull()?.let { cached ->
-        NfcLink.parse(cached)?.let { return it }
-    }
-    return runCatching {
-        ndef.connect()
-        val message: NdefMessage? = ndef.ndefMessage
-        ndef.close()
-        NfcLink.parse(message)
-    }.getOrNull()
-}
-
-/**
- * Анимация соединения: жидкое стекло — цветные потоки света расходятся волнами
- * от точки касания и медленно растворяются.
- */
+/** Дуэль на реакцию: сначала приглашение, затем две кнопки-попытки. */
 @Composable
-fun LiquidGlassLink(onDone: () -> Unit) {
-    val transition = rememberInfiniteTransition(label = "liquid")
-    val flow by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart),
-        label = "flow"
-    )
-    var closing by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        delay(1800)
-        closing = true
-        delay(400)
-        onDone()
-    }
-
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color(0xE60A0518))
-            .clickable { closing = true },
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val center = Offset(size.width / 2f, size.height / 2f)
-            val maxR = size.minDimension * 0.85f
-
-            repeat(3) { index ->
-                val phase = (flow + index * 0.33f) % 1f
-                val radius = maxR * phase
-                val alpha = ((1f - phase) * 0.55f).coerceIn(0f, 1f)
-                val hueShift = index * 90f
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            Color.hsv((265f + hueShift + phase * 40f) % 360f, 0.85f, 1f).copy(alpha = alpha * 0.55f),
-                            Color.hsv((140f + hueShift) % 360f, 0.75f, 0.95f).copy(alpha = alpha * 0.30f),
-                            Color.Transparent
-                        ),
-                        center = center,
-                        radius = radius.coerceAtLeast(1f)
-                    ),
-                    radius = radius.coerceAtLeast(1f),
-                    center = center
-                )
-            }
-
-            val ringRadius = size.minDimension * 0.18f * (1f + flow * 0.4f)
-            drawCircle(
-                color = Color.White.copy(alpha = 0.35f - flow * 0.25f),
-                radius = ringRadius,
-                center = center,
-                style = Stroke(width = 2.5f)
-            )
-
-            repeat(9) { i ->
-                val angle = (i / 9f) * 6.28f + flow * 6.28f
-                val r = size.minDimension * 0.42f
-                drawCircle(
-                    color = Color.White.copy(alpha = 0.16f),
-                    radius = 5f + (i % 3) * 3f,
-                    center = Offset(center.x + cos(angle) * r, center.y + sin(angle) * r)
-                )
-            }
-        }
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                "Связь установлена",
-                color = Color.White,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = if (closing) "завершаю…" else "Grape Link",
-                color = Color.White.copy(alpha = 0.72f),
-                style = MaterialTheme.typography.labelMedium
-            )
-        }
-    }
-}
-
-@Composable
-private fun SmallChip(label: String, selected: Boolean = false, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .clip(RoundedCornerShape(50))
-            .background(if (selected) GrapeViolet else CardBgAlt)
-            .border(1.dp, if (selected) Color.Transparent else ChipBorder, RoundedCornerShape(50))
-            .clickable { onClick() }
-            .padding(horizontal = 13.dp, vertical = 7.dp)
-    ) {
+private fun DuelPanel(
+    invite: NfcLink.GameInvite?,
+    onInviteOpponent: () -> Unit,
+    onWin: () -> Unit
+) {
+    SurfaceCard(borderColor = GrapeViolet.copy(alpha = 0.5f)) {
+        Text("Дуэль на реакцию", color = TextPrimary, style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(4.dp))
         Text(
-            text = label,
-            color = if (selected) Color(0xFF120720) else TextSecondary,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+            text = invite?.let { "Вызов от «${it.from}». Игра: реакция." }
+                ?: "Позовите друга одним касанием — телефон сам передаст вызов.",
+            color = if (invite != null) GrapeVioletSoft else TextDim,
+            style = MaterialTheme.typography.labelSmall
+        )
+        Spacer(Modifier.height(12.dp))
+        PrimaryButton(
+            text = if (invite == null) "Позвать в дуэль" else "Ответить вызовом",
+            onClick = onInviteOpponent,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+    var signalAt by remember { mutableStateOf(0L) }
+    var waiting by remember { mutableStateOf(false) }
+    var result by remember { mutableStateOf("") }
+
+    fun start() {
+        waiting = true
+        result = ""
+        // одинаковое зерно у обоих телефонов — сигнал наступает в один момент
+        signalAt = System.currentTimeMillis() + Random.nextInt(1500, 3500).toLong()
+    }
+
+    LaunchedEffect(waiting, signalAt) {
+        if (!waiting) return@LaunchedEffect
+        while (System.currentTimeMillis() < signalAt) delay(40)
+        if (waiting) result = "СИГНАЛ! Жмите!"
+    }
+
+    SurfaceCard {
+        Text("Ваша попытка", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(10.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    if (result.startsWith("Итог")) TileBrush.Green else TileBrush.Ink
+                )
+                .clickable {
+                    if (!waiting) {
+                        start()
+                    } else if (System.currentTimeMillis() < signalAt) {
+                        result = "Рано! Засчитано как промах"
+                        waiting = false
+                    } else {
+                        val ms = (System.currentTimeMillis() - signalAt).toInt()
+                        result = "Итог: $ms мс"
+                        waiting = false
+                        if (ms < 320) onWin()
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = when {
+                    !waiting && result.isEmpty() -> "Начать попытку"
+                    waiting && result.startsWith("СИГНАЛ") -> result
+                    else -> result.ifEmpty { "Ждите…" }
+                },
+                color = TextPrimary,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "Меньше 320 мс — победа, она сохраняется в рекорды. Соперник играет у себя: " +
+                "сигнал идёт от общей программы, поэтому результат сравнивается честно.",
+            color = TextDim,
+            style = MaterialTheme.typography.labelSmall
         )
     }
 }
 
-/** Находит Activity по цепочке ContextWrapper — нужна для reader-mode. */
-internal fun Context.findActivity(): Activity? {
-    var current: Context? = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
-}
+/** Сериализуем правила в компактную строку для передачи по NFC (вызывать из корутины). */
+private suspend fun profilePayload(context: android.content.Context): String = runCatching {
+    com.gsynk.app.core.PayloadCodec.encodeRules(
+        RuleRepository(context).currentRules()
+    )
+}.getOrDefault("")

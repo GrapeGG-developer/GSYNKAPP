@@ -1,27 +1,21 @@
 package com.gsynk.app.ui
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,6 +26,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,358 +35,536 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.gsynk.app.R
+import com.gsynk.app.core.GameScores
 import com.gsynk.app.ui.theme.CardBg
+import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBorder
-import com.gsynk.app.ui.theme.GrapeGradient
+import com.gsynk.app.ui.theme.GrapeCyan
 import com.gsynk.app.ui.theme.GrapeGreen
 import com.gsynk.app.ui.theme.GrapeGreenSoft
+import com.gsynk.app.ui.theme.GrapePink
 import com.gsynk.app.ui.theme.GrapeViolet
 import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
+import com.gsynk.app.ui.theme.TileBrush
 import kotlinx.coroutines.delay
-import kotlin.math.abs
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-/** Экран «Игры»: хаб с плитками + мини-игры. */
+/**
+ * Мини-игры 2.1 — три законченные игры со своими рекордами:
+ * «Реакция», «Память» (повтори последовательность) и «2048».
+ */
 @Composable
-fun GamesScreen(
-    bestSnake: Int,
-    bestReaction: Int,
-    onSaveSnake: (Int) -> Unit,
-    onSaveReaction: (Int) -> Unit,
-    onBack: () -> Unit
-) {
-    var game by remember { mutableStateOf<String?>(null) }
+fun GamesScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val scores = remember { GameScores(context) }
+    var open by remember { mutableStateOf<String?>(null) }
 
-    GrapeScreen(title = "Игры", onBack = onBack) {
-        when (game) {
-            "snake" -> SnakeGame(best = bestSnake, onSave = onSaveSnake, onExit = { game = null })
-            "reaction" -> ReactionGame(best = bestReaction, onSave = onSaveReaction, onExit = { game = null })
-            else -> {
-                TileRow {
-                    LiveTile(
-                        title = "Змейка",
-                        subtitle = "рекорд: $bestSnake",
-                        tint = TileTint.Green,
-                        liveText = "Играть",
-                        modifier = Modifier.weight(1f),
-                        onClick = { game = "snake" }
-                    )
-                    LiveTile(
-                        title = "Реакция",
-                        subtitle = if (bestReaction == 0) "нет рекорда" else "рекорд: $bestReaction мс",
-                        tint = TileTint.Violet,
-                        liveText = "Играть",
-                        modifier = Modifier.weight(1f),
-                        onClick = { game = "reaction" }
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                TileRow {
-                    LiveTile(
-                        title = "NFC-дуэль",
-                        subtitle = "два телефона касанием",
-                        tint = TileTint.Dark,
-                        badge = "скоро",
-                        liveText = "В разработке",
-                        modifier = Modifier.weight(1f),
-                        onClick = { }
-                    )
-                    LiveTile(
-                        title = "Остров-тир",
-                        subtitle = "стрельба по плиткам",
-                        tint = TileTint.Dark,
-                        badge = "идея",
-                        liveText = "В планах",
-                        modifier = Modifier.weight(1f),
-                        onClick = { }
-                    )
-                }
-            }
+    val reactionFlow = remember { scores.reaction }
+    val memoryFlow = remember { scores.memory }
+    val tilesFlow = remember { scores.tiles }
+    var bestReaction by remember { mutableIntStateOf(0) }
+    var bestMemory by remember { mutableIntStateOf(0) }
+    var bestTiles by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        launch { reactionFlow.collect { bestReaction = it } }
+        launch { memoryFlow.collect { bestMemory = it } }
+        launch { tilesFlow.collect { bestTiles = it } }
+    }
+
+    when (open) {
+        "reaction" -> ReactionGame(scores) { open = null }
+        "memory" -> MemoryGame(scores) { open = null }
+        "tiles" -> TilesGame(scores) { open = null }
+    }
+    if (open != null) return
+
+    GrapeScreen(title = "Мини-игры", subtitle = "рекорды сохраняются на телефоне", onBack = onBack) {
+        LiveTile(
+            title = "Реакция",
+            subtitle = "насколько быстрая рука",
+            brush = TileBrush.Cyan,
+            iconRes = R.drawable.ic_bolt,
+            liveText = if (bestReaction > 0) "рекорд $bestReaction мс" else "ещё не играли",
+            height = 104.dp,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { open = "reaction" }
+        )
+        Spacer(Modifier.height(12.dp))
+        LiveTile(
+            title = "Память",
+            subtitle = "повтори последовательность",
+            brush = TileBrush.Violet,
+            iconRes = R.drawable.ic_shield,
+            liveText = if (bestMemory > 0) "уровень $bestMemory" else "ещё не играли",
+            height = 104.dp,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { open = "memory" }
+        )
+        Spacer(Modifier.height(12.dp))
+        LiveTile(
+            title = "2048",
+            subtitle = "складывайте плитки свайпами",
+            brush = TileBrush.Amber,
+            iconRes = R.drawable.ic_schedule,
+            liveText = if (bestTiles > 0) "рекорд $bestTiles" else "ещё не играли",
+            height = 104.dp,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { open = "tiles" }
+        )
+        Spacer(Modifier.height(14.dp))
+        SurfaceCard {
+            Text(
+                text = "Рекорды попадают на остров и в главный экран — можно мериться с друзьями " +
+                    "через Grape Link.",
+                color = TextDim,
+                style = MaterialTheme.typography.labelSmall
+            )
         }
     }
 }
 
 // ————————————————————————————————————————————————
-//  Змейка на плитках
+//  1. Реакция: ждём смену цвета и жмём как можно быстрее
 // ————————————————————————————————————————————————
 
 @Composable
-private fun SnakeGame(best: Int, onSave: (Int) -> Unit, onExit: () -> Unit) {
+private fun ReactionGame(scores: GameScores, onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
-    val size = 14
+    var waiting by remember { mutableStateOf(false) }
+    var lit by remember { mutableStateOf(false) }
+    var startedAt by remember { mutableLongStateOf(0L) }
+    var lastMs by remember { mutableIntStateOf(0) }
+    var message by remember { mutableStateOf("Нажмите «Старт»") }
+    var rounds by remember { mutableIntStateOf(0) }
 
-    var snake by remember { mutableStateOf(listOf(7 to 7, 6 to 7, 5 to 7)) }
-    var food by remember { mutableStateOf(10 to 7) }
-    var dir by remember { mutableStateOf(1 to 0) } // вправо
-    var score by remember { mutableIntStateOf(0) }
-    var alive by remember { mutableStateOf(true) }
-    var speed by remember { mutableLongStateOf(320L) }
+    LaunchedEffect(waiting) {
+        if (!waiting) return@LaunchedEffect
+        lit = false
+        delay(Random.nextLong(1200L, 4200L))
+        startedAt = System.currentTimeMillis()
+        lit = true
+    }
 
-    LaunchedEffect(alive) {
-        while (alive) {
-            delay(speed)
-            val head = snake.first()
-            val next = (head.first + dir.first) to (head.second + dir.second)
-
-            val crashed = next.first !in 0 until size ||
-                next.second !in 0 until size ||
-                snake.dropLast(1).contains(next)
-
-            if (crashed) {
-                alive = false
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                onSave(score)
-                break
+    fun tap() {
+        when {
+            !waiting -> {
+                waiting = true
+                message = "Ждите зелёного…"
             }
 
-            snake = if (next == food) {
-                score += 1
-                speed = (speed - 6L).coerceAtLeast(140L)
-                var candidate: Pair<Int, Int>
-                do {
-                    candidate = Random.nextInt(size) to Random.nextInt(size)
-                } while (snake.contains(candidate))
-                food = candidate
-                listOf(next) + snake
-            } else {
-                listOf(next) + snake.dropLast(1)
+            waiting && !lit -> {
+                waiting = false
+                message = "Рано! Дождитесь цвета."
+            }
+
+            else -> {
+                val ms = (System.currentTimeMillis() - startedAt).toInt()
+                lastMs = ms
+                waiting = false
+                lit = false
+                rounds++
+                message = "$ms мс" + when {
+                    ms < 180 -> " — реакция киборга"
+                    ms < 260 -> " — отличный результат"
+                    ms < 350 -> " — хорошо"
+                    else -> " — можно быстрее"
+                }
+                scope.launch { scores.saveReaction(ms); scores.addPlayed() }
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             }
         }
     }
 
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Очки: $score", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.weight(1f))
-            Text("Рекорд: $best", color = TextDim, style = MaterialTheme.typography.labelMedium)
-        }
-        Spacer(Modifier.height(12.dp))
-
+    GrapeScreen(title = "Реакция", subtitle = "попыток: $rounds", onBack = onBack) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF120B22))
-                .border(1.dp, ChipBorder, RoundedCornerShape(20.dp))
-                .padding(8.dp)
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    when {
+                        lit -> TileBrush.Green
+                        waiting -> TileBrush.Ink
+                        else -> TileBrush.Violet
+                    }
+                )
+                .border(1.dp, ChipBorder, RoundedCornerShape(28.dp))
+                .clickable { tap() },
+            contentAlignment = Alignment.Center
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                for (y in 0 until size) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        for (x in 0 until size) {
-                            val isSnake = snake.contains(x to y)
-                            val isHead = snake.firstOrNull() == (x to y)
-                            val isFood = food == (x to y)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = when {
+                        lit -> "ЖМИ!"
+                        waiting -> "ждите…"
+                        lastMs > 0 -> "$lastMs мс"
+                        else -> "СТАРТ"
+                    },
+                    color = TextPrimary,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Light,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = if (waiting && !lit) "появится цвет — и сразу касание" else message,
+                    color = TextPrimary.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        SurfaceCard {
+            InfoRow("Последний результат", if (lastMs > 0) "$lastMs мс" else "—")
+            InfoRow("Человеческий предел", "≈150 мс")
+        }
+    }
+}
+
+// ————————————————————————————————————————————————
+//  2. Память: повтори растущую последовательность
+// ————————————————————————————————————————————————
+
+@Composable
+private fun MemoryGame(scores: GameScores, onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    val palette = listOf(TileBrush.Violet, TileBrush.Cyan, TileBrush.Green, TileBrush.Amber)
+
+    var sequence by remember { mutableStateOf(listOf<Int>()) }
+    var inputIndex by remember { mutableIntStateOf(0) }
+    var showing by remember { mutableIntStateOf(-1) }
+    var level by remember { mutableIntStateOf(0) }
+    var busy by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf("Нажмите «Начать»") }
+
+    fun nextRound() {
+        scope.launch {
+            busy = true
+            val next = sequence + Random.nextInt(4)
+            sequence = next
+            inputIndex = 0
+            level = next.size
+            status = "Смотрите…"
+            delay(420)
+            next.forEach { pad ->
+                showing = pad
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                delay(420)
+                showing = -1
+                delay(180)
+            }
+            status = "Ваш ход: ${next.size} шагов"
+            busy = false
+        }
+    }
+
+    fun press(pad: Int) {
+        if (busy) return
+        if (sequence.isEmpty()) {
+            nextRound()
+            return
+        }
+        showing = pad
+        scope.launch {
+            delay(160)
+            showing = -1
+        }
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        if (sequence.getOrNull(inputIndex) == pad) {
+            inputIndex++
+            if (inputIndex == sequence.size) {
+                scope.launch {
+                    scores.saveMemory(level)
+                    scores.addPlayed()
+                    status = "Верно! Уровень ${level + 1}"
+                    nextRound()
+                }
+            }
+        } else {
+            scope.launch {
+                status = "Ошибка. Дошли до уровня $level"
+                sequence = emptyList()
+                inputIndex = 0
+                if (level > 0) scores.saveMemory(level)
+                level = 0
+            }
+        }
+    }
+
+    GrapeScreen(title = "Память", subtitle = "уровень $level", onBack = onBack) {
+        Text(status, color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            repeat(2) { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    repeat(2) { column ->
+                        val pad = row * 2 + column
+                        val active = showing == pad
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(if (active) palette[pad] else TileBrush.Ink)
+                                .border(
+                                    1.dp,
+                                    if (active) Color.White.copy(alpha = 0.5f) else ChipBorder,
+                                    RoundedCornerShape(24.dp)
+                                )
+                                .clickable { press(pad) }
+                        )
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PrimaryButton(
+                text = if (sequence.isEmpty()) "Начать" else "Заново",
+                onClick = {
+                    sequence = emptyList()
+                    level = 0
+                    inputIndex = 0
+                    nextRound()
+                },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+// ————————————————————————————————————————————————
+//  3. 2048: складываем плитки свайпами
+// ————————————————————————————————————————————————
+
+private fun mergeLine(line: List<Int>): Pair<List<Int>, Int> {
+    val compact = line.filter { it != 0 }
+    val result = mutableListOf<Int>()
+    var gained = 0
+    var index = 0
+    while (index < compact.size) {
+        if (index + 1 < compact.size && compact[index] == compact[index + 1]) {
+            val merged = compact[index] * 2
+            result.add(merged)
+            gained += merged
+            index += 2
+        } else {
+            result.add(compact[index])
+            index++
+        }
+    }
+    while (result.size < 4) result.add(0)
+    return result to gained
+}
+
+private fun move(board: List<Int>, direction: Int): Pair<List<Int>, Int> {
+    // direction: 0 влево, 1 вправо, 2 вверх, 3 вниз
+    val grid = board.toMutableList()
+    var gained = 0
+    repeat(4) { line ->
+        val cells = when (direction) {
+            0, 1 -> (0 until 4).map { grid[line * 4 + it] }
+            else -> (0 until 4).map { grid[it * 4 + line] }
+        }
+        val oriented = if (direction == 1 || direction == 3) cells.reversed() else cells
+        val (merged, gain) = mergeLine(oriented)
+        gained += gain
+        val back = if (direction == 1 || direction == 3) merged.reversed() else merged
+        repeat(4) { position ->
+            if (direction == 0 || direction == 1) {
+                grid[line * 4 + position] = back[position]
+            } else {
+                grid[position * 4 + line] = back[position]
+            }
+        }
+    }
+    return grid to gained
+}
+
+private fun spawnTile(board: List<Int>): List<Int> {
+    val empty = board.indices.filter { board[it] == 0 }
+    if (empty.isEmpty()) return board
+    val target = empty.random()
+    val next = board.toMutableList()
+    next[target] = if (Random.nextInt(10) == 0) 4 else 2
+    return next
+}
+
+@Composable
+private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    var board by remember { mutableStateOf(spawnTile(spawnTile(List(16) { 0 }))) }
+    var score by remember { mutableIntStateOf(0) }
+    var best by remember { mutableIntStateOf(0) }
+    var over by remember { mutableStateOf(false) }
+    var dragSum by remember { mutableStateOf(0f to 0f) }
+
+    LaunchedEffect(Unit) {
+        scores.tiles.collect { best = it }
+    }
+
+    fun slide(direction: Int) {
+        if (over) return
+        val (moved, gained) = move(board, direction)
+        if (moved == board) return
+        val withTile = spawnTile(moved)
+        board = withTile
+        score += gained
+        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        scope.launch { scores.saveTiles(score) }
+        val stuck = (0..3).all { directionIndex ->
+            move(withTile, directionIndex).first == withTile
+        }
+        if (stuck) {
+            over = true
+            scope.launch { scores.saveTiles(score); scores.addPlayed() }
+        }
+    }
+
+    fun tileColor(value: Int): Brush = when {
+        value == 0 -> TileBrush.Ink
+        value <= 4 -> TileBrush.Blue
+        value <= 16 -> TileBrush.Cyan
+        value <= 64 -> TileBrush.Green
+        value <= 256 -> TileBrush.Amber
+        else -> TileBrush.Pink
+    }
+
+    GrapeScreen(title = "2048", subtitle = "счёт $score • рекорд $best", onBack = onBack) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(24.dp))
+                .background(CardBg)
+                .border(1.dp, CardBorder, RoundedCornerShape(24.dp))
+                .padding(8.dp)
+                .pointerInput(over) {
+                    detectDragGestures(
+                        onDragEnd = {
+                            val (dx, dy) = dragSum
+                            if (dx * dx + dy * dy > 3600f) {
+                                slide(
+                                    if (kotlin.math.abs(dx) > kotlin.math.abs(dy)) {
+                                        if (dx > 0) 1 else 0
+                                    } else {
+                                        if (dy > 0) 3 else 2
+                                    }
+                                )
+                            }
+                            dragSum = 0f to 0f
+                        },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            dragSum = (dragSum.first + amount.x) to (dragSum.second + amount.y)
+                        }
+                    )
+                }
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(4) { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        repeat(4) { column ->
+                            val value = board[row * 4 + column]
+                            val appear = remember(value) { Animatable(if (value == 0) 0.94f else 1f) }
+                            LaunchedEffect(value) {
+                                if (value != 0) {
+                                    appear.snapTo(0.86f)
+                                    appear.animateTo(1f, tween(140))
+                                }
+                            }
                             Box(
                                 Modifier
                                     .weight(1f)
-                                    .height(18.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(
-                                        when {
-                                            isHead -> GrapeGreen
-                                            isSnake -> GrapeGreenSoft.copy(alpha = 0.75f)
-                                            isFood -> GrapeViolet
-                                            else -> Color.White.copy(alpha = 0.04f)
-                                        }
+                                    .aspectRatio(1f)
+                                    .scale(appear.value)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(tileColor(value)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (value != 0) {
+                                    Text(
+                                        text = value.toString(),
+                                        color = TextPrimary,
+                                        style = if (value < 1000) {
+                                            MaterialTheme.typography.headlineSmall
+                                        } else {
+                                            MaterialTheme.typography.titleMedium
+                                        },
+                                        fontWeight = FontWeight.Medium
                                     )
-                            )
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Spacer(Modifier.height(14.dp))
-
-        if (alive) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                DpadButton("▲") { if (dir != 0 to 1) dir = 0 to -1 }
-                Row {
-                    DpadButton("◀") { if (dir != 1 to 0) dir = -1 to 0 }
-                    Spacer(Modifier.width(56.dp))
-                    DpadButton("▶") { if (dir != -1 to 0) dir = 1 to 0 }
+            if (over) {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xE60B0714))
+                        .clickable {
+                            board = spawnTile(spawnTile(List(16) { 0 }))
+                            score = 0
+                            over = false
+                        },
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Ходов нет", color = TextPrimary, style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(6.dp))
+                    Text("Счёт $score • нажмите для новой игры", color = TextDim, style = MaterialTheme.typography.labelSmall)
                 }
-                DpadButton("▼") { if (dir != 0 to -1) dir = 0 to 1 }
-            }
-        } else {
-            SurfaceCard {
-                Text("Игра окончена — очки $score", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(10.dp))
-                PrimaryButton(
-                    text = "Заново",
-                    onClick = {
-                        snake = listOf(7 to 7, 6 to 7, 5 to 7)
-                        food = 10 to 7
-                        dir = 1 to 0
-                        score = 0
-                        speed = 320L
-                        alive = true
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         }
-        Spacer(Modifier.height(10.dp))
-        SecondaryButton(text = "К играм", onClick = onExit, modifier = Modifier.fillMaxWidth())
-    }
-}
 
-@Composable
-private fun DpadButton(label: String, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .size(56.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1C1430))
-            .border(1.dp, ChipBorder, RoundedCornerShape(16.dp))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(label, color = GrapeVioletSoft, style = MaterialTheme.typography.titleLarge)
-    }
-}
-
-// ————————————————————————————————————————————————
-//  Проверка реакции
-// ————————————————————————————————————————————————
-
-@Composable
-private fun ReactionGame(best: Int, onSave: (Int) -> Unit, onExit: () -> Unit) {
-    var phase by remember { mutableIntStateOf(0) } // 0 ждём, 1 готов, 2 рано, 3 результат
-    var startAt by remember { mutableLongStateOf(0L) }
-    var result by remember { mutableIntStateOf(0) }
-
-    val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.04f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(700, easing = LinearEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        ),
-        label = "reactionPulse"
-    )
-
-    LaunchedEffect(phase) {
-        if (phase == 1) {
-            val wait = Random.nextLong(900, 3200)
-            delay(wait)
-            if (phase == 1) {
-                startAt = System.currentTimeMillis()
-                phase = 2
-            }
-        }
-    }
-
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Рекорд: ${if (best == 0) "—" else "$best мс"}", color = TextDim, style = MaterialTheme.typography.labelMedium)
         Spacer(Modifier.height(12.dp))
-
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(260.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(
-                    when (phase) {
-                        0 -> Brush.linearGradient(listOf(Color(0xFF1C1430), Color(0xFF241A3E)))
-                        1 -> Brush.linearGradient(listOf(Color(0xFF3B2668), Color(0xFF5B21B6)))
-                        2 -> Brush.linearGradient(listOf(GrapeGreen, GrapeViolet))
-                        else -> Brush.linearGradient(listOf(Color(0xFF166534), GrapeGreen))
-                    }
-                )
-                .border(1.dp, ChipBorder, RoundedCornerShape(24.dp))
-                .clickable {
-                    when (phase) {
-                        0 -> phase = 1
-                        1 -> {
-                            phase = 3
-                            result = 0
-                        }
-                        2 -> {
-                            val ms = (System.currentTimeMillis() - startAt).toInt()
-                            result = ms
-                            onSave(ms)
-                            phase = 3
-                        }
-                        else -> phase = 0
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = when (phase) {
-                    0 -> "Нажмите, чтобы начать"
-                    1 -> "Ждите зелёного…"
-                    2 -> "ЖМИ!"
-                    else -> if (result == 0) "Рано! Попробуйте снова" else "$result мс"
-                },
-                color = Color.White,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.scale(if (phase == 2) pulse else 1f)
+        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            SecondaryButton(
+                text = "Влево",
+                onClick = { slide(0) },
+                modifier = Modifier.weight(1f)
+            )
+            SecondaryButton(
+                text = "Вверх",
+                onClick = { slide(2) },
+                modifier = Modifier.weight(1f)
+            )
+            SecondaryButton(
+                text = "Вправо",
+                onClick = { slide(1) },
+                modifier = Modifier.weight(1f)
+            )
+            SecondaryButton(
+                text = "Вниз",
+                onClick = { slide(3) },
+                modifier = Modifier.weight(1f)
             )
         }
-
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(10.dp))
         Text(
-            text = when (phase) {
-                0 -> "Правило простое: как только поле станет зелёным — жмите как можно быстрее."
-                1 -> "Держите палец наготове."
-                2 -> "Сейчас!"
-                else -> if (result == 0) "Слишком рано." else "Отличный результат!"
-            },
-            color = TextSecondary,
-            style = MaterialTheme.typography.bodySmall
+            text = "Свайпайте по полю или пользуйтесь кнопками. Одинаковые плитки соединяются.",
+            color = TextDim,
+            style = MaterialTheme.typography.labelSmall
         )
-        Spacer(Modifier.height(14.dp))
-        SecondaryButton(text = "К играм", onClick = onExit, modifier = Modifier.fillMaxWidth())
-    }
-}
-
-/** Общая рамка полноэкранного раздела: фон, заголовок с кнопкой «назад». */
-@Composable
-fun GrapeScreen(
-    title: String,
-    onBack: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    AnimatedGrapeBackground {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-                .padding(top = 18.dp, bottom = 24.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(CardBg)
-                        .border(1.dp, ChipBorder, CircleShape)
-                        .clickable { onBack() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("←", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
-                }
-                Spacer(Modifier.width(12.dp))
-                GradientText(text = title, style = MaterialTheme.typography.headlineMedium, brush = GrapeGradient)
-            }
-            Spacer(Modifier.height(16.dp))
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                content()
-            }
-        }
     }
 }

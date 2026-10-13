@@ -8,250 +8,314 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.gsynk.app.R
-import com.gsynk.app.core.AppSettings
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gsynk.app.BuildConfig
 import com.gsynk.app.core.IslandPosition
+import com.gsynk.app.core.IslandWidget
+import com.gsynk.app.core.Permissions
 import com.gsynk.app.ui.theme.CardBg
-import com.gsynk.app.ui.theme.CardBgAlt
+import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBorder
-import com.gsynk.app.ui.theme.GrapeGreenSoft
+import com.gsynk.app.ui.theme.GrapeViolet
 import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
 
+/**
+ * Настройки: всё, что не относится к самим правилам.
+ *
+ * Панель открывается на весь экран и уважает вырезы: содержимое не залезает
+ * на строку состояния, а кнопка закрытия всегда на виду.
+ */
 @Composable
 fun SettingsSheet(
-    settings: AppSettings,
-    versionName: String,
-    overlayAllowed: Boolean,
+    vm: MainViewModel,
     onDismiss: () -> Unit,
-    onAutopilot: (Boolean) -> Unit,
-    onNotifications: (Boolean) -> Unit,
-    onIsland: (Boolean) -> Unit,
-    onIslandPosition: (Int) -> Unit,
-    onSyncAfterBoot: (Boolean) -> Unit,
-    onSyncNow: () -> Unit,
-    onRestoreAutoBrightness: () -> Unit,
-    onPreviewIsland: () -> Unit,
-    onOpenAutostart: () -> Unit,
-    onOpenOverlay: () -> Unit
+    onOpenTools: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = CardBg,
-        scrimColor = Color(0xE60A0514),
         dragHandle = null
     ) {
         Column(
             Modifier
+                .fillMaxWidth()
+                .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
                 .padding(horizontal = 18.dp)
-                .padding(top = 10.dp, bottom = 26.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { SheetGrabber() }
-
-            Spacer(Modifier.height(16.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp, bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column(Modifier.weight(1f)) {
-                    Text("Настройки", color = TextPrimary, style = MaterialTheme.typography.headlineSmall)
-                    Text("GSYNK $versionName", color = TextDim, style = MaterialTheme.typography.bodySmall)
+                    GradientText(
+                        text = "Настройки",
+                        style = MaterialTheme.typography.headlineMedium,
+                        brush = com.gsynk.app.ui.theme.GrapeGradient
+                    )
+                    Text(
+                        text = "GSYNK ${BuildConfig.VERSION_NAME}",
+                        color = TextDim,
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
                 Box(
                     Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(CardBgAlt)
-                        .border(1.dp, ChipBorder, CircleShape)
+                        .background(CardBorder)
                         .clickable { onDismiss() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = "Закрыть",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Text("✕", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
-
-            SwitchRow(
-                icon = ImageVector.vectorResource(R.drawable.ic_bolt),
+            // ————— автопилот и уведомления —————
+            SettingRow(
                 title = "Автопилот",
+                subtitle = "правила применяются сами по расписанию",
                 checked = settings.autopilot,
-                accent = GrapeGreenSoft,
-                onCheckedChange = onAutopilot
+                onChange = { vm.setAutopilot(it) }
             )
-            SwitchRow(
-                icon = Icons.Filled.Refresh,
-                title = "Уведомление при срабатывании",
+            SettingRow(
+                title = "Уведомления",
+                subtitle = "сообщения о сработавших правилах",
                 checked = settings.notifications,
-                accent = GrapeVioletSoft,
-                onCheckedChange = onNotifications
+                onChange = { vm.setNotifications(it) }
             )
-            SwitchRow(
-                icon = ImageVector.vectorResource(R.drawable.ic_shield),
-                title = "Мини-айленд поверх приложений",
-                checked = settings.islandEnabled,
-                accent = GrapeVioletSoft,
-                onCheckedChange = onIsland
-            )
-            SwitchRow(
-                icon = Icons.Filled.Refresh,
+            SettingRow(
                 title = "Синхронизация после перезагрузки",
+                subtitle = "телефон сам придёт к последнему правилу",
                 checked = settings.syncAfterBoot,
-                accent = GrapeVioletSoft,
-                onCheckedChange = onSyncAfterBoot
+                onChange = { vm.setSyncAfterBoot(it) }
             )
 
-            if (settings.islandEnabled) {
-                Spacer(Modifier.height(6.dp))
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 33.dp, bottom = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TagChip(
-                        text = "Сверху",
-                        selected = settings.islandPosition == IslandPosition.TOP,
-                        onClick = { onIslandPosition(IslandPosition.TOP) }
-                    )
-                    TagChip(
-                        text = "По центру",
-                        selected = settings.islandPosition == IslandPosition.CENTER,
-                        onClick = { onIslandPosition(IslandPosition.CENTER) }
-                    )
-                    TagChip(
-                        text = "Снизу",
-                        selected = settings.islandPosition == IslandPosition.BOTTOM,
-                        onClick = { onIslandPosition(IslandPosition.BOTTOM) }
-                    )
+            // ————— остров —————
+            Spacer(Modifier.height(8.dp))
+            SectionTitle("Остров у камеры")
+            Spacer(Modifier.height(8.dp))
+            SettingRow(
+                title = "Показывать остров",
+                subtitle = "вспышки при срабатывании правил",
+                checked = settings.islandEnabled,
+                onChange = { vm.setIsland(it) }
+            )
+            SettingRow(
+                title = "Постоянный остров",
+                subtitle = "капсула висит с часами и зарядом",
+                checked = settings.islandPersistent,
+                onChange = { vm.setIslandPersistent(it) }
+            )
+            SettingRow(
+                title = "Компактный размер",
+                subtitle = if (settings.islandCompact) "маленькая капсула" else "обычная капсула",
+                checked = settings.islandCompact,
+                onChange = { vm.setIslandCompact(it) }
+            )
+
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                SortChip("Выше", settings.islandOffsetY < 0) {
+                    vm.setIslandOffset(settings.islandOffsetY - 4)
                 }
+                SortChip("Ниже", settings.islandOffsetY > 0) {
+                    vm.setIslandOffset(settings.islandOffsetY + 4)
+                }
+                SortChip("Сброс", settings.islandOffsetY == 0) { vm.setIslandOffset(0) }
             }
 
-            if (settings.islandEnabled && !overlayAllowed) {
-                Spacer(Modifier.height(8.dp))
-                SurfaceCard(corner = 18.dp, contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.Warning,
-                            contentDescription = null,
-                            tint = GrapeVioletSoft,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(10.dp))
-                        Text(
-                            text = "Нужен доступ «Поверх других приложений»",
-                            color = TextPrimary,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TagChip(text = "Дать", selected = true, onClick = onOpenOverlay)
+            Spacer(Modifier.height(12.dp))
+            Text("Расположение", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.height(7.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                IslandPosition.ALL.chunked(4).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        row.forEach { position ->
+                            SortChip(
+                                label = shortPosition(position),
+                                selected = settings.islandPosition == position
+                            ) { vm.setIslandPosition(position) }
+                        }
                     }
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
+            Text("Что показывать", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.height(7.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                IslandWidget.ALL.chunked(3).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        row.forEach { widget ->
+                            SortChip(
+                                label = IslandWidget.label(widget),
+                                selected = widget in settings.islandWidgets
+                            ) { vm.toggleIslandWidget(widget, widget !in settings.islandWidgets) }
+                        }
+                    }
+                }
+            }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                SecondaryButton(
+                    text = "Показать образец",
+                    onClick = { vm.fullIslandPreview() },
+                    modifier = Modifier.weight(1f)
+                )
+                SecondaryButton(
+                    text = "Мультитул",
+                    onClick = onOpenTools,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // ————— обновления —————
+            Spacer(Modifier.height(16.dp))
+            SectionTitle("Обновления")
+            Spacer(Modifier.height(8.dp))
+            SettingRow(
+                title = "Проверять автоматически",
+                subtitle = "панель появится сама, когда выйдет новая версия",
+                checked = settings.updateAuto,
+                onChange = { vm.setUpdateAuto(it) }
+            )
+            Spacer(Modifier.height(6.dp))
+            GrapeTextField(
+                value = settings.updateRepo,
+                onValueChange = { vm.setUpdateRepo(it) },
+                label = "Репозиторий обновлений"
+            )
+            Spacer(Modifier.height(10.dp))
+            SecondaryButton(
+                text = "Проверить сейчас",
+                onClick = { vm.checkUpdate() },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // ————— доступы —————
+            Spacer(Modifier.height(16.dp))
+            SectionTitle("Доступы и приложение")
+            Spacer(Modifier.height(8.dp))
+            val snapshot = Permissions.snapshot(context)
+            snapshot.items.forEach { item ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { Permissions.open(context, item.id) }
+                        .padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.title,
+                        color = if (item.granted) TextSecondary else TextPrimary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = if (item.granted) "выдано" else "выдать →",
+                        color = if (item.granted) TextDim else GrapeVioletSoft,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 SecondaryButton(
                     text = "Синхронизировать",
-                    onClick = onSyncNow,
+                    onClick = { vm.syncToSchedule() },
                     modifier = Modifier.weight(1f)
                 )
                 SecondaryButton(
-                    text = "Автояркость",
-                    onClick = onRestoreAutoBrightness,
+                    text = "Вернуть автояркость",
+                    onClick = { vm.restoreAutoBrightness() },
                     modifier = Modifier.weight(1f)
                 )
             }
+
             Spacer(Modifier.height(10.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SecondaryButton(
-                    text = "Показать айленд",
-                    onClick = onPreviewIsland,
-                    modifier = Modifier.weight(1f)
-                )
-                SecondaryButton(
-                    text = "Автозапуск",
-                    onClick = onOpenAutostart,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            Text(
+                text = "Правил в расписании: " + (vm.rules.collectAsStateWithLifecycle().value.size) +
+                    " • вся работа идёт на телефоне, интернет нужен только для проверки обновлений",
+                color = TextDim,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun SwitchRow(
-    icon: ImageVector,
+private fun SettingRow(
     title: String,
+    subtitle: String,
     checked: Boolean,
-    accent: Color,
-    onCheckedChange: (Boolean) -> Unit
+    onChange: (Boolean) -> Unit
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onChange(!checked) }
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = accent, modifier = Modifier.size(21.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = title,
-            color = TextPrimary,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.weight(1f)
-        )
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color(0xFF120720),
-                checkedTrackColor = accent,
-                uncheckedThumbColor = TextSecondary,
-                uncheckedTrackColor = Color(0xFF2A1E40),
-                uncheckedBorderColor = ChipBorder
-            )
-        )
+        Column(Modifier.weight(1f)) {
+            Text(title, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+            Text(subtitle, color = TextDim, style = MaterialTheme.typography.labelSmall)
+        }
+        ToggleDot(checked = checked) { onChange(!checked) }
     }
+}
+
+private fun shortPosition(position: Int): String = when (position) {
+    IslandPosition.TOP_LEFT -> "↑ слева"
+    IslandPosition.TOP_CENTER -> "↑ центр"
+    IslandPosition.TOP_RIGHT -> "↑ справа"
+    IslandPosition.MID_LEFT -> "• слева"
+    IslandPosition.MID_RIGHT -> "• справа"
+    IslandPosition.BOTTOM_LEFT -> "↓ слева"
+    IslandPosition.BOTTOM_CENTER -> "↓ центр"
+    else -> "↓ справа"
 }

@@ -2,17 +2,14 @@ package com.gsynk.app.core
 
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord
-import android.nfc.NfcAdapter
-import android.os.Bundle
 import java.nio.charset.StandardCharsets
 
 /**
  * Обмен по NFC («Grape Link»).
  *
- * Важно и честно: NFC — это канал на считанные килобайты и пару сантиметров.
- * Он идеален для мгновенного «касания-рукопожатия» и передачи небольших данных
- * (текст, ссылка, визитка, вызов в игру). Большие файлы им передать нельзя физически —
- * для этого нужен Bluetooth/Wi-Fi Direct (следующий шаг развития).
+ * Что можно передать: текст, ссылку, визитку, пароль, координаты, профиль GSYNK
+ * (правила расписания) и вызов в игру. NFC — канал на пару килобайт, поэтому
+ * передаём короткие данные, а телефон-метку обслуживает [NdefHceService].
  */
 object NfcLink {
 
@@ -20,18 +17,26 @@ object NfcLink {
     const val MIME_URL = "text/uri-list"
     const val MIME_CONTACT = "text/vcard"
     const val MIME_GAME = "application/vnd.gsynk.game"
+    const val MIME_PROFILE = "application/vnd.gsynk.profile"
 
-    /** Типы полезной нагрузки приложения. */
     const val KIND_TEXT = "text"
     const val KIND_URL = "url"
     const val KIND_CONTACT = "contact"
+    const val KIND_PASSWORD = "password"
+    const val KIND_GEO = "geo"
+    const val KIND_PROFILE = "profile"
     const val KIND_GAME = "game"
+
+    /** Пользовательские типы: кодируем как текст с префиксом вида gsynk:password|… */
+    private const val PREFIX = "gsynk"
 
     data class Payload(
         val kind: String,
         val title: String,
         val body: String
-    )
+    ) {
+        val isProfile: Boolean get() = kind == KIND_PROFILE
+    }
 
     data class GameInvite(
         val game: String,
@@ -39,91 +44,106 @@ object NfcLink {
         val seed: Long
     )
 
-    fun isSupported(adapter: NfcAdapter?): Boolean = adapter != null
+    /** Доступные типы для экрана передачи. */
+    val TRANSFER_KINDS = listOf(
+        TransferOption(KIND_TEXT, "Текст", "Любое сообщение до ~600 символов"),
+        TransferOption(KIND_URL, "Ссылка", "Откроется на втором телефоне"),
+        TransferOption(KIND_CONTACT, "Визитка", "Имя и номер телефона"),
+        TransferOption(KIND_PASSWORD, "Пароль", "Случайный пароль или ключ"),
+        TransferOption(KIND_GEO, "Координаты", "Точка на карте"),
+        TransferOption(KIND_PROFILE, "Профиль GSYNK", "Правила расписания целиком"),
+        TransferOption(KIND_GAME, "Вызов в игру", "Приглашение в дуэль")
+    )
 
-    fun isEnabled(adapter: NfcAdapter?): Boolean = runCatching {
-        adapter?.isEnabled == true
-    }.getOrDefault(false)
+    data class TransferOption(val kind: String, val title: String, val hint: String)
+
+    fun option(kind: String): TransferOption =
+        TRANSFER_KINDS.firstOrNull { it.kind == kind } ?: TRANSFER_KINDS.first()
+
+    fun isSupported(): Boolean = true
 
     fun openNfcSettingsIntent(): android.content.Intent =
         android.content.Intent(android.provider.Settings.ACTION_NFC_SETTINGS)
 
-    // ————— сборка сообщений —————
+    // ————— сборка —————
 
     fun buildMessage(payload: Payload, appPackage: String): NdefMessage {
         val record = when (payload.kind) {
             KIND_URL -> NdefRecord.createUri(payload.body)
-            KIND_CONTACT -> NdefRecord(
-                NdefRecord.TNF_MIME_MEDIA,
-                MIME_CONTACT.toByteArray(StandardCharsets.US_ASCII),
-                ByteArray(0),
-                payload.body.toByteArray(StandardCharsets.UTF_8)
+            KIND_CONTACT -> mime(MIME_CONTACT, payload.body)
+            KIND_GAME -> mime(MIME_GAME, payload.body)
+            KIND_PROFILE -> mime(MIME_PROFILE, payload.body)
+            else -> NdefRecord.createTextRecord(
+                "ru",
+                "$PREFIX:${payload.kind}|${payload.title}|${payload.body}".take(900)
             )
-
-            KIND_GAME -> NdefRecord(
-                NdefRecord.TNF_MIME_MEDIA,
-                MIME_GAME.toByteArray(StandardCharsets.US_ASCII),
-                ByteArray(0),
-                payload.body.toByteArray(StandardCharsets.UTF_8)
-            )
-
-            else -> NdefRecord.createTextRecord("ru", "${payload.title}|${payload.body}".take(700))
         }
-        val appRecord = NdefRecord.createApplicationRecord(appPackage)
-        return NdefMessage(arrayOf(record, appRecord))
+        return NdefMessage(arrayOf(record, NdefRecord.createApplicationRecord(appPackage)))
     }
 
-    fun buildGameInvite(invite: GameInvite, appPackage: String): NdefMessage {
-        val body = "${invite.game};${invite.from};${invite.seed}"
-        val payload = Payload(KIND_GAME, "GSYNK-игра", body)
-        return buildMessage(payload, appPackage)
-    }
+    fun buildGameInvite(invite: GameInvite, appPackage: String): NdefMessage =
+        buildMessage(Payload(KIND_GAME, "GSYNK-игра", "${invite.game};${invite.from};${invite.seed}"), appPackage)
 
-    // ————— разбор сообщений —————
+    private fun mime(type: String, body: String): NdefRecord =
+        NdefRecord(
+            NdefRecord.TNF_MIME_MEDIA,
+            type.toByteArray(StandardCharsets.US_ASCII),
+            ByteArray(0),
+            body.toByteArray(StandardCharsets.UTF_8)
+        )
+
+    // ————— разбор —————
 
     fun parse(message: NdefMessage?): Payload? {
         if (message == null) return null
         for (record in message.records) {
-            val parsed = parseRecord(record) ?: continue
-            return parsed
+            parseRecord(record)?.let { return it }
         }
         return null
     }
 
     private fun parseRecord(record: NdefRecord): Payload? = runCatching {
+        val type = String(record.type, StandardCharsets.US_ASCII)
         when {
             record.tnf == NdefRecord.TNF_WELL_KNOWN && record.type.contentEquals(NdefRecord.RTD_URI) -> {
-                val uri = record.toUri()?.toString() ?: return null
-                Payload(KIND_URL, "Ссылка", uri)
+                Payload(KIND_URL, "Ссылка", record.toUri()?.toString().orEmpty())
             }
 
-            record.tnf == NdefRecord.TNF_MIME_MEDIA &&
-                record.type.contentEquals(MIME_CONTACT.toByteArray(StandardCharsets.US_ASCII)) -> {
+            record.tnf == NdefRecord.TNF_MIME_MEDIA && type == MIME_CONTACT ->
                 Payload(KIND_CONTACT, "Визитка", String(record.payload, StandardCharsets.UTF_8))
-            }
 
-            record.tnf == NdefRecord.TNF_MIME_MEDIA &&
-                record.type.contentEquals(MIME_GAME.toByteArray(StandardCharsets.US_ASCII)) -> {
+            record.tnf == NdefRecord.TNF_MIME_MEDIA && type == MIME_GAME ->
                 Payload(KIND_GAME, "Вызов в игру", String(record.payload, StandardCharsets.UTF_8))
-            }
+
+            record.tnf == NdefRecord.TNF_MIME_MEDIA && type == MIME_PROFILE ->
+                Payload(KIND_PROFILE, "Профиль GSYNK", String(record.payload, StandardCharsets.UTF_8))
 
             record.tnf == NdefRecord.TNF_WELL_KNOWN && record.type.contentEquals(NdefRecord.RTD_TEXT) -> {
-                val status = record.payload.firstOrNull()?.toInt() ?: 0
-                val langLen = status and 0x3F
-                val text = if (record.payload.size > langLen + 1) {
+                val statusByte = record.payload.firstOrNull()?.toInt() ?: 0
+                val langLen = statusByte and 0x3F
+                val raw = if (record.payload.size > langLen + 1) {
                     String(record.payload, langLen + 1, record.payload.size - langLen - 1, StandardCharsets.UTF_8)
                 } else {
                     ""
                 }
-                val parts = text.split("|", limit = 2)
-                Payload(KIND_TEXT, parts.firstOrNull().orEmpty(), parts.getOrNull(1).orEmpty())
+                parseTextPayload(raw)
             }
 
             else -> null
         }
     }.getOrNull()
 
-    /** Разбор вызова в игру из текстовой нагрузки. */
+    /** Текст бывает двух форм: «gsynk:тип|заголовок|тело» и просто текст. */
+    private fun parseTextPayload(raw: String): Payload {
+        if (!raw.startsWith("$PREFIX:")) return Payload(KIND_TEXT, "Сообщение", raw)
+        val rest = raw.removePrefix("$PREFIX:")
+        val parts = rest.split("|", limit = 3)
+        val kind = parts.getOrNull(0).orEmpty().ifBlank { KIND_TEXT }
+        val title = parts.getOrNull(1).orEmpty()
+        val body = parts.getOrNull(2).orEmpty()
+        return Payload(kind, title.ifBlank { option(kind).title }, body)
+    }
+
     fun parseGameInvite(body: String): GameInvite? = runCatching {
         val parts = body.split(";")
         GameInvite(
@@ -133,10 +153,14 @@ object NfcLink {
         )
     }.getOrNull()
 
-    /** Фильтры для reader-mode: слушаем все теги, пока экран открыт. */
-    fun readerFilter(): Array<android.content.IntentFilter> = arrayOf(
-        android.content.IntentFilter(NfcAdapter.ACTION_NDEF_DISCOVERED),
-        android.content.IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED),
-        android.content.IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED)
-    )
+    /** Краткое описание того, что пришло — для карточки «Получено». */
+    fun describe(payload: Payload): String = when (payload.kind) {
+        KIND_URL -> "Ссылка готова к открытию"
+        KIND_CONTACT -> "Контакт: откройте, чтобы добавить в телефонную книгу"
+        KIND_PASSWORD -> "Пароль можно скопировать в буфер"
+        KIND_GEO -> "Координаты: откроются на карте"
+        KIND_PROFILE -> "Профиль GSYNK: импортируйте правила расписания"
+        KIND_GAME -> "Вызов в игру"
+        else -> "Текстовое сообщение"
+    }
 }

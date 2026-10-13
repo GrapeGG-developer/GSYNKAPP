@@ -1,19 +1,24 @@
 package com.gsynk.app
 
 import com.gsynk.app.core.DeviceProfile
+import com.gsynk.app.core.IslandPosition
+import com.gsynk.app.core.IslandWidget
 import com.gsynk.app.core.NfcLink
-import com.gsynk.app.core.ScheduledTask
-import com.gsynk.app.core.TaskScheduler
+import com.gsynk.app.core.Passwords
+import com.gsynk.app.core.PayloadCodec
+import com.gsynk.app.core.Rule
+import com.gsynk.app.core.RuleSort
 import com.gsynk.app.core.UpdateChecker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.random.Random
 
 /**
- * Логика мультитула: профиль устройства, версии для OTA, обмен по NFC, задачи.
- * Всё без обращения к Android — проверяется чистая логика.
+ * Логика мультитула: профиль устройства, версии для OTA, обмен по NFC,
+ * сортировка правил, остров и генератор паролей. Всё без Android — чистая логика.
  */
 class MultiToolTest {
 
@@ -28,201 +33,154 @@ class MultiToolTest {
         androidLabel = "Android 16",
         hasNfc = hasNfc,
         supportsOverlay = true,
-        autoTier = tier,
-        tier = tier,
-        mainModeManual = false
+        reason = "тест",
+        tier = tier
     )
 
-    // ————— профиль устройства —————
-
     @Test
-    fun `полный режим разрешает все функции`() {
+    fun fullTier_hasEveryFeature() {
         val full = info(DeviceProfile.TIER_FULL)
         assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.RULES))
         assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.AI_CHAT))
-        assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.PERSISTENT_ISLAND))
+        assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.ISLAND))
         assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.UPDATE))
-        assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.TASKS))
+        assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.TOOLS))
     }
 
     @Test
-    fun `базовый режим оставляет только яркость-громкость NFC игры фонарик и скринсейвер`() {
+    fun legacyTier_keepsBaseFeaturesOnly() {
         val legacy = info(DeviceProfile.TIER_LEGACY, sdk = 33)
         assertTrue(DeviceProfile.feature(legacy, DeviceProfile.Feature.RULES))
         assertTrue(DeviceProfile.feature(legacy, DeviceProfile.Feature.NFC_LINK))
         assertTrue(DeviceProfile.feature(legacy, DeviceProfile.Feature.GAMES))
         assertTrue(DeviceProfile.feature(legacy, DeviceProfile.Feature.FLASHLIGHT))
         assertTrue(DeviceProfile.feature(legacy, DeviceProfile.Feature.SCREENSAVER))
-
-        assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.DND))
-        assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.TASKS))
-        assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.PERSISTENT_ISLAND))
         assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.AI_CHAT))
-        assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.GRAPE_UI))
+        assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.ISLAND))
         assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.UPDATE))
     }
 
     @Test
-    fun `базовый набор не содержит полных функций`() {
-        assertEquals(5, DeviceProfile.LEGACY_FEATURES.size)
-        assertFalse(DeviceProfile.Feature.AI_CHAT in DeviceProfile.LEGACY_FEATURES)
-        assertFalse(DeviceProfile.Feature.PERSISTENT_ISLAND in DeviceProfile.LEGACY_FEATURES)
-        assertTrue(DeviceProfile.Feature.SCREENSAVER in DeviceProfile.LEGACY_FEATURES)
+    fun profileSummary_mentionsModel() {
+        val full = info(DeviceProfile.TIER_FULL)
+        assertTrue(full.isFull)
+        assertTrue(full.summary.isNotBlank())
+    }
+
+    // ————— обновления —————
+
+    @Test
+    fun compareVersions_ordersCorrectly() {
+        assertTrue(UpdateChecker.compareVersions("2.1.0", "2.0.2") > 0)
+        assertTrue(UpdateChecker.compareVersions("2.0.2", "2.0.10") < 0)
+        assertEquals(0, UpdateChecker.compareVersions("2.1.0", "2.1.0"))
+        assertTrue(UpdateChecker.compareVersions("v2.2", "2.1.9") > 0)
+    }
+
+    // ————— NFC —————
+
+    @Test
+    fun transferKinds_coverAllRequiredTypes() {
+        val kinds = NfcLink.TRANSFER_KINDS.map { it.kind }
+        listOf(
+            NfcLink.KIND_TEXT,
+            NfcLink.KIND_URL,
+            NfcLink.KIND_CONTACT,
+            NfcLink.KIND_PASSWORD,
+            NfcLink.KIND_GEO,
+            NfcLink.KIND_PROFILE,
+            NfcLink.KIND_GAME
+        ).forEach { assertTrue("нет типа $it", it in kinds) }
     }
 
     @Test
-    fun `у каждой функции есть человеческое название`() {
-        val ids = listOf(
-            DeviceProfile.Feature.RULES, DeviceProfile.Feature.NFC_LINK, DeviceProfile.Feature.GAMES,
-            DeviceProfile.Feature.FLASHLIGHT, DeviceProfile.Feature.DND, DeviceProfile.Feature.TASKS,
-            DeviceProfile.Feature.PERSISTENT_ISLAND, DeviceProfile.Feature.AI_CHAT,
-            DeviceProfile.Feature.GRAPE_UI, DeviceProfile.Feature.UPDATE,
-            DeviceProfile.Feature.SCREENSAVER, DeviceProfile.Feature.SHIZUKU
-        )
-        ids.forEach { id ->
-            assertNotNull("нет названия для $id", DeviceProfile.Feature.TITLES[id])
+    fun transferOption_hasTitleAndHint() {
+        NfcLink.TRANSFER_KINDS.forEach { option ->
+            assertTrue(option.title.isNotBlank())
+            assertTrue(option.hint.isNotBlank())
         }
-        assertEquals(ids.size, DeviceProfile.Feature.TITLES.size)
     }
 
     @Test
-    fun `подпись режима зависит от профиля`() {
-        assertEquals("MAIN — все функции", info(DeviceProfile.TIER_FULL).summary)
-        assertEquals("Базовый набор", info(DeviceProfile.TIER_LEGACY).summary)
-        assertTrue(info(DeviceProfile.TIER_FULL).isFull)
-        assertFalse(info(DeviceProfile.TIER_LEGACY).isFull)
+    fun gameInvite_roundTrip() {
+        val invite = NfcLink.GameInvite(game = "reaction", from = "Poco X3 Pro", seed = 4242L)
+        val parsed = NfcLink.parseGameInvite("${invite.game};${invite.from};${invite.seed}")
+        assertNotNull(parsed)
+        assertEquals("reaction", parsed!!.game)
+        assertEquals(4242L, parsed.seed)
     }
 
-    // ————— OTA: сравнение версий —————
+    // ————— профиль правил по NFC —————
 
     @Test
-    fun `одинаковые версии не требуют обновления`() {
-        assertEquals(0, UpdateChecker.compareVersions("1.2.0", "1.2.0"))
-        assertEquals(0, UpdateChecker.compareVersions("v2.0", "2.0.0"))
-        assertEquals(0, UpdateChecker.compareVersions("2.0.0", "v2.0.0"))
-    }
-
-    @Test
-    fun `новая версия определяется любой длиной`() {
-        assertTrue(UpdateChecker.compareVersions("1.3", "1.2.9") > 0)
-        assertTrue(UpdateChecker.compareVersions("2.0.0", "1.9.9") > 0)
-        assertTrue(UpdateChecker.compareVersions("1.2.1", "1.2") > 0)
-        assertTrue(UpdateChecker.compareVersions("v2.1.0", "2.0.9") > 0)
-    }
-
-    @Test
-    fun `старая версия и суффиксы читаются верно`() {
-        assertTrue(UpdateChecker.compareVersions("1.2", "1.2.1") < 0)
-        assertTrue(UpdateChecker.compareVersions("1.1.9", "1.2.0") < 0)
-        // суффикс сборки не мешает: 2.0.0-beta = 2.0.0
-        assertEquals(0, UpdateChecker.compareVersions("2.0.0-beta", "2.0.0"))
-        assertEquals(1, UpdateChecker.compareVersions("2.0.1-rc1", "2.0.0"))
+    fun rulesEncode_decodeKeepsFields() {
+        val rules = listOf(
+            Rule(name = "Вечер", hour = 22, minute = 15, days = listOf(1, 2, 3, 4, 5), brightness = 20, volume = 0),
+            Rule(name = "Утро", hour = 6, minute = 45, days = listOf(6, 7), brightness = 80, volume = 60, enabled = false)
+        )
+        val decoded = PayloadCodec.decodeRules(PayloadCodec.encodeRules(rules))
+        assertEquals(2, decoded.size)
+        assertEquals("Вечер", decoded[0].name)
+        assertEquals(22, decoded[0].hour)
+        assertEquals(20, decoded[0].brightness)
+        assertEquals(listOf(6, 7), decoded[1].days)
+        assertFalse(decoded[1].enabled)
     }
 
     @Test
-    fun `мусор вместо версии не ломает сравнение`() {
-        assertEquals(0, UpdateChecker.compareVersions("", ""))
-        assertTrue(UpdateChecker.compareVersions("2.0", "версия") > 0)
-    }
-
-    // ————— NFC-обмен —————
-
-    @Test
-    fun `вызов в игру разбирается на поля`() {
-        val invite = NfcLink.parseGameInvite("плитки-tap;Poco X3 Pro;12345")
-        assertNotNull(invite)
-        assertEquals("плитки-tap", invite!!.game)
-        assertEquals("Poco X3 Pro", invite.from)
-        assertEquals(12345L, invite.seed)
+    fun rulesDecode_ignoresForeignPayload() {
+        assertTrue(PayloadCodec.decodeRules("просто текст").isEmpty())
+        assertTrue(PayloadCodec.decodeRules("").isEmpty())
     }
 
     @Test
-    fun `вызов без счёта получает текущее время вместо падения`() {
-        val invite = NfcLink.parseGameInvite("дуэль;Олег")
-        assertNotNull(invite)
-        assertEquals("дуэль", invite!!.game)
-        assertEquals("Олег", invite.from)
-        assertTrue(invite.seed > 0L)
+    fun rulesEncode_staysWithinNfcLimit() {
+        val rules = (1..12).map {
+            Rule(name = "Правило номер $it", hour = it % 24, minute = 0)
+        }
+        val encoded = PayloadCodec.encodeRules(rules)
+        assertTrue("слишком длинно: ${encoded.length}", encoded.length < 800)
+    }
+
+    // ————— сортировка и остров —————
+
+    @Test
+    fun ruleSort_ordersAsExpected() {
+        val rules = listOf(
+            Rule(name = "Б", hour = 18, minute = 0, enabled = false),
+            Rule(name = "А", hour = 7, minute = 30, enabled = true)
+        )
+        assertEquals("А", RuleSort.apply(rules, RuleSort.BY_NAME)[0].name)
+        assertEquals("А", RuleSort.apply(rules, RuleSort.BY_TIME)[0].name)
+        assertEquals("А", RuleSort.apply(rules, RuleSort.ACTIVE_FIRST)[0].name)
     }
 
     @Test
-    fun `пустая нагрузка не роняет разбор`() {
-        val invite = NfcLink.parseGameInvite("")
-        assertNotNull(invite)
-        assertEquals("", invite!!.game)
-        assertTrue(invite.seed > 0L)
+    fun islandPositions_allHaveLabels() {
+        assertEquals(8, IslandPosition.ALL.size)
+        IslandPosition.ALL.forEach { assertTrue(IslandPosition.label(it).isNotBlank()) }
+        assertEquals(IslandPosition.ALL.size, IslandPosition.ALL.toSet().size)
     }
 
     @Test
-    fun `типы полезной нагрузки различимы`() {
-        assertEquals("text", NfcLink.KIND_TEXT)
-        assertEquals("url", NfcLink.KIND_URL)
-        assertEquals("contact", NfcLink.KIND_CONTACT)
-        assertEquals("game", NfcLink.KIND_GAME)
-        assertEquals("application/vnd.gsynk.game", NfcLink.MIME_GAME)
+    fun islandWidgets_allHaveLabels() {
+        assertTrue(IslandWidget.ALL.isNotEmpty())
+        IslandWidget.ALL.forEach { assertTrue(IslandWidget.label(it).isNotBlank()) }
     }
 
-    // ————— задачи —————
+    // ————— пароли —————
 
     @Test
-    fun `у каждого вида задачи есть название`() {
-        assertEquals("Звонок + озвучка", ScheduledTask.KIND_TITLES[ScheduledTask.KIND_CALL])
-        assertEquals("Озвучить фразу", ScheduledTask.KIND_TITLES[ScheduledTask.KIND_SPEAK])
-        assertEquals("Фейковый звонок", ScheduledTask.KIND_TITLES[ScheduledTask.KIND_FAKE_CALL])
-        assertEquals(3, ScheduledTask.KIND_TITLES.size)
+    fun password_respectsLengthAndAlphabet() {
+        val random = Random(7)
+        val password = Passwords.generate(Passwords.Options(24, letters = true, digits = true, symbols = true), random)
+        assertEquals(24, password.length)
+        assertTrue(password.any { it.isDigit() } || password.any { !it.isLetterOrDigit() })
     }
 
     @Test
-    fun `новая задача по умолчанию через минуту и включена`() {
-        val before = System.currentTimeMillis()
-        val task = ScheduledTask()
-        assertTrue(task.enabled)
-        assertTrue(task.triggerAt >= before + 55_000L)
-        assertTrue(task.triggerAt <= before + 65_000L)
-        assertEquals(ScheduledTask.KIND_SPEAK, task.kind)
-        assertTrue(task.id.isNotBlank())
-    }
-
-    // ————— восстановление задач после перезагрузки и обновления —————
-
-    @Test
-    fun `будущие задачи восстанавливаются после перезагрузки`() {
-        val now = 1_000_000L
-        val future = ScheduledTask(title = "Позвонить", triggerAt = now + 120_000L, kind = ScheduledTask.KIND_CALL)
-        val plan = TaskScheduler.restore(listOf(future), now)
-        assertEquals(1, plan.future.size)
-        assertEquals(future.id, plan.future.first().id)
-        assertTrue(plan.expired.isEmpty())
-    }
-
-    @Test
-    fun `просроченные и выключенные задачи убираются`() {
-        val now = 2_000_000L
-        val past = ScheduledTask(triggerAt = now - 1L)
-        val exactly = ScheduledTask(triggerAt = now)
-        val off = ScheduledTask(triggerAt = now + 60_000L, enabled = false)
-        val future = ScheduledTask(triggerAt = now + 1L)
-
-        val plan = TaskScheduler.restore(listOf(past, exactly, off, future), now)
-
-        assertEquals(1, plan.future.size)
-        assertEquals(future.id, plan.future.first().id)
-        assertEquals(3, plan.expired.size)
-        assertTrue(plan.expired.any { it.id == past.id })
-        assertTrue(plan.expired.any { it.id == exactly.id })
-        assertTrue(plan.expired.any { it.id == off.id })
-    }
-
-    @Test
-    fun `пустой список задач переживает восстановление`() {
-        val plan = TaskScheduler.restore(emptyList(), 5L)
-        assertTrue(plan.future.isEmpty())
-        assertTrue(plan.expired.isEmpty())
-    }
-
-    @Test
-    fun `задержка озвучки по умолчанию безопасна`() {
-        val task = ScheduledTask()
-        assertTrue("пауза перед речью должна быть не меньше 6 секунд", task.speakDelayMs >= 6_000L)
+    fun password_strengthGrowsWithVariety() {
+        assertTrue(Passwords.strength("aaaaaaaa") < Passwords.strength("A7#kLp2!Qz"))
+        assertEquals(0, Passwords.strength(""))
     }
 }

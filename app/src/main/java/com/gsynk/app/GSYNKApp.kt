@@ -5,9 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 
 /**
- * GSYNK — мультитул: расписание яркости и громкости, постоянный остров,
- * NFC-связка, мини-игры, задачи со звонком и озвучкой.
- * Все данные хранятся на устройстве; интернет нужен только для OTA-обновления и ИИ-чата.
+ * GSYNK — мультитул: расписание яркости и громкости, компактный остров,
+ * Grape Link по NFC, локальная ИИ-модель, сцены, мини-игры и хакерский набор
+ * инструментов. Все данные хранятся на устройстве; интернет нужен только для
+ * проверки обновлений.
  */
 class GSYNKApp : Application() {
 
@@ -18,33 +19,38 @@ class GSYNKApp : Application() {
 
     private fun createChannels() {
         val nm = getSystemService(NotificationManager::class.java) ?: return
-        val channel = NotificationChannel(
-            CHANNEL_APPLY,
-            getString(R.string.notif_channel_apply),
-            NotificationManager.IMPORTANCE_LOW
-        ).apply {
-            description = getString(R.string.notif_channel_apply_desc)
-            setShowBadge(false)
-            enableVibration(false)
-            setSound(null, null)
-        }
-        nm.createNotificationChannel(channel)
 
-        val fakeCall = NotificationChannel(
-            CHANNEL_FAKE_CALL,
-            getString(R.string.notif_channel_fake_call),
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = getString(R.string.notif_channel_fake_call_desc)
-            setShowBadge(false)
-            enableVibration(true)
-            setSound(null, null)
-        }
-        nm.createNotificationChannel(fakeCall)
+        // Применение правил и постоянный остров
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_APPLY,
+                getString(R.string.notif_channel_apply),
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = getString(R.string.notif_channel_apply_desc)
+                setShowBadge(false)
+                enableVibration(false)
+                setSound(null, null)
+            }
+        )
+
+        // Обновления приложения
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_UPDATES,
+                getString(R.string.notif_channel_updates),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = getString(R.string.notif_channel_updates_desc)
+                setShowBadge(true)
+                enableVibration(true)
+                setSound(null, null)
+            }
+        )
     }
 
     companion object {
         const val CHANNEL_APPLY = "gsynk_apply"
-        const val CHANNEL_FAKE_CALL = "gsynk_fake_call"
+        const val CHANNEL_UPDATES = "gsynk_updates"
     }
 }

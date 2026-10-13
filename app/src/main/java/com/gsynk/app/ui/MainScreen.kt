@@ -2,21 +2,18 @@
 
 package com.gsynk.app.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,12 +23,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -42,7 +43,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,21 +58,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -80,11 +75,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gsynk.app.R
-import com.gsynk.app.core.AppSettings
+import com.gsynk.app.core.DeviceProfile
+import com.gsynk.app.core.IslandPosition
 import com.gsynk.app.core.Permissions
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleScheduler
+import com.gsynk.app.core.RuleSort
+import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBgAlt
+import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBorder
 import com.gsynk.app.ui.theme.GrapeGradient
 import com.gsynk.app.ui.theme.GrapeGreen
@@ -94,394 +93,412 @@ import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
+import com.gsynk.app.ui.theme.TileBrush
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
+/**
+ * Главный экран 2.1.
+ *
+ * Сверху — крупные живые плитки (автопилот, NFC, разделы) и переключатели, ниже —
+ * расписание правил с сортировкой. Панель обновления выезжает сама, когда вышла
+ * новая версия: пользователю не нужно ничего искать.
+ */
 @Composable
 fun MainScreen(vm: MainViewModel) {
     val rules by vm.rules.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
-
-    // мультитул: устройство, игры, инструменты
-    val toolsVm: ToolsViewModel = viewModel()
-    val device by toolsVm.device.collectAsStateWithLifecycle()
-    val snakeBest by toolsVm.bestSnake.collectAsStateWithLifecycle()
-    val reactionBest by toolsVm.bestReaction.collectAsStateWithLifecycle()
-    var screen by remember { mutableStateOf("main") }
+    val hasUpdate by vm.updateAvailable.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
 
-    // доступы пересчитываем при каждом возврате в приложение
-    var permTick by remember { mutableIntStateOf(0) }
+    var showSettings by remember { mutableStateOf(false) }
+    var showTools by remember { mutableStateOf(false) }
+    var showGames by remember { mutableStateOf(false) }
+    var showNfc by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<Rule?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    var permissions by remember { mutableStateOf(Permissions.snapshot(context)) }
+    var showUpdateSheet by remember { mutableStateOf(false) }
+    var showScenes by remember { mutableStateOf(false) }
+    val profile = remember { DeviceProfile.detect(context) }
+
+    // пересчёт разрешений при возвращении из системных экранов
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner, showSettings, showTools, showNfc) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) permTick++
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissions = Permissions.snapshot(context)
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    val snapshot = remember(permTick) { Permissions.snapshot(context) }
 
-    val notifLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { permTick++ }
-
-    var editorOpen by remember { mutableStateOf(false) }
-    var editorRule by remember { mutableStateOf<Rule?>(null) }
-    var settingsOpen by remember { mutableStateOf(false) }
-
-    // анимация «плюс-кнопки»
-    var fabSpin by remember { mutableFloatStateOf(0f) }
-    val fabRotation by animateFloatAsState(
-        targetValue = fabSpin,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label = "fab"
-    )
-
-    // часы для обратного отсчёта
-    var now by remember { mutableStateOf(ZonedDateTime.now()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(10_000)
-            now = ZonedDateTime.now()
-        }
-    }
+    // автопроверка перед установкой обновления из системы
+    val installLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { vm.checkUpdate(silent = true) }
 
     LaunchedEffect(message) {
-        val text = message ?: return@LaunchedEffect
-        snackbar.showSnackbar(text)
-        vm.clearMessage()
-    }
-
-    val nextRun = remember(rules, now) {
-        rules.filter { it.enabled }
-            .mapNotNull { rule -> RuleScheduler.nextOccurrence(rule, now)?.let { it to rule } }
-            .minByOrNull { it.first }
-    }
-
-    val versionName = remember {
-        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }
-            .getOrNull() ?: "1.0.0"
-    }
-
-    when (screen) {
-        "games" -> {
-            GamesScreen(
-                bestSnake = snakeBest,
-                bestReaction = reactionBest,
-                onSaveSnake = toolsVm::saveSnakeScore,
-                onSaveReaction = toolsVm::saveReaction,
-                onBack = { screen = "main" }
-            )
-            return
-        }
-
-        "tools" -> {
-            ToolsScreen(
-                vm = toolsVm,
-                onBack = { screen = "main" },
-                onOpenScreensaver = { screen = "screensaver" },
-                onOpenGrapeUi = { screen = "grape" }
-            )
-            return
-        }
-
-        "nfc" -> {
-            NfcLinkScreen(onBack = { screen = "main" })
-            return
-        }
-
-        "screensaver" -> {
-            ScreensaverScreen(onBack = { screen = "main" })
-            return
-        }
-
-        "grape" -> {
-            GrapeUiScreen(onBack = { screen = "main" })
-            return
+        message?.let {
+            snackbar.showSnackbar(it)
+            vm.clearMessage()
         }
     }
+
+    LaunchedEffect(hasUpdate) {
+        if (hasUpdate) showUpdateSheet = true
+    }
+
+    val sortedRules = remember(rules, settings.ruleSort) { RuleSort.apply(rules, settings.ruleSort) }
+    val nextRule = remember(rules) { nextOccurrence(rules) }
 
     AnimatedGrapeBackground {
-        Scaffold(
-            containerColor = Color.Transparent,
-            snackbarHost = { SnackbarHost(snackbar) },
-            floatingActionButton = {
-                AddRuleFab(rotation = fabRotation) {
-                    fabSpin += 90f
-                    editorRule = null
-                    editorOpen = true
-                }
-            }
-        ) { innerPadding ->
+        Box(
+            Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars)
+        ) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 120.dp),
+                Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = 8.dp,
+                    bottom = 140.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item(key = "header") {
-                    Appear(index = 0) { AppHeader(onSettings = { settingsOpen = true }) }
-                }
+                item { HomeHeader(model = profile.model, onSettings = { showSettings = true }) }
 
-                item(key = "metrotiles") {
-                    Appear(index = 1) {
-                        Column {
-                            TileRow {
-                                AutopilotTile(
-                                    enabled = settings.autopilot,
-                                    countdown = nextRun?.let { humanDelta(now, it.first) } ?: "нет правил",
-                                    rulesCount = rules.size,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { vm.setAutopilot(!settings.autopilot) }
-                                )
-                                DeviceTile(
-                                    model = device.model,
-                                    tierSummary = if (device.isFull) "MAIN активен" else "базовый набор",
-                                    isFull = device.isFull,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { screen = "tools" }
-                                )
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            TileRow {
-                                NavTile(
-                                    title = "Игры",
-                                    subtitle = "змейка и реакция",
-                                    iconRes = R.drawable.ic_bolt,
-                                    tint = TileTint.Green,
-                                    liveText = if (snakeBest == 0) "Играть" else "рекорд: $snakeBest",
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { screen = "games" }
-                                )
-                                NavTile(
-                                    title = "Инструменты",
-                                    subtitle = "задачи, чат, обновление",
-                                    iconRes = R.drawable.ic_tune,
-                                    tint = TileTint.Violet,
-                                    liveText = "Открыть",
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { screen = "tools" }
-                                )
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            TileRow {
-                                NavTile(
-                                    title = "Grape Link",
-                                    subtitle = "передача касанием",
-                                    iconRes = R.drawable.ic_copy,
-                                    tint = TileTint.Mixed,
-                                    badge = if (device.hasNfc) "NFC" else "нет NFC",
-                                    liveText = "Коснуться",
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { screen = "nfc" }
-                                )
-                                NavTile(
-                                    title = "Скринсейвер",
-                                    subtitle = "DVD-логотип летает",
-                                    iconRes = R.drawable.ic_brightness,
-                                    tint = TileTint.Dark,
-                                    liveText = "Запустить",
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { screen = "screensaver" }
-                                )
-                            }
-                        }
+                item {
+                    AnimatedVisibility(
+                        visible = hasUpdate,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        UpdateBanner(onClick = { showUpdateSheet = true })
                     }
                 }
 
-                item(key = "permissions") {
-                    Appear(index = 2) {
-                        PermissionsCard(
-                            snapshot = snapshot,
-                            onOpen = { id ->
-                                val needRuntime = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
-                                    PackageManager.PERMISSION_GRANTED
-                                if (id == Permissions.ID_NOTIF && needRuntime) {
-                                    notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                } else {
-                                    Permissions.open(context, id)
-                                }
-                            }
-                        )
-                    }
-                }
-
-                item(key = "status") {
-                    Appear(index = 3) {
-                        StatusCard(
-                            settings = settings,
-                            nextRun = nextRun,
-                            now = now,
-                            hasRules = rules.isNotEmpty(),
-                            brightnessAllowed = snapshot.items
-                                .firstOrNull { it.id == Permissions.ID_WRITE }?.granted == true,
-                            onAutopilot = vm::setAutopilot
-                        )
-                    }
-                }
-
-                if (rules.isNotEmpty()) {
-                    item(key = "rulesTitle") {
-                        Appear(index = 4) { SectionTitle("Правила", Modifier.padding(start = 4.dp, top = 4.dp)) }
-                    }
-                }
-
-                items(rules, key = { it.id }) { rule ->
-                    RuleCard(
-                        rule = rule,
-                        isNext = nextRun?.second?.id == rule.id && settings.autopilot,
-                        onEdit = {
-                            editorRule = rule
-                            editorOpen = true
+                item {
+                    DeviceTile(
+                        model = profile.model.ifBlank { "Устройство" },
+                        tierLabel = if (profile.isFull) {
+                            "функции определены автоматически"
+                        } else {
+                            "базовый набор функций"
                         },
-                        onApply = { vm.applyNow(rule) },
-                        onDuplicate = { vm.duplicate(rule) },
-                        onToggle = { enabled -> vm.setEnabled(rule, enabled) },
-                        onDelete = { vm.delete(rule) },
-                        modifier = Modifier.animateItem(
-                            fadeInSpec = tween(260),
-                            fadeOutSpec = tween(180)
-                        )
+                        isFull = profile.isFull,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { showTools = true }
                     )
                 }
 
-                if (rules.isEmpty()) {
-                    item(key = "empty") {
-                        Appear(index = 4) {
-                            EmptyState(
-                                onAdd = {
-                                    fabSpin += 90f
-                                    editorRule = null
-                                    editorOpen = true
-                                }
-                            )
+                item {
+                    AutopilotTile(
+                        enabled = settings.autopilot,
+                        countdown = nextRule?.let { "через " + humanDelta(ZonedDateTime.now(), it) } ?: "правил нет",
+                        rulesCount = rules.size,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { vm.setAutopilot(!settings.autopilot) }
+                    )
+                }
+
+                item {
+                    TileRow {
+                        ToggleTile(
+                            title = "Остров",
+                            on = settings.islandPersistent,
+                            iconRes = R.drawable.ic_brightness,
+                            onText = "постоянный",
+                            offText = "только вспышки",
+                            modifier = Modifier.weight(1f),
+                            onClick = { vm.setIslandPersistent(!settings.islandPersistent) }
+                        )
+                        ToggleTile(
+                            title = "Уведомления",
+                            on = settings.notifications,
+                            iconRes = R.drawable.ic_shield,
+                            onText = "приходят",
+                            offText = "тишина",
+                            modifier = Modifier.weight(1f),
+                            onClick = { vm.setNotifications(!settings.notifications) }
+                        )
+                    }
+                }
+
+                item {
+                    TileRow {
+                        NavTile(
+                            title = "Grape Link",
+                            subtitle = "обмен по NFC",
+                            iconRes = R.drawable.ic_bolt,
+                            brush = TileBrush.Cyan,
+                            liveText = "касаний: ${settings.nfcTouches}",
+                            modifier = Modifier.weight(1f),
+                            onClick = { showNfc = true }
+                        )
+                        NavTile(
+                            title = "Сцены",
+                            subtitle = "один тап",
+                            iconRes = R.drawable.ic_shield,
+                            brush = TileBrush.Green,
+                            liveText = "Ночь · Кино",
+                            modifier = Modifier.weight(1f),
+                            onClick = { showScenes = true }
+                        )
+                    }
+                }
+
+                item {
+                    TileRow {
+                        NavTile(
+                            title = "Инструменты",
+                            subtitle = "мультитул",
+                            iconRes = R.drawable.ic_tune,
+                            brush = TileBrush.Blue,
+                            modifier = Modifier.weight(1f),
+                            onClick = { showTools = true }
+                        )
+                        NavTile(
+                            title = "Мини-игры",
+                            subtitle = "на счёт",
+                            iconRes = R.drawable.ic_schedule,
+                            brush = TileBrush.Pink,
+                            modifier = Modifier.weight(1f),
+                            onClick = { showGames = true }
+                        )
+                    }
+                }
+
+                if (!permissions.allGranted) {
+                    item {
+                        PermissionsCard(
+                            snapshot = permissions,
+                            onOpen = { id -> Permissions.open(context, id) }
+                        )
+                    }
+                }
+
+                item {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Расписание",
+                            color = TextPrimary,
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = "${rules.count { it.enabled }} из ${rules.size} активны",
+                            color = TextDim,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        RuleSort.ALL.forEach { mode ->
+                            SortChip(
+                                label = RuleSort.label(mode),
+                                selected = settings.ruleSort == mode
+                            ) { vm.setRuleSort(mode) }
                         }
                     }
                 }
+
+                if (sortedRules.isEmpty()) {
+                    item { EmptyState(onAdd = { creating = true }) }
+                }
+
+                items(sortedRules, key = { it.id }) { rule ->
+                    RuleCard(
+                        rule = rule,
+                        isNext = rule.id == nextRuleId(rules),
+                        onEdit = { editing = rule },
+                        onApply = { vm.applyNow(rule) },
+                        onDuplicate = { vm.duplicate(rule) },
+                        onToggle = { vm.setEnabled(rule, it) },
+                        onDelete = { vm.delete(rule) }
+                    )
+                }
+
+                item {
+                    AddRuleTile(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { creating = true }
+                    )
+                }
             }
+
+            SnackbarHost(
+                hostState = snackbar,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = 12.dp)
+            )
         }
     }
 
-    if (editorOpen) {
+    if (creating || editing != null) {
         RuleEditorSheet(
-            initial = editorRule,
-            onDismiss = { editorOpen = false },
+            initial = editing,
+            onDismiss = {
+                creating = false
+                editing = null
+            },
             onSave = { rule ->
                 vm.upsert(rule)
-                editorOpen = false
-            },
-            onDelete = { rule ->
-                vm.delete(rule)
-                editorOpen = false
+                creating = false
+                editing = null
             }
         )
     }
 
-    if (settingsOpen) {
+    if (showSettings) {
         SettingsSheet(
-            settings = settings,
-            versionName = versionName,
-            overlayAllowed = snapshot.items.firstOrNull { it.id == Permissions.ID_OVERLAY }?.granted == true,
-            onDismiss = { settingsOpen = false },
-            onAutopilot = vm::setAutopilot,
-            onNotifications = vm::setNotifications,
-            onIsland = vm::setIsland,
-            onIslandPosition = vm::setIslandPosition,
-            onSyncAfterBoot = vm::setSyncAfterBoot,
-            onSyncNow = vm::syncToSchedule,
-            onRestoreAutoBrightness = vm::restoreAutoBrightness,
-            onPreviewIsland = vm::previewIsland,
-            onOpenAutostart = { Permissions.open(context, Permissions.ID_AUTOSTART) },
-            onOpenOverlay = { Permissions.open(context, Permissions.ID_OVERLAY) }
+            vm = vm,
+            onDismiss = { showSettings = false },
+            onOpenTools = {
+                showSettings = false
+                showTools = true
+            }
         )
+    }
+
+    if (showTools) {
+        ToolsScreen(vm = vm, onBack = { showTools = false }, onOpenNfc = { showNfc = true })
+    }
+
+    if (showScenes) {
+        ScenesScreen(onBack = { showScenes = false })
+    }
+
+    if (showGames) {
+        GamesScreen(onBack = { showGames = false })
+    }
+
+    if (showNfc) {
+        NfcLinkScreen(onBack = { showNfc = false })
+    }
+
+    if (showUpdateSheet) {
+        UpdateSheet(vm = vm, onDismiss = {
+            showUpdateSheet = false
+            vm.dismissUpdate()
+        })
     }
 }
 
 // ————————————————————————————————————————————————
-//  Заголовок
+//  Заголовок и живая строка состояния
 // ————————————————————————————————————————————————
 
 @Composable
-private fun AppHeader(onSettings: () -> Unit) {
+private fun HomeHeader(model: String, onSettings: () -> Unit) {
+    Column(Modifier.padding(top = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                GradientText(
+                    text = "GSYNK",
+                    style = MaterialTheme.typography.displaySmall,
+                    brush = GrapeGradient
+                )
+                Text(
+                    text = model.ifBlank { "мультитул для телефона" },
+                    color = TextDim,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+            Box(
+                Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(CardBg)
+                    .border(1.dp, ChipBorder, CircleShape)
+                    .clickable { onSettings() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = ImageVector.vectorResource(R.drawable.ic_tune),
+                    contentDescription = "Настройки",
+                    tint = TextPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+/** Панель обновления: выезжает сама, ничего искать не нужно. */
+@Composable
+private fun UpdateBanner(onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 2.dp),
+            .clip(RoundedCornerShape(20.dp))
+            .background(TileBrush.Green)
+            .clickable { onClick() }
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            GradientText(text = "GSYNK", style = MaterialTheme.typography.displaySmall)
-        }
-        Box(
-            Modifier
-                .size(46.dp)
-                .clip(CircleShape)
-                .background(CardBgAlt)
-                .border(1.dp, ChipBorder, CircleShape)
-                .clickable { onSettings() },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.ic_tune),
-                contentDescription = "Настройки",
-                tint = TextPrimary,
-                modifier = Modifier.size(21.dp)
+            Text(
+                text = "Доступно обновление",
+                color = Color(0xFF052E1F),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "Нажмите, чтобы обновить приложение",
+                color = Color(0xFF052E1F).copy(alpha = 0.75f),
+                style = MaterialTheme.typography.labelSmall
             )
         }
+        Text("→", color = Color(0xFF052E1F), style = MaterialTheme.typography.headlineSmall)
     }
 }
 
-// ————————————————————————————————————————————————
-//  Разрешения (компактно, без описаний)
-// ————————————————————————————————————————————————
-
 @Composable
-private fun PermissionsCard(snapshot: Permissions.Snapshot, onOpen: (String) -> Unit) {
-    if (snapshot.missing.isEmpty()) {
-        SurfaceCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 13.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(26.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF14512C)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.Check, null, tint = GrapeGreenSoft, modifier = Modifier.size(16.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Text("Все доступы выданы", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-            }
-        }
-        return
-    }
-
-    SurfaceCard(contentPadding = PaddingValues(16.dp)) {
+private fun PermissionsCard(
+    snapshot: Permissions.Snapshot,
+    onOpen: (String) -> Unit
+) {
+    SurfaceCard(borderColor = GrapeViolet.copy(alpha = 0.5f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Filled.Warning,
-                contentDescription = null,
-                tint = GrapeVioletSoft,
-                modifier = Modifier.size(20.dp)
-            )
+            PulseDot(color = GrapeViolet)
             Spacer(Modifier.width(10.dp))
             Text(
-                text = if (snapshot.missing.size == 1) "Нужен 1 доступ" else "Нужно доступов: ${snapshot.missing.size}",
+                text = "Нужны доступы",
                 color = TextPrimary,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f)
             )
+            Text(
+                text = snapshot.items.count { !it.granted }.toString(),
+                color = GrapeVioletSoft,
+                style = MaterialTheme.typography.titleMedium
+            )
         }
-        Spacer(Modifier.height(4.dp))
-        snapshot.items.forEach { item ->
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "Откройте и выдайте — иначе часть функций не работает",
+            color = TextDim,
+            style = MaterialTheme.typography.labelSmall
+        )
+        Spacer(Modifier.height(8.dp))
+        snapshot.items.filter { !it.granted }.take(6).forEach { item ->
             PermissionRow(item = item, onClick = { onOpen(item.id) })
         }
     }
@@ -494,159 +511,21 @@ private fun PermissionRow(item: Permissions.Item, onClick: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .clickable { onClick() }
-            .padding(vertical = 9.dp, horizontal = 2.dp),
+            .padding(vertical = 9.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = if (item.granted) Icons.Filled.Check else Icons.Filled.Warning,
-            contentDescription = null,
-            tint = if (item.granted) GrapeGreenSoft else GrapeVioletSoft,
-            modifier = Modifier.size(17.dp)
-        )
-        Spacer(Modifier.width(12.dp))
         Text(
             text = item.title,
-            color = if (item.granted) TextSecondary else TextPrimary,
-            style = MaterialTheme.typography.titleSmall,
+            color = TextSecondary,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
-        if (item.granted) {
-            Text("готово", color = TextDim, style = MaterialTheme.typography.labelSmall)
-        } else if (item.optional) {
-            TagChip(text = "по желанию", onClick = onClick)
-        } else {
-            TagChip(text = "Дать", selected = true, onClick = onClick)
-        }
+        Text("выдать →", color = GrapeVioletSoft, style = MaterialTheme.typography.labelMedium)
     }
 }
 
 // ————————————————————————————————————————————————
-//  Статус и следующее срабатывание
-// ————————————————————————————————————————————————
-
-@Composable
-private fun StatusCard(
-    settings: AppSettings,
-    nextRun: Pair<ZonedDateTime, Rule>?,
-    now: ZonedDateTime,
-    hasRules: Boolean,
-    brightnessAllowed: Boolean,
-    onAutopilot: (Boolean) -> Unit
-) {
-    SurfaceCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                SectionTitle("Автопилот")
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = if (settings.autopilot) "включён" else "выключен",
-                    color = if (settings.autopilot) GrapeGreenSoft else TextDim,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            Switch(
-                checked = settings.autopilot,
-                onCheckedChange = onAutopilot,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color(0xFF07160E),
-                    checkedTrackColor = GrapeGreen,
-                    uncheckedThumbColor = TextSecondary,
-                    uncheckedTrackColor = Color(0xFF2A1E40),
-                    uncheckedBorderColor = ChipBorder
-                )
-            )
-        }
-
-        AnimatedVisibility(visible = settings.autopilot) {
-            Column {
-                Spacer(Modifier.height(14.dp))
-                ThinDivider()
-                Spacer(Modifier.height(14.dp))
-
-                if (nextRun != null) {
-                    SectionTitle("Следующее срабатывание")
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        GradientText(
-                            text = nextRun.first.format(DateTimeFormatter.ofPattern("HH:mm")),
-                            style = MaterialTheme.typography.displaySmall
-                        )
-                        Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                PulseDot(color = GrapeGreen)
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = nextRun.second.name,
-                                    color = TextPrimary,
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                            }
-                            Spacer(Modifier.height(2.dp))
-                            AnimatedContent(
-                                targetState = humanDelta(now, nextRun.first),
-                                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(120)) },
-                                label = "delta"
-                            ) { delta ->
-                                Text(
-                                    text = "через $delta",
-                                    color = TextDim,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (nextRun.second.useBrightness) {
-                            MetricPill(
-                                icon = ImageVector.vectorResource(R.drawable.ic_brightness),
-                                text = "${nextRun.second.brightness}%",
-                                tint = GrapeVioletSoft
-                            )
-                        }
-                        if (nextRun.second.useVolume) {
-                            MetricPill(
-                                icon = ImageVector.vectorResource(R.drawable.ic_volume),
-                                text = "${nextRun.second.volume}%",
-                                tint = GrapeGreenSoft
-                            )
-                        }
-                    }
-                } else {
-                    Text(
-                        text = if (hasRules) "Все правила выключены" else "Добавьте первое правило",
-                        color = TextSecondary,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-
-        AnimatedVisibility(visible = settings.autopilot && !brightnessAllowed) {
-            Column {
-                Spacer(Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.Warning,
-                        contentDescription = null,
-                        tint = GrapeVioletSoft,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Яркость не меняется без доступа",
-                        color = GrapeVioletSoft,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ————————————————————————————————————————————————
-//  Карточка правила
+//  Карточка правила (компактнее и мягче прежней)
 // ————————————————————————————————————————————————
 
 @Composable
@@ -662,16 +541,12 @@ private fun RuleCard(
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     val borderColor by animateColorAsState(
-        targetValue = if (isNext) GrapeGreen else ChipBorder,
+        targetValue = if (isNext) GrapeGreen else CardBorder,
         animationSpec = tween(450),
         label = "ruleBorder"
     )
 
-    SurfaceCard(
-        modifier = modifier,
-        borderColor = borderColor,
-        onClick = onEdit
-    ) {
+    SurfaceCard(modifier = modifier, borderColor = borderColor, onClick = onEdit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -808,7 +683,13 @@ private fun RuleCard(
 private fun EmptyState(onAdd: () -> Unit) {
     SurfaceCard {
         Text("Правил пока нет", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "Правило меняет яркость и громкость по расписанию — например «вечером тише»",
+            color = TextDim,
+            style = MaterialTheme.typography.labelSmall
+        )
+        Spacer(Modifier.height(14.dp))
         PrimaryButton(
             text = "Добавить правило",
             icon = Icons.Filled.Add,
@@ -818,30 +699,26 @@ private fun EmptyState(onAdd: () -> Unit) {
     }
 }
 
-@Composable
-private fun AddRuleFab(rotation: Float, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .padding(18.dp)
-            .size(62.dp)
-            .shadow(14.dp, CircleShape, spotColor = Color.Black, ambientColor = Color.Black)
-            .clip(CircleShape)
-            .background(GrapeGradient)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Add,
-            contentDescription = "Добавить правило",
-            tint = Color(0xFF100619),
-            modifier = Modifier
-                .size(30.dp)
-                .rotate(rotation)
-        )
-    }
+// ————————————————————————————————————————————————
+//  Ближайшее правило
+// ————————————————————————————————————————————————
+
+private fun nextOccurrence(rules: List<Rule>): ZonedDateTime? {
+    val now = ZonedDateTime.now()
+    return rules.filter { it.enabled }
+        .mapNotNull { RuleScheduler.nextOccurrence(it, now) }
+        .minOrNull()
 }
 
-private fun humanDelta(from: ZonedDateTime, to: ZonedDateTime): String {
+private fun nextRuleId(rules: List<Rule>): String? {
+    val now = ZonedDateTime.now()
+    return rules.filter { it.enabled }
+        .mapNotNull { rule -> RuleScheduler.nextOccurrence(rule, now)?.let { it to rule } }
+        .minByOrNull { it.first }
+        ?.second?.id
+}
+
+fun humanDelta(from: ZonedDateTime, to: ZonedDateTime): String {
     val duration = Duration.between(from, to)
     if (duration.isNegative) return "сейчас"
     val days = duration.toDays()

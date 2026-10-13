@@ -22,6 +22,7 @@ object Permissions {
     const val ID_BATTERY = "battery"
     const val ID_OVERLAY = "overlay"
     const val ID_AUTOSTART = "autostart"
+    const val ID_MIC = "mic"
 
     data class Item(
         val id: String,
@@ -60,9 +61,9 @@ object Permissions {
             true
         }
 
-    /** Разрешение на сами звонки (для задач «позвонить и сказать фразу»). */
-    fun hasCallPermission(context: Context): Boolean = runCatching {
-        ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) ==
+    /** Разрешение на микрофон (шумомер в «хакерском наборе»). */
+    fun hasMicrophone(context: Context): Boolean = runCatching {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
     }.getOrDefault(false)
 
@@ -77,7 +78,8 @@ object Permissions {
             Item(ID_WRITE, "Изменение системных настроек", canWriteSettings(context)),
             Item(ID_BATTERY, "Без ограничений батареи", batteryExempt(context)),
             Item(ID_NOTIF, "Уведомления", hasNotifications(context)),
-            Item(ID_OVERLAY, "Мини-айленд", canDrawOverlays(context), optional = true)
+            Item(ID_OVERLAY, "Остров поверх приложений", canDrawOverlays(context), optional = true),
+            Item(ID_MIC, "Микрофон (шумомер)", hasMicrophone(context), optional = true)
         )
     )
 

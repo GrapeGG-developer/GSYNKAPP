@@ -6,11 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.gsynk.app.R
 import com.gsynk.app.core.AppSettings
 import com.gsynk.app.core.IslandOverlay
+import com.gsynk.app.core.IslandService
 import com.gsynk.app.core.Permissions
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleEngine
 import com.gsynk.app.core.RuleRepository
 import com.gsynk.app.core.RuleScheduler
+import com.gsynk.app.core.UpdateChecker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -243,6 +245,102 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ————— обновления (OTA) —————
+
+    private val _update = MutableStateFlow<UpdateChecker.Result?>(null)
+    val update: StateFlow<UpdateChecker.Result?> = _update.asStateFlow()
+
+    private val _updateDownloading = MutableStateFlow(false)
+    val updateDownloading: StateFlow<Boolean> = _updateDownloading.asStateFlow()
+
+    private val _updateProgress = MutableStateFlow(0)
+    val updateProgress: StateFlow<Int> = _updateProgress.asStateFlow()
+
+    /** Баннер обновления показываем только когда оно реально есть. */
+    val updateAvailable: StateFlow<Boolean> = _update
+        .let { flow ->
+            kotlinx.coroutines.flow.combine(flow, settings) { result, _ ->
+                result?.updateAvailable == true
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    init {
+        initUpdateCheck()
+    }
+
+    /**
+     * Автопроверка обновлений: при запуске и не чаще, чем раз в 6 часов.
+     * Пользователю не нужно искать кнопку — баннер появится сам.
+     */
+    private fun initUpdateCheck() {
+        viewModelScope.launch {
+            val current = repository.currentSettings()
+            if (!current.updateAuto) return@launch
+            val sixHours = 6 * 60 * 60 * 1000L
+            if (System.currentTimeMillis() - current.lastUpdateCheck < sixHours) return@launch
+            checkUpdate(silent = true)
+        }
+    }
+
+    fun checkUpdate(silent: Boolean = false) = viewModelScope.launch {
+        val repo = repository.currentSettings().updateRepo
+        if (repo.isBlank()) return@launch
+        val result = withContext(Dispatchers.IO) { UpdateChecker.check(app(), repo) }
+        _update.value = result
+        repository.saveSettings(
+            repository.currentSettings().copy(lastUpdateCheck = System.currentTimeMillis())
+        )
+        if (!silent) {
+            _message.value = result.message
+        }
+    }
+
+    fun dismissUpdate() = viewModelScope.launch {
+        guarded {
+            val version = _update.value?.latestTag.orEmpty()
+            repository.saveSettings(repository.currentSettings().copy(seenVersion = version))
+            _update.value = null
+        }
+    }
+
+    fun setUpdateAuto(enabled: Boolean) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(updateAuto = enabled)) }
+    }
+
+    fun setUpdateRepo(repo: String) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(updateRepo = repo.trim())) }
+    }
+
+    /** Скачать и установить обновление с показом прогресса. */
+    fun downloadAndInstall() = viewModelScope.launch {
+        val url = _update.value?.apkUrl.orEmpty()
+        if (url.isBlank()) {
+            _message.value = "Нет ссылки на APK"
+            return@launch
+        }
+        _updateDownloading.value = true
+        _updateProgress.value = 0
+        val file = withContext(Dispatchers.IO) {
+            UpdateChecker.download(app(), url) { percent -> _updateProgress.value = percent }
+        }
+        _updateDownloading.value = false
+        if (file == null) {
+            _message.value = "Не удалось скачать обновление"
+            return@launch
+        }
+        if (!UpdateChecker.canInstall(app())) {
+            _message.value = "Разрешите установку из GSYNK и повторите"
+            UpdateChecker.openInstallSettings(app())
+            return@launch
+        }
+        if (UpdateChecker.install(app(), file)) {
+            _message.value = "Запускаю установку…"
+        } else {
+            _message.value = "Не удалось запустить установку"
+        }
+    }
+
     // ————— настройки —————
 
     fun setAutopilot(enabled: Boolean) = viewModelScope.launch {
@@ -268,18 +366,68 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Постоянный остров: включён — висит капсула, выключен — только вспышки. */
+    fun setIslandPersistent(enabled: Boolean) = viewModelScope.launch {
+        guarded {
+            repository.saveSettings(repository.currentSettings().copy(islandPersistent = enabled))
+            if (enabled) {
+                if (!Permissions.canDrawOverlays(app())) {
+                    _message.value = "Нужен доступ «Поверх других приложений»"
+                } else if (!Permissions.hasNotifications(app())) {
+                    _message.value = "Нужны уведомления: без них остров не удержать"
+                } else {
+                    IslandService.start(app())
+                    _message.value = "Остров включён"
+                }
+            } else {
+                IslandService.stop(app())
+                _message.value = "Остров выключен"
+            }
+        }
+    }
+
     fun setIslandPosition(position: Int) = viewModelScope.launch {
         guarded {
             repository.saveSettings(repository.currentSettings().copy(islandPosition = position))
-            val label = when (position) {
-                com.gsynk.app.core.IslandPosition.BOTTOM -> "снизу"
-                com.gsynk.app.core.IslandPosition.CENTER -> "по центру"
-                else -> "сверху"
-            }
-            _message.value = "Айленд: $label"
-            if (settings.value.islandEnabled) {
+            _message.value = "Остров: " + com.gsynk.app.core.IslandPosition.label(position).lowercase()
+            if (settings.value.islandPersistent) {
+                IslandService.start(app())
+            } else if (settings.value.islandEnabled) {
                 fullIslandPreview()
             }
+        }
+    }
+
+    /** Размер капсулы: компактный или обычный. */
+    fun setIslandCompact(compact: Boolean) = viewModelScope.launch {
+        guarded {
+            repository.saveSettings(repository.currentSettings().copy(islandCompact = compact))
+            if (settings.value.islandPersistent) IslandService.start(app()) else fullIslandPreview()
+        }
+    }
+
+    /** Смещение острова по вертикали в dp. */
+    fun setIslandOffset(offset: Int) = viewModelScope.launch {
+        guarded {
+            repository.saveSettings(repository.currentSettings().copy(islandOffsetY = offset))
+            if (settings.value.islandPersistent) IslandService.start(app()) else fullIslandPreview()
+        }
+    }
+
+    /** Что показывать на постоянном острове. */
+    fun toggleIslandWidget(widget: String, on: Boolean) = viewModelScope.launch {
+        guarded {
+            val current = repository.currentSettings().islandWidgets
+            val next = if (on) (current + widget).distinct() else current.filterNot { it == widget }
+            repository.saveSettings(repository.currentSettings().copy(islandWidgets = next))
+            if (settings.value.islandPersistent) IslandService.start(app())
+        }
+    }
+
+    /** Порядок правил на главном экране. */
+    fun setRuleSort(mode: Int) = viewModelScope.launch {
+        guarded {
+            repository.saveSettings(repository.currentSettings().copy(ruleSort = mode))
         }
     }
 
@@ -334,6 +482,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             subtitle = "Яркость 25% • Звук 0%",
             position = islandPosition()
         )
+    }
+
+    /** Показать сообщение в главном экране (например, от мультитула). */
+    fun showMessage(text: String) {
+        _message.value = text
     }
 
     fun clearMessage() {

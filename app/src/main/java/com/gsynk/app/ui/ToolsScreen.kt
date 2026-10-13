@@ -1,580 +1,415 @@
 package com.gsynk.app.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import android.Manifest
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.gsynk.app.R
 import com.gsynk.app.core.DeviceProfile
-import com.gsynk.app.core.MainMode
-import com.gsynk.app.core.Permissions
-import com.gsynk.app.core.ScheduledTask
-import com.gsynk.app.ui.theme.CardBg
-import com.gsynk.app.ui.theme.CardBgAlt
-import com.gsynk.app.ui.theme.ChipBorder
+import com.gsynk.app.core.IslandWidget
+import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.GrapeGreen
-import com.gsynk.app.ui.theme.GrapeViolet
-import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.gsynk.app.ui.theme.TileBrush
 
-/** Хаб мультитула: фонарик, DND, задачи со звонком и озвучкой, ИИ-чат, OTA, MAIN-режим. */
+/**
+ * Мультитул 2.1: живые плитки вместо длинных списков.
+ *
+ * Здесь собрано всё, что делают «на ходу»: фонарик, режим тишины, сирена,
+ * быстрые системные экраны, «хакерский набор», локальный ИИ и профиль устройства.
+ * Модель определяется автоматически — переключателя набора функций нет.
+ */
 @Composable
 fun ToolsScreen(
-    vm: ToolsViewModel,
+    vm: MainViewModel,
     onBack: () -> Unit,
-    onOpenScreensaver: () -> Unit,
-    onOpenGrapeUi: () -> Unit
+    onOpenNfc: () -> Unit
 ) {
-    val device by vm.device.collectAsStateWithLifecycle()
-    val torch by vm.torch.collectAsStateWithLifecycle()
-    val dnd by vm.dnd.collectAsStateWithLifecycle()
-    val tasks by vm.tasks.collectAsStateWithLifecycle()
-    val settings by vm.settings.collectAsStateWithLifecycle()
-
-    val full = device.isFull
-
-    // разрешение на звонки: без него задача только откроет набор номера
     val context = LocalContext.current
-    var callAllowed by remember { mutableStateOf(Permissions.hasCallPermission(context)) }
-    val callLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> callAllowed = granted }
+    val tools: ToolsViewModel = viewModel()
+    val torch by tools.torch.collectAsStateWithLifecycle()
+    val dnd by tools.dnd.collectAsStateWithLifecycle()
+    val siren by tools.siren.collectAsStateWithLifecycle()
+    val stats by tools.stats.collectAsStateWithLifecycle()
+    val toolsMessage by tools.message.collectAsStateWithLifecycle()
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val updateAvailable by vm.updateAvailable.collectAsStateWithLifecycle()
 
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                callAllowed = Permissions.hasCallPermission(context)
-            }
+    val profile = remember { DeviceProfile.detect(context) }
+    var openExtra by remember { mutableStateOf<String?>(null) }
+    var showChat by remember { mutableStateOf(false) }
+    var showUpdate by remember { mutableStateOf(false) }
+    var showScreensaver by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (toolsMessage != null) {
+            vm.showMessage(toolsMessage!!)
+            tools.clearMessage()
         }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    GrapeScreen(title = "Инструменты", onBack = onBack) {
+    when (openExtra) {
+        "password" -> PasswordToolScreen(onBack = { openExtra = null })
+        "morse" -> MorseToolScreen(onBack = { openExtra = null })
+        "metal" -> MetalDetectorScreen(onBack = { openExtra = null })
+        "level" -> LevelToolScreen(onBack = { openExtra = null })
+        "sound" -> SoundMeterScreen(onBack = { openExtra = null })
+        "sysinfo" -> SysDashboardScreen(onBack = { openExtra = null })
+        "coder" -> EncoderScreen(onBack = { openExtra = null })
+        "subnet" -> SubnetScreen(onBack = { openExtra = null })
+    }
+
+    if (openExtra != null) return
+
+    if (showChat) {
+        ChatScreen(onBack = { showChat = false })
+        return
+    }
+
+    if (showScreensaver) {
+        ScreensaverScreen(onBack = { showScreensaver = false })
+        return
+    }
+
+    if (showUpdate) {
+        UpdateSheet(vm = vm, onDismiss = { showUpdate = false })
+        return
+    }
+
+    GrapeScreen(
+        title = "Инструменты",
+        subtitle = "всё в одном приложении",
+        onBack = onBack
+    ) {
         // ————— быстрые действия —————
+        SectionTitle("На ходу")
+        Spacer(Modifier.height(9.dp))
         TileRow {
             ToggleTile(
                 title = "Фонарик",
                 on = torch,
-                iconRes = com.gsynk.app.R.drawable.ic_bolt,
-                onText = "горит",
+                iconRes = R.drawable.ic_brightness,
+                onText = "светит",
                 offText = "выключен",
-                modifier = Modifier.weight(1f),
-                onClick = vm::toggleTorch
-            )
-            if (full) {
-                ToggleTile(
-                    title = "Не беспокоить",
-                    on = dnd,
-                    iconRes = com.gsynk.app.R.drawable.ic_shield,
-                    onText = "тишина",
-                    offText = "уведомления идут",
-                    modifier = Modifier.weight(1f),
-                    onClick = {
-                        vm.refreshDnd()
-                        vm.toggleDnd()
-                    }
-                )
-            } else {
-                NavTile(
-                    title = "Скринсейвер",
-                    subtitle = "DVD-логотип",
-                    iconRes = com.gsynk.app.R.drawable.ic_brightness,
-                    tint = TileTint.Dark,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenScreensaver
-                )
-            }
+                modifier = Modifier.weight(1f)
+            ) { tools.toggleTorch() }
+            ToggleTile(
+                title = "Тишина",
+                on = dnd,
+                iconRes = R.drawable.ic_shield,
+                onText = "не беспокоить",
+                offText = "звук включён",
+                modifier = Modifier.weight(1f)
+            ) { tools.toggleDnd() }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(11.dp))
         TileRow {
-            if (full) {
-                ToggleTile(
-                    title = "Постоянный остров",
-                    on = settings.islandPersistent,
-                    iconRes = com.gsynk.app.R.drawable.ic_tune,
-                    onText = "висит у камеры",
-                    offText = "выключен",
-                    modifier = Modifier.weight(1f),
-                    onClick = { vm.setPersistentIsland(!settings.islandPersistent) }
-                )
-                NavTile(
-                    title = "Скринсейвер",
-                    subtitle = "DVD-логотип",
-                    iconRes = com.gsynk.app.R.drawable.ic_brightness,
-                    tint = TileTint.Dark,
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenScreensaver
-                )
-            } else {
-                NavTile(
-                    title = "Grape Link",
-                    subtitle = "передача касанием",
-                    iconRes = com.gsynk.app.R.drawable.ic_copy,
-                    tint = TileTint.Mixed,
-                    badge = if (device.hasNfc) "NFC" else "нет NFC",
-                    modifier = Modifier.weight(1f),
-                    onClick = { }
-                )
-                NavTile(
-                    title = "Правила",
-                    subtitle = "яркость и громкость",
-                    iconRes = com.gsynk.app.R.drawable.ic_schedule,
-                    tint = TileTint.Green,
-                    modifier = Modifier.weight(1f),
-                    onClick = onBack
-                )
-            }
-        }
-        if (full) {
-            Spacer(Modifier.height(12.dp))
-            TileRow {
-                NavTile(
-                    title = "GRAPEUI",
-                    subtitle = "ОС внутри GSYNK",
-                    iconRes = com.gsynk.app.R.drawable.ic_tune,
-                    tint = TileTint.Dark,
-                    badge = "черновик",
-                    modifier = Modifier.weight(1f),
-                    onClick = onOpenGrapeUi
-                )
-                NavTile(
-                    title = "Grape Link",
-                    subtitle = "передача касанием",
-                    iconRes = com.gsynk.app.R.drawable.ic_copy,
-                    tint = TileTint.Mixed,
-                    badge = if (device.hasNfc) "NFC" else "нет NFC",
-                    modifier = Modifier.weight(1f),
-                    onClick = { }
-                )
-            }
+            ToggleTile(
+                title = "Сирена",
+                on = siren,
+                iconRes = R.drawable.ic_volume,
+                onText = "громко зовёт",
+                offText = "найти телефон",
+                modifier = Modifier.weight(1f)
+            ) { tools.toggleSiren() }
+            LiveTile(
+                title = "Вибрация",
+                subtitle = "проверка мотора",
+                iconRes = R.drawable.ic_bolt,
+                brush = TileBrush.Pink,
+                liveText = "разок",
+                modifier = Modifier.weight(1f)
+            ) { tools.vibrate() }
         }
 
-        Spacer(Modifier.height(22.dp))
-
-        // ————— задачи (полный набор) —————
-        if (full) {
-            SectionTitle("Отложенные задачи")
-            Spacer(Modifier.height(8.dp))
-            if (!callAllowed) {
-                SurfaceCard(corner = 18.dp, contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                "Нужно разрешение на звонки",
-                                color = TextPrimary,
-                                style = MaterialTheme.typography.titleSmall
-                            )
-                            Text(
-                                "Без него задача откроет набор номера, но не позвонит сама.",
-                                color = TextDim,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Box(
-                            Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(GrapeViolet)
-                                .clickable { callLauncher.launch(Manifest.permission.CALL_PHONE) }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Text("Разрешить", color = Color(0xFF120720), style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-            }
-            TaskComposer(
-                canCall = true,
-                onCreate = { title, kind, number, phrase, delay -> vm.addTask(title, kind, number, phrase, delay) },
-                onSpeak = vm::speak
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Разделы")
+        Spacer(Modifier.height(9.dp))
+        TileRow {
+            NavTile(
+                title = "Grape Link",
+                subtitle = "NFC-обмен",
+                iconRes = R.drawable.ic_bolt,
+                brush = TileBrush.Cyan,
+                liveText = "касаний: ${settings.nfcTouches}",
+                modifier = Modifier.weight(1f),
+                onClick = onOpenNfc
             )
-
-            if (tasks.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                tasks.sortedBy { it.triggerAt }.forEach { task ->
-                    TaskRow(task = task, onCancel = { vm.removeTask(task) })
-                    Spacer(Modifier.height(8.dp))
-                }
-            }
-
-            Spacer(Modifier.height(22.dp))
-
-            // ————— ИИ-чат —————
-            SectionTitle("GrapeBot — чат с помощником")
-            Spacer(Modifier.height(8.dp))
-            ChatSection(vm)
-
-            Spacer(Modifier.height(22.dp))
-
-            // ————— обновление —————
-            SectionTitle("Обновление GSYNK")
-            Spacer(Modifier.height(8.dp))
-            UpdateSection(vm)
-
-            Spacer(Modifier.height(22.dp))
-        } else {
-            SectionTitle("Базовый набор")
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "На этом устройстве включены: расписание яркости и громкости, фонарик, " +
-                    "мини-игры, скринсейвер и NFC-обмен. Постоянный остров, задачи со звонком, " +
-                    "ИИ-чат и OTA доступны в полном (MAIN) режиме — его можно включить ниже.",
-                color = TextSecondary,
-                style = MaterialTheme.typography.bodySmall
+            NavTile(
+                title = "Локальный ИИ",
+                subtitle = "чат офлайн",
+                iconRes = R.drawable.ic_shield,
+                brush = TileBrush.Violet,
+                modifier = Modifier.weight(1f),
+                onClick = { showChat = true }
             )
-            Spacer(Modifier.height(22.dp))
+        }
+        Spacer(Modifier.height(11.dp))
+        TileRow {
+            NavTile(
+                title = "Скринсейвер",
+                subtitle = "полка с часами",
+                iconRes = R.drawable.ic_schedule,
+                brush = TileBrush.Ink,
+                modifier = Modifier.weight(1f),
+                onClick = { showScreensaver = true }
+            )
+            NavTile(
+                title = "Обновления",
+                subtitle = "версия ${com.gsynk.app.BuildConfig.VERSION_NAME}",
+                iconRes = R.drawable.ic_bolt,
+                brush = if (updateAvailable) TileBrush.Green else TileBrush.Ink,
+                badge = if (updateAvailable) "новое" else null,
+                liveText = if (updateAvailable) "Обновить" else "Проверить",
+                modifier = Modifier.weight(1f),
+                onClick = { showUpdate = true }
+            )
         }
 
-        // ————— MAIN-режим —————
-        SectionTitle("MAIN-режим устройства")
-        Spacer(Modifier.height(8.dp))
-        DeviceSection(vm, device)
-
-        Spacer(Modifier.height(24.dp))
-        SecondaryButton(text = "Назад", onClick = onBack, modifier = Modifier.fillMaxWidth())
-    }
-}
-
-// ————————————————————————————————————————————————
-//  Создание задач
-// ————————————————————————————————————————————————
-
-@Composable
-private fun TaskComposer(
-    canCall: Boolean,
-    onCreate: (String, String, String, String, Long) -> Unit,
-    onSpeak: (String) -> Unit
-) {
-    var kind by remember { mutableStateOf(ScheduledTask.KIND_CALL) }
-    var target by remember { mutableStateOf("") }
-    var phrase by remember { mutableStateOf("") }
-    var delaySeconds by remember { mutableLongStateOf(180L) }
-
-    SurfaceCard(corner = 22.dp) {
-        Text("Что сделать", color = TextPrimary, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            KindChip("Позвонить", kind == ScheduledTask.KIND_CALL) { kind = ScheduledTask.KIND_CALL }
-            KindChip("Озвучить", kind == ScheduledTask.KIND_SPEAK) { kind = ScheduledTask.KIND_SPEAK }
-            KindChip("Розыгрыш", kind == ScheduledTask.KIND_FAKE_CALL) { kind = ScheduledTask.KIND_FAKE_CALL }
-        }
-
-        Spacer(Modifier.height(12.dp))
-        GrapeTextField(
-            value = target,
-            onValueChange = { target = it.take(60) },
-            label = if (kind == ScheduledTask.KIND_FAKE_CALL) "Имя «звонящего»" else "Контакт или номер",
-            keyboardType = if (kind == ScheduledTask.KIND_CALL) KeyboardType.Phone else KeyboardType.Text
-        )
-
-        Spacer(Modifier.height(10.dp))
-        GrapeTextField(
-            value = phrase,
-            onValueChange = { phrase = it.take(160) },
-            label = "Фраза для озвучки (необязательно)",
-            singleLine = false
-        )
-
-        Spacer(Modifier.height(12.dp))
-        Text("Когда", color = TextDim, style = MaterialTheme.typography.labelMedium)
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(10L to "через 10 с", 60L to "1 мин", 180L to "3 мин", 600L to "10 мин").forEach { (seconds, label) ->
-                KindChip(label, delaySeconds == seconds) { delaySeconds = seconds }
-            }
-        }
-
-        Spacer(Modifier.height(14.dp))
-        PrimaryButton(
-            text = when (kind) {
-                ScheduledTask.KIND_CALL -> "Позвонить и сказать"
-                ScheduledTask.KIND_FAKE_CALL -> "Устроить розыгрыш"
-                else -> "Озвучить"
-            },
-            onClick = {
-                if (kind == ScheduledTask.KIND_SPEAK && phrase.isBlank()) return@PrimaryButton
-                onCreate(
-                    if (target.isBlank()) "Задача" else target,
-                    kind,
-                    target,
-                    phrase,
-                    delaySeconds
-                )
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(8.dp))
-        SecondaryButton(
-            text = "Озвучить сейчас",
-            onClick = { if (phrase.isNotBlank()) onSpeak(phrase) },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(8.dp))
+        // ————— хакерский набор —————
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Хакерский набор")
+        Spacer(Modifier.height(4.dp))
         Text(
-            text = "Подсказка: для звонка нужен контакт или номер; текст в линию читает синтез речи " +
-                "телефона — на части прошивок он звучит только в динамик разговора.",
+            text = "Измерения, кодирование, радиочастоты — всё офлайн, без интернета",
             color = TextDim,
             style = MaterialTheme.typography.labelSmall
         )
-    }
-}
-
-@Composable
-private fun KindChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    Box(
-        Modifier
-            .clip(RoundedCornerShape(50))
-            .background(if (selected) GrapeViolet else CardBgAlt)
-            .border(1.dp, if (selected) Color.Transparent else ChipBorder, RoundedCornerShape(50))
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = label,
-            color = if (selected) Color(0xFF120720) else TextSecondary,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-        )
-    }
-}
-
-@Composable
-private fun TaskRow(task: ScheduledTask, onCancel: () -> Unit) {
-    val time = remember(task.triggerAt) {
-        DateTimeFormatter.ofPattern("HH:mm:ss").format(
-            Instant.ofEpochMilli(task.triggerAt).atZone(ZoneId.systemDefault())
-        )
-    }
-    SurfaceCard(corner = 18.dp, contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = ScheduledTask.KIND_TITLES[task.kind] ?: "Задача",
-                    color = TextPrimary,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = buildString {
-                        append(time)
-                        if (task.contactName.isNotBlank()) append(" • ").append(task.contactName)
-                        if (task.phrase.isNotBlank()) append(" • «").append(task.phrase.take(40)).append("»")
-                    },
-                    color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-            Box(
-                Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(CardBgAlt)
-                    .border(1.dp, ChipBorder, RoundedCornerShape(50))
-                    .clickable { onCancel() }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text("Отменить", color = TextSecondary, style = MaterialTheme.typography.labelSmall)
-            }
+        Spacer(Modifier.height(9.dp))
+        TileRow {
+            NavTile(
+                title = "Пароль",
+                subtitle = "и QR-код",
+                iconRes = R.drawable.ic_shield,
+                brush = TileBrush.Amber,
+                modifier = Modifier.weight(1f),
+                onClick = { openExtra = "password" }
+            )
+            NavTile(
+                title = "Морзянка",
+                subtitle = "мигание фонариком",
+                iconRes = R.drawable.ic_bolt,
+                brush = TileBrush.Violet,
+                modifier = Modifier.weight(1f),
+                onClick = { openExtra = "morse" }
+            )
         }
-    }
-}
+        Spacer(Modifier.height(11.dp))
+        TileRow {
+            NavTile(
+                title = "Металл",
+                subtitle = "магнитометр",
+                iconRes = R.drawable.ic_shield,
+                brush = TileBrush.Blue,
+                modifier = Modifier.weight(1f),
+                onClick = { openExtra = "metal" }
+            )
+            NavTile(
+                title = "Уровень",
+                subtitle = "наклон в градусах",
+                iconRes = R.drawable.ic_tune,
+                brush = TileBrush.Green,
+                modifier = Modifier.weight(1f),
+                onClick = { openExtra = "level" }
+            )
+        }
+        Spacer(Modifier.height(11.dp))
+        TileRow {
+            NavTile(
+                title = "Шумомер",
+                subtitle = "уровень в дБ",
+                iconRes = R.drawable.ic_volume,
+                brush = TileBrush.Red,
+                modifier = Modifier.weight(1f),
+                onClick = { openExtra = "sound" }
+            )
+            NavTile(
+                title = "Система",
+                subtitle = "живой дашборд",
+                iconRes = R.drawable.ic_schedule,
+                brush = TileBrush.Ink,
+                modifier = Modifier.weight(1f),
+                onClick = { openExtra = "sysinfo" }
+            )
+        }
+        Spacer(Modifier.height(11.dp))
+        TileRow {
+            NavTile(
+                title = "Кодер",
+                subtitle = "base64, URL, hex",
+                iconRes = R.drawable.ic_copy,
+                brush = TileBrush.Violet,
+                modifier = Modifier.weight(1f),
+                onClick = { openExtra = "coder" }
+            )
+            NavTile(
+                title = "Подсети",
+                subtitle = "калькулятор IP",
+                iconRes = R.drawable.ic_bolt,
+                brush = TileBrush.Cyan,
+                modifier = Modifier.weight(1f),
+                onClick = { openExtra = "subnet" }
+            )
+        }
 
-// ————————————————————————————————————————————————
-//  Чат
-// ————————————————————————————————————————————————
+        // ————— системные экраны —————
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Системные экраны")
+        Spacer(Modifier.height(9.dp))
+        TileRow {
+            SortChip(label = "Звук", selected = false) { tools.openSettings("sound") }
+            SortChip(label = "Батарея", selected = false) { tools.openSettings("battery") }
+            SortChip(label = "NFC", selected = false) { tools.openSettings("nfc") }
+        }
+        Spacer(Modifier.height(7.dp))
+        TileRow {
+            SortChip(label = "Wi-Fi", selected = false) { tools.openSettings("wifi") }
+            SortChip(label = "Bluetooth", selected = false) { tools.openSettings("bluetooth") }
+            SortChip(label = "Геолокация", selected = false) { tools.openSettings("location") }
+        }
 
-@Composable
-private fun ChatSection(vm: ToolsViewModel) {
-    val chat by vm.chat.collectAsStateWithLifecycle()
-    var input by remember { mutableStateOf("") }
-
-    SurfaceCard(corner = 22.dp) {
-        Column(Modifier.height(240.dp)) {
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(chat) { message ->
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (message.fromUser) Arrangement.End else Arrangement.Start
-                    ) {
-                        Box(
-                            Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(if (message.fromUser) GrapeViolet.copy(alpha = 0.85f) else CardBgAlt)
-                                .padding(horizontal = 12.dp, vertical = 9.dp)
-                        ) {
-                            Text(
-                                text = message.text,
-                                color = if (message.fromUser) Color(0xFF120720) else TextPrimary,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f)) {
-                    GrapeTextField(
-                        value = input,
-                        onValueChange = { input = it.take(200) },
-                        label = "Команда: «яркость 40», «фонарик»…"
+        // ————— постоянный остров —————
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Остров у камеры")
+        Spacer(Modifier.height(9.dp))
+        SurfaceCard(borderColor = CardBorder) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = if (settings.islandPersistent) "Постоянный остров включён" else "Только вспышки",
+                        color = TextPrimary,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Позиция: " + com.gsynk.app.core.IslandPosition.label(settings.islandPosition) +
+                            if (settings.islandCompact) " • компактный" else " • обычный",
+                        color = TextDim,
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
-                Spacer(Modifier.width(8.dp))
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(GrapeViolet)
-                        .clickable {
-                            vm.sendChat(input)
-                            input = ""
-                        }
-                        .padding(horizontal = 14.dp, vertical = 14.dp)
-                ) {
-                    Text("→", color = Color(0xFF120720), style = MaterialTheme.typography.titleMedium)
-                }
-            }
-        }
-    }
-}
-
-// ————————————————————————————————————————————————
-//  OTA
-// ————————————————————————————————————————————————
-
-@Composable
-private fun UpdateSection(vm: ToolsViewModel) {
-    val settings by vm.settings.collectAsStateWithLifecycle()
-    val result by vm.update.collectAsStateWithLifecycle()
-    val busy by vm.updateBusy.collectAsStateWithLifecycle()
-    var repo by remember(settings.updateRepo) { mutableStateOf(settings.updateRepo) }
-
-    SurfaceCard(corner = 22.dp) {
-        GrapeTextField(
-            value = repo,
-            onValueChange = {
-                repo = it.take(80)
-                vm.setUpdateRepo(repo)
-            },
-            label = "Репозиторий GitHub: владелец/gsynk"
-        )
-        Spacer(Modifier.height(12.dp))
-        PrimaryButton(
-            text = if (busy) "Проверяю…" else "Проверить обновление",
-            onClick = vm::checkUpdate,
-            enabled = !busy,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        val state = result
-        if (state != null) {
-            Spacer(Modifier.height(12.dp))
-            Text(state.message, color = if (state.updateAvailable) GrapeGreen else TextSecondary, style = MaterialTheme.typography.bodySmall)
-            if (state.latestTag.isNotBlank()) {
-                Text("Текущая: ${state.currentTag} • Новейшая: ${state.latestTag}", color = TextDim, style = MaterialTheme.typography.labelSmall)
-            }
-            if (state.updateAvailable) {
-                Spacer(Modifier.height(10.dp))
-                if (state.notes.isNotBlank()) {
-                    Text(state.notes, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
-                    Spacer(Modifier.height(10.dp))
-                }
                 PrimaryButton(
-                    text = if (busy) "Скачиваю…" else "Скачать и установить",
-                    onClick = vm::downloadAndInstall,
-                    enabled = !busy,
-                    modifier = Modifier.fillMaxWidth()
+                    text = if (settings.islandPersistent) "Выключить" else "Включить",
+                    onClick = { vm.setIslandPersistent(!settings.islandPersistent) }
                 )
             }
+            Spacer(Modifier.height(12.dp))
+            Text("Показывать:", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.height(7.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                IslandWidget.ALL.chunked(3).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        row.forEach { widget ->
+                            SortChip(
+                                label = IslandWidget.label(widget),
+                                selected = widget in settings.islandWidgets
+                            ) { vm.toggleIslandWidget(widget, widget !in settings.islandWidgets) }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text("Расположение:", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.height(7.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                com.gsynk.app.core.IslandPosition.ALL.chunked(3).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        row.forEach { position ->
+                            SortChip(
+                                label = com.gsynk.app.core.IslandPosition.label(position)
+                                    .replace("Сверху ", "")
+                                    .replace("По центру ", "центр "),
+                                selected = settings.islandPosition == position
+                            ) { vm.setIslandPosition(position) }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                SortChip("Компактный", settings.islandCompact) { vm.setIslandCompact(true) }
+                SortChip("Обычный", !settings.islandCompact) { vm.setIslandCompact(false) }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Сдвиг по вертикали: ${settings.islandOffsetY} точек",
+                color = TextSecondary,
+                style = MaterialTheme.typography.labelMedium
+            )
+            Spacer(Modifier.height(7.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                SortChip(label = "Выше на 4", selected = false) { vm.setIslandOffset((settings.islandOffsetY - 4).coerceIn(-40, 80)) }
+                SortChip(label = "Ниже на 4", selected = false) { vm.setIslandOffset((settings.islandOffsetY + 4).coerceIn(-40, 80)) }
+                SortChip(label = "Сброс", selected = false) { vm.setIslandOffset(0) }
+            }
+            Spacer(Modifier.height(10.dp))
+            SecondaryButton(
+                text = "Показать образец",
+                onClick = { vm.fullIslandPreview() },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-    }
-}
 
-// ————————————————————————————————————————————————
-//  MAIN-режим
-// ————————————————————————————————————————————————
-
-@Composable
-private fun DeviceSection(vm: ToolsViewModel, device: DeviceProfile.Info) {
-    val settings by vm.settings.collectAsStateWithLifecycle()
-
-    SurfaceCard(corner = 22.dp) {
-        Text(device.model, color = TextPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        Text(
-            text = "${device.brand} • Android ${device.androidLabel} (SDK ${device.androidSdk}) • NFC: ${if (device.hasNfc) "да" else "нет"}",
-            color = TextDim,
-            style = MaterialTheme.typography.labelSmall
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "Определено как: ${if (device.isFull) "полный набор (MAIN)" else "базовый набор"}",
-            color = if (device.isFull) GrapeGreen else GrapeVioletSoft,
-            style = MaterialTheme.typography.labelMedium
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(device.summary, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
-
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            KindChip("Авто", settings.mainMode == MainMode.AUTO) { vm.setMainMode(MainMode.AUTO) }
-            KindChip("Как на Poco X8 Pro Max", settings.mainMode == MainMode.ON) { vm.setMainMode(MainMode.ON) }
-            KindChip("Базовый", settings.mainMode == MainMode.OFF) { vm.setMainMode(MainMode.OFF) }
+        // ————— профиль устройства (только показ) —————
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Профиль устройства")
+        Spacer(Modifier.height(9.dp))
+        SurfaceCard(borderColor = if (profile.isFull) GrapeGreen.copy(alpha = 0.45f) else CardBorder) {
+            Text(
+                text = profile.model,
+                color = TextPrimary,
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(profile.summary, color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Spacer(Modifier.height(12.dp))
+            InfoRow("Набор функций", if (profile.isFull) "полный" else "базовый")
+            InfoRow("Android", profile.androidLabel)
+            InfoRow("NFC", if (profile.hasNfc) "есть" else "нет")
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Определяется автоматически по модели и системе — переключать вручную не нужно.",
+                color = TextDim,
+                style = MaterialTheme.typography.labelSmall
+            )
         }
 
-        Spacer(Modifier.height(12.dp))
-        Text("Доступные функции", color = TextDim, style = MaterialTheme.typography.labelMedium)
-        Spacer(Modifier.height(6.dp))
-        DeviceProfile.Feature.TITLES.forEach { (id, title) ->
-            val enabled = DeviceProfile.feature(device, id)
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 3.dp)) {
-                Text(
-                    text = if (enabled) "✓" else "—",
-                    color = if (enabled) GrapeGreen else TextDim,
-                    style = MaterialTheme.typography.labelMedium
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(title, color = if (enabled) TextPrimary else TextDim, style = MaterialTheme.typography.bodySmall)
+        // ————— живой дашборд —————
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Сейчас в телефоне")
+        Spacer(Modifier.height(9.dp))
+        SurfaceCard {
+            val snapshot = stats
+            if (snapshot == null) {
+                Text("Считываю показатели…", color = TextDim, style = MaterialTheme.typography.bodySmall)
+            } else {
+                InfoRow("Память", "${snapshot.ramUsedMb} / ${snapshot.ramTotalMb} МБ")
+                BarIndicator(percent = snapshot.ramPercent, brush = TileBrush.Violet)
+                Spacer(Modifier.height(10.dp))
+                InfoRow("Накопитель", "свободно %.1f ГБ".format(snapshot.storageFreeGb))
+                BarIndicator(percent = 100 - snapshot.storageUsedPercent, brush = TileBrush.Cyan)
+                Spacer(Modifier.height(10.dp))
+                InfoRow("Батарея", "${snapshot.batteryPercent}% • %.1f°C".format(snapshot.batteryTempC))
+                BarIndicator(percent = snapshot.batteryPercent, brush = TileBrush.Green)
+                Spacer(Modifier.height(12.dp))
+                InfoRow("Ядер", snapshot.cores.toString())
+                InfoRow("Включён", "${snapshot.uptimeHours} ч")
             }
         }
     }

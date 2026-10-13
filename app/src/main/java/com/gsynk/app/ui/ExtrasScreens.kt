@@ -223,6 +223,7 @@ private fun DvdLogo(hue: Int) {
     }
 }
 
+/** Маленькая кнопка-капсула: нужна внутри полноэкранных разделов. */
 @Composable
 private fun SmallAction(label: String, onClick: () -> Unit) {
     Box(
@@ -231,126 +232,8 @@ private fun SmallAction(label: String, onClick: () -> Unit) {
             .background(CardBgAlt)
             .border(1.dp, ChipBorder, RoundedCornerShape(50))
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 7.dp)
+            .padding(horizontal = 13.dp, vertical = 8.dp)
     ) {
         Text(label, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-/**
- * GRAPEUI — «операционная система внутри GSYNK».
- * Пока это только каркас: рабочий стол, док и часы. Логику пользователь допишет сам.
- */
-@Composable
-fun GrapeUiScreen(onBack: () -> Unit) {
-    var booted by remember { mutableStateOf(false) }
-    var clock by remember { mutableStateOf("") }
-    var openedApp by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(Unit) {
-        delay(1200)
-        booted = true
-    }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            clock = java.time.format.DateTimeFormatter.ofPattern("HH:mm").format(java.time.LocalTime.now())
-            delay(15_000)
-        }
-    }
-
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF170A2A), Color(0xFF08170F))))
-    ) {
-        if (!booted) {
-            Text(
-                "GRAPEUI\nзагрузка…",
-                color = GrapeVioletSoft,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        } else {
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(clock, color = TextPrimary, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.weight(1f))
-                    Text("GRAPEUI v0.1", color = TextDim, style = MaterialTheme.typography.labelSmall)
-                }
-                Spacer(Modifier.height(18.dp))
-
-                val apps = listOf(
-                    Triple("Терминал", "заготовка", GrapeGreen),
-                    Triple("Файлы", "заготовка", GrapeViolet),
-                    Triple("Настройки", "заготовка", GrapeVioletSoft),
-                    Triple("Хранилище", "в разработке", TextDim)
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    apps.chunked(2).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            row.forEach { (name, note, color) ->
-                                Box(
-                                    Modifier
-                                        .weight(1f)
-                                        .aspectRatio(1.35f)
-                                        .clip(RoundedCornerShape(18.dp))
-                                        .background(CardBgAlt)
-                                        .border(1.dp, ChipBorder, RoundedCornerShape(18.dp))
-                                        .clickable { openedApp = name },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Box(
-                                            Modifier
-                                                .size(10.dp)
-                                                .clip(RoundedCornerShape(50))
-                                                .background(color)
-                                        )
-                                        Spacer(Modifier.height(8.dp))
-                                        Text(name, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-                                        Text(note, color = TextDim, style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                            }
-                            if (row.size == 1) Spacer(Modifier.weight(1f))
-                        }
-                    }
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                SurfaceCard(corner = 18.dp, contentPadding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
-                    Text(
-                        text = "Это каркас будущей оболочки: GSYNK уже умеет запускать её, " +
-                            "а приложения внутри GRAPEUI вы добавляете сами.",
-                        color = TextSecondary,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-                Spacer(Modifier.height(10.dp))
-                SecondaryButton(text = "Выйти из GRAPEUI", onClick = onBack, modifier = Modifier.fillMaxWidth())
-            }
-        }
-
-        if (openedApp != null) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.72f))
-                    .clickable { openedApp = null },
-                contentAlignment = Alignment.Center
-            ) {
-                SurfaceCard(corner = 20.dp) {
-                    Text("«$openedApp» — заглушка", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(6.dp))
-                    Text("Здесь будет ваш код приложения GRAPEUI.", color = TextDim, style = MaterialTheme.typography.labelSmall)
-                }
-            }
-        }
     }
 }

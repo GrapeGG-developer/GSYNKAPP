@@ -129,8 +129,12 @@ object UpdateChecker {
         return 0
     }
 
-    /** Скачать APK во внутренний кэш и вернуть путь. */
-    fun download(context: Context, url: String): java.io.File? = runCatching {
+    /** Скачать APK во внутренний кэш и вернуть путь. [onProgress] — проценты 0..100. */
+    fun download(
+        context: Context,
+        url: String,
+        onProgress: (Int) -> Unit = {}
+    ): java.io.File? = runCatching {
         val target = java.io.File(context.cacheDir, "gsynk-update.apk")
         if (target.exists()) target.delete()
 
@@ -140,14 +144,38 @@ object UpdateChecker {
             connectTimeout = 15_000
             readTimeout = 30_000
         }
+        val total = connection.contentLengthLong
         connection.inputStream.use { input ->
-            target.outputStream().use { output -> input.copyTo(output, 64 * 1024) }
+            target.outputStream().use { output ->
+                val buffer = ByteArray(64 * 1024)
+                var copied = 0L
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read <= 0) break
+                    output.write(buffer, 0, read)
+                    copied += read
+                    if (total > 0) onProgress(((copied * 100) / total).toInt().coerceIn(0, 100))
+                }
+                onProgress(100)
+            }
         }
         connection.disconnect()
         if (target.length() > 100_000) target else null
     }.getOrNull()
 
     /** Можно ли ставить APK (разрешение «неизвестные источники»). */
+    /** Открыть страницу репозитория в браузере. */
+    fun openRepo(context: Context, repo: String) {
+        runCatching {
+            context.startActivity(
+                android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse("https://github.com/$repo")
+                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
+
     fun canInstall(context: Context): Boolean =
         context.packageManager.canRequestPackageInstalls()
 

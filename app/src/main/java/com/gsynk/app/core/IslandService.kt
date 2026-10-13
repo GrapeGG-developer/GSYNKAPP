@@ -21,22 +21,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * Постоянный остров: живёт в шторке-фоне и держит капсулу рядом с фронтальной камерой.
- * Показывает часы, заряд и ближайшее правило; по касанию раскрывается.
- *
- * Это ровно та же технология, что и у системного Dynamic Island HyperOS —
- * системный остров сторонним приложениям недоступен, поэтому GSYNK рисует свой.
+ * Постоянный остров: держит компактную капсулу у фронтальной камеры.
+ * Показывает выбранную в настройках информацию и обновляется раз в 15 секунд.
  */
 class IslandService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val handler = Handler(Looper.getMainLooper())
-    private var lastPosition = IslandPosition.TOP
+    private var lastPosition = IslandPosition.TOP_CENTER
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -48,13 +46,11 @@ class IslandService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val foregroundStarted = runCatching { startForegroundCompat() }.isSuccess
-        if (!foregroundStarted) {
+        if (runCatching { startForegroundCompat() }.isFailure) {
             stopSelf()
             return START_NOT_STICKY
         }
         if (!IslandOverlay.isAvailable(this)) {
-            // без разрешения «поверх других приложений» остров показать нельзя
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -73,45 +69,68 @@ class IslandService : Service() {
                     stopSelf()
                     return@launch
                 }
-                val rules = repository.currentRules()
-                lastPosition = settings.islandPosition
 
+                val widgets = settings.islandWidgets
                 val now = ZonedDateTime.now()
-                val time = now.format(DateTimeFormatter.ofPattern("HH:mm"))
-                val battery = batteryPercent()
 
-                val next = rules.filter { it.enabled }
-                    .mapNotNull { rule -> RuleScheduler.nextOccurrence(rule, now)?.let { it to rule } }
-                    .minByOrNull { it.first }
-
-                val subtitle = buildString {
-                    append("🔋 ").append(battery).append('%')
-                    if (next != null) {
-                        append(" • ")
-                        append(next.first.format(DateTimeFormatter.ofPattern("HH:mm")))
-                        append(' ')
-                        append(next.second.name)
-                    } else {
-                        append(" • правил нет")
+                val title = buildList {
+                    if (IslandWidget.CLOCK in widgets) {
+                        add(now.format(DateTimeFormatter.ofPattern("HH:mm")))
                     }
-                }
+                    if (IslandWidget.BATTERY in widgets) {
+                        val battery = batteryPercent()
+                        add("$battery%")
+                        if (battery in 1..20) add("⚠")
+                    }
+                }.joinToString("  ").ifBlank { "GSYNK" }
+
+                val rules = repository.currentRules()
+                val next = rules.asSequence()
+                    .mapNotNull { rule -> RuleScheduler.nextOccurrence(rule, now)?.let { time -> time to rule } }
+                    .minByOrNull { pair -> pair.first }
+
+                val subtitle = buildList {
+                    if (IslandWidget.NEXT_RULE in widgets) {
+                        val upcoming = next
+                        if (upcoming != null) {
+                            add(
+                                upcoming.first.format(DateTimeFormatter.ofPattern("HH:mm")) + " " +
+                                    upcoming.second.name.take(14)
+                            )
+                        } else {
+                            add("правил нет")
+                        }
+                    }
+                    if (IslandWidget.NFC_COUNT in widgets) add("NFC ${settings.nfcTouches}")
+                    if (IslandWidget.RECORD in widgets) {
+                        val record = GameScores(applicationContext).snake.first()
+                        if (record > 0) add("рекорд $record")
+                    }
+                }.joinToString("  ").ifBlank { if (settings.autopilot) "автопилот" else "пауза" }
+
                 val expanded = buildString {
-                    append("Автопилот ")
-                    append(if (settings.autopilot) "вкл" else "выкл")
+                    append(DeviceProfile.detect(this@IslandService).model.ifEmpty { "GSYNK" })
+                    append(" • Android ").append(Build.VERSION.RELEASE)
                     append(" • правил: ").append(rules.size)
-                    append(" • обновлено ")
-                    append(now.format(DateTimeFormatter.ofPattern("HH:mm:ss")))
+                    append(" • ").append(now.format(DateTimeFormatter.ofPattern("HH:mm:ss")))
                 }
 
+                lastPosition = settings.islandPosition
                 handler.post {
                     if (IslandOverlay.isShownPersistent()) {
-                        IslandOverlay.updatePersistent(applicationContext, time, subtitle, expanded, lastPosition)
+                        IslandOverlay.updatePersistent(
+                            applicationContext, title, subtitle, expanded, lastPosition,
+                            settings.islandCompact, settings.islandOffsetY
+                        )
                     } else {
-                        IslandOverlay.showPersistent(applicationContext, time, subtitle, expanded, lastPosition)
+                        IslandOverlay.showPersistent(
+                            applicationContext, title, subtitle, expanded, lastPosition,
+                            settings.islandCompact, settings.islandOffsetY
+                        )
                     }
                 }
             } catch (_: Throwable) {
-                // тихо: сервис не должен падать
+                // сервис не должен падать
             }
         }
     }
@@ -158,7 +177,7 @@ class IslandService : Service() {
 
     companion object {
         private const val NOTIFICATION_ID = 1003
-        private const val REFRESH_MS = 20_000L
+        private const val REFRESH_MS = 15_000L
 
         fun start(context: Context) {
             runCatching {

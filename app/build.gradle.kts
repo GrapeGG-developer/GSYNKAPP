@@ -15,8 +15,15 @@ android {
         applicationId = "com.gsynk.app"
         minSdk = 30
         targetSdk = 36
-        versionCode = 7
-        versionName = "2.0.2"
+        versionCode = 8
+        versionName = "2.1.0"
+
+        // Локальная модель тянет тяжёлые нативные библиотеки MediaPipe.
+        // Оставляем процессоры телефонов: x86/x86_64 — эмуляторы, на них APK
+        // раздувался бы ещё на 60 МБ.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildTypes {
@@ -34,6 +41,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -72,6 +80,12 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.serialization.json)
+
+    // Локальная языковая модель (Gemma) прямо на телефоне — без интернета
+    implementation(libs.mediapipe.llm)
+
+    // QR-коды для быстрого обмена ссылками и паролями
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
 

@@ -107,26 +107,97 @@ data class AppSettings(
     val notifications: Boolean = true,
     /** Показывать мини-айленд при срабатывании правила. */
     val islandEnabled: Boolean = true,
-    /** Положение мини-айленда на экране. */
-    val islandPosition: Int = IslandPosition.TOP,
-    /** Постоянный остров: висит на экране всегда (как системный Dynamic Island). */
+    /** Положение острова на экране (см. IslandPosition). */
+    val islandPosition: Int = IslandPosition.TOP_CENTER,
+    /** Постоянный остров: висит на экране всегда. */
     val islandPersistent: Boolean = false,
+    /** Что показывать на постоянном острове (см. IslandWidget). */
+    val islandWidgets: List<String> = IslandWidget.DEFAULTS,
+    /** Компактный размер капсулы. */
+    val islandCompact: Boolean = true,
+    /** Смещение острова по вертикали, dp (можно поднять/опустить под свой вырез). */
+    val islandOffsetY: Int = 0,
     /** После перезагрузки применить правило, чьё время было последним по графику. */
     val syncAfterBoot: Boolean = true,
-    /** MAIN-режим: авто / принудительно полный / базовый. */
-    val mainMode: Int = MainMode.AUTO,
+    /** Порядок правил на главном экране (см. RuleSort). */
+    val ruleSort: Int = RuleSort.BY_TIME,
     /** Репозиторий для OTA-обновлений («владелец/репозиторий»). */
-    val updateRepo: String = "GrapeGG-developer/GSYNKAPP"
+    val updateRepo: String = "GrapeGG-developer/GSYNKAPP",
+    /** Проверять обновления автоматически при запуске. */
+    val updateAuto: Boolean = true,
+    /** Когда последний раз проверяли обновления (ms). */
+    val lastUpdateCheck: Long = 0L,
+    /** Версия, о которой пользователь уже знает (чтобы не показывать баннер повторно). */
+    val seenVersion: String = "",
+    /** Путь к локальной ИИ-модели (Gemma .task/.bin), если импортирована. */
+    val modelPath: String = "",
+    /** Имя импортированной модели — для отображения. */
+    val modelName: String = "",
+    /** Сколько раз телефон касался другого по NFC (счётчик «рукопожатий»). */
+    val nfcTouches: Int = 0
 )
 
-object MainMode {
-    const val AUTO = 0
-    const val ON = 1
-    const val OFF = 2
+object IslandPosition {
+    const val TOP_LEFT = 0
+    const val TOP_CENTER = 1
+    const val TOP_RIGHT = 2
+    const val MID_LEFT = 3
+    const val MID_RIGHT = 4
+    const val BOTTOM_LEFT = 5
+    const val BOTTOM_CENTER = 6
+    const val BOTTOM_RIGHT = 7
+
+    val ALL = listOf(TOP_LEFT, TOP_CENTER, TOP_RIGHT, MID_LEFT, MID_RIGHT, BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT)
+
+    fun label(value: Int): String = when (value) {
+        TOP_LEFT -> "Сверху слева"
+        TOP_CENTER -> "Сверху по центру"
+        TOP_RIGHT -> "Сверху справа"
+        MID_LEFT -> "По центру слева"
+        MID_RIGHT -> "По центру справа"
+        BOTTOM_LEFT -> "Снизу слева"
+        BOTTOM_CENTER -> "Снизу по центру"
+        else -> "Снизу справа"
+    }
 }
 
-object IslandPosition {
-    const val TOP = 0
-    const val CENTER = 1
-    const val BOTTOM = 2
+/** Что выводить на постоянном острове. */
+object IslandWidget {
+    const val CLOCK = "clock"
+    const val BATTERY = "battery"
+    const val NEXT_RULE = "next_rule"
+    const val NFC_COUNT = "nfc"
+    const val RECORD = "record"
+
+    val ALL = listOf(CLOCK, BATTERY, NEXT_RULE, NFC_COUNT, RECORD)
+    val DEFAULTS = listOf(CLOCK, BATTERY, NEXT_RULE)
+
+    fun label(id: String): String = when (id) {
+        CLOCK -> "Часы"
+        BATTERY -> "Заряд батареи"
+        NEXT_RULE -> "Ближайшее правило"
+        NFC_COUNT -> "Счётчик NFC-касаний"
+        else -> "Рекорд игр"
+    }
+}
+
+object RuleSort {
+    const val BY_TIME = 0
+    const val BY_NAME = 1
+    const val ACTIVE_FIRST = 2
+
+    val ALL = listOf(BY_TIME, BY_NAME, ACTIVE_FIRST)
+
+    fun label(value: Int): String = when (value) {
+        BY_TIME -> "По времени"
+        BY_NAME -> "По названию"
+        else -> "Активные сверху"
+    }
+
+    /** Сортировка списка правил выбранным способом. */
+    fun apply(rules: List<Rule>, mode: Int): List<Rule> = when (mode) {
+        BY_NAME -> rules.sortedBy { it.name.lowercase() }
+        ACTIVE_FIRST -> rules.sortedWith(compareByDescending<Rule> { it.enabled }.thenBy { it.hour * 60 + it.minute })
+        else -> rules.sortedBy { it.hour * 60 + it.minute }
+    }
 }
