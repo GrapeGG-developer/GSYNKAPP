@@ -196,10 +196,18 @@ object Sensors {
         private val manager = context.getSystemService(SensorManager::class.java)
         private var listener: SensorEventListener? = null
 
-        val supported: Boolean get() = manager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null
+        /**
+         * Берём только публичный датчик: у Xiaomi встречается «магнитный always-on»,
+         * подписка на который роняет процесс (`SecurityException` из
+         * `registerAonListener`, вылет 2.3.0).
+         */
+        private fun pick(): Sensor? = manager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+            ?.takeIf { !DeviceLab.isSystemOnlySensor(it.type, it.name, it.stringType.orEmpty()) }
+
+        val supported: Boolean get() = pick() != null
 
         fun start(onChange: (Float) -> Unit) {
-            val sensor = manager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) ?: return
+            val sensor = pick() ?: return
             stop()
             val newListener = object : SensorEventListener {
                 override fun onSensorChanged(event: SensorEvent) {
@@ -226,10 +234,14 @@ object Sensors {
         private val manager = context.getSystemService(SensorManager::class.java)
         private var listener: SensorEventListener? = null
 
-        val supported: Boolean get() = manager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null
+        /** Публичный акселерометр — по той же причине, что и у магнитометра. */
+        private fun pick(): Sensor? = manager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+            ?.takeIf { !DeviceLab.isSystemOnlySensor(it.type, it.name, it.stringType.orEmpty()) }
+
+        val supported: Boolean get() = pick() != null
 
         fun start(onChange: (Float, Float) -> Unit) {
-            val sensor = manager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return
+            val sensor = pick() ?: return
             stop()
             val newListener = object : SensorEventListener {
                 override fun onSensorChanged(event: SensorEvent) {

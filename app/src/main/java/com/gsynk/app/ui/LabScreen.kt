@@ -682,11 +682,20 @@ private fun SensorsScreen(onBack: () -> Unit) {
         // Слушаем только те датчики, на которые обычному приложению дают право.
         // Приватные и «always-on» датчики Android 16 отдают лишь системе: попытка
         // подписки роняет процесс с SecurityException (был такой вылет из отчёта).
-        sensors
-            .filterNot { DeviceLab.isSystemOnlySensor(it.type, it.name, it.stringType.orEmpty()) }
-            .forEach { sensor ->
-                runCatching { manager?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI) }
-            }
+        val allowed = sensors.filterNot {
+            DeviceLab.isSystemOnlySensor(it.type, it.name, it.stringType.orEmpty())
+        }
+        val skipped = sensors.size - allowed.size
+        if (skipped > 0) {
+            AppLog.event(
+                "Лаборатория",
+                "датчики: пропущено системных — " + skipped + " из " + sensors.size +
+                    " (" + sensors.filterNot { it in allowed }.joinToString(", ") { it.name } + ")"
+            )
+        }
+        allowed.forEach { sensor ->
+            runCatching { manager?.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI) }
+        }
         onDispose { runCatching { manager?.unregisterListener(listener) } }
     }
 
@@ -979,7 +988,13 @@ private fun CoilsScreen(onBack: () -> Unit) {
 private fun InductionScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val manager = remember { context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager }
-    val magnetic = remember { manager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) }
+    // Берём датчик, только если он публичный: у Xiaomi бывает «магнитный always-on»,
+    // подписка на который валит процесс (SecurityException из registerAonListener).
+    val magnetic = remember {
+        manager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.takeIf {
+            !DeviceLab.isSystemOnlySensor(it.type, it.name, it.stringType.orEmpty())
+        }
+    }
     var strength by remember { mutableFloatStateOf(0f) }
     var baseline by remember { mutableFloatStateOf(0f) }
     var peak by remember { mutableFloatStateOf(0f) }
