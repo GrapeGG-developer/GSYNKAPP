@@ -69,21 +69,24 @@ import kotlin.random.Random
  * тяжёлой анимацией вспышки у фронтальной камеры.
  */
 @Composable
-fun NfcLinkScreen(onBack: () -> Unit) {
+fun NfcLinkScreen(
+    onBack: () -> Unit,
+    onPlayGame: (seed: Long?) -> Unit = {}
+) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
     val adapter = remember(context) { runCatching { NfcAdapter.getDefaultAdapter(context) }.getOrNull() }
     val burst = remember(context) { NfcBurstOverlay(context) }
 
-    var mode by remember { mutableIntStateOf(0) } // 0 передать, 1 принять, 2 дуэль
+    var mode by remember { mutableIntStateOf(0) } // 0 играть, 1 передать, 2 принять
     var kind by remember { mutableStateOf(NfcLink.KIND_TEXT) }
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var received by remember { mutableStateOf(PendingNfcPayload.take()) }
-    var duel by remember { mutableStateOf<NfcLink.GameInvite?>(null) }
+    var invite by remember { mutableStateOf<NfcLink.GameInvite?>(null) }
     var touches by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -120,10 +123,14 @@ fun NfcLinkScreen(onBack: () -> Unit) {
                             burst.show(3_400L)
                             AutomationActions.vibrate(context, 120L)
                             registerTouch()
-                            duel = if (payload.kind == NfcLink.KIND_GAME) {
+                            invite = if (payload.kind == NfcLink.KIND_GAME) {
                                 NfcLink.parseGameInvite(payload.body)
                             } else {
                                 null
+                            }
+                            if (invite != null) {
+                                status = "Приглашение в подземелье получено — жмите «Играть»"
+                                onPlayGame(invite?.seed)
                             }
                             status = "Получено: " + payload.title
                         }
@@ -140,7 +147,7 @@ fun NfcLinkScreen(onBack: () -> Unit) {
             NfcAdapter.FLAG_READER_NFC_F or
             NfcAdapter.FLAG_READER_NFC_V or
             NfcAdapter.FLAG_READER_NFC_BARCODE
-        if (activity != null && nfc != null && (mode == 1 || mode == 2)) {
+        if (activity != null && nfc != null && mode == 2) {
             // приём и эмуляция карты мешают друг другу: в режиме приёма передачу гасим
             NdefHceService.setEnabled(context, false)
             runCatching { nfc.enableReaderMode(activity, callback, flags, android.os.Bundle()) }
@@ -200,13 +207,110 @@ fun NfcLinkScreen(onBack: () -> Unit) {
         // ————— режимы —————
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            SortChip("Передать", mode == 0) { mode = 0 }
-            SortChip("Принять", mode == 1) { mode = 1 }
-            SortChip("Дуэль", mode == 2) { mode = 2 }
+            SortChip("Играть", mode == 0) { mode = 0 }
+            SortChip("Передать", mode == 1) { mode = 1 }
+            SortChip("Принять", mode == 2) { mode = 2 }
         }
 
         when (mode) {
+            // ————— главное: игра —————
             0 -> {
+                Spacer(Modifier.height(14.dp))
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(132.dp)
+                        .clip(RectangleShape)
+                        .background(TileBrush.Violet)
+                        .clickable { onPlayGame(null) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("ПОДЗЕМЕЛЬЕ GSYNK", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+                        Text(
+                            text = "настоящая игра: комнаты, враги, босс",
+                            color = Color.White.copy(alpha = 0.85f),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    PrimaryButton(
+                        text = "Играть",
+                        onClick = { onPlayGame(null) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    SecondaryButton(
+                        text = "Пригласить по NFC",
+                        onClick = {
+                            val seed = com.gsynk.app.core.RogueGame.newSeed()
+                            val card = NfcLink.GameInvite("rogue", android.os.Build.MODEL ?: "GSYNK", seed)
+                            prepareTransfer(
+                                NfcLink.Payload(
+                                    NfcLink.KIND_GAME,
+                                    "Подземелье",
+                                    "${card.game};${card.from};${card.seed}"
+                                )
+                            )
+                            status = "Ключ подземелья $seed отправлен по NFC. Второй телефон начнёт ту же игру."
+                        }
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                SurfaceCard(borderColor = CardBorder) {
+                    Text("Как это работает", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(6.dp))
+                    InfoRow("Один экран", "вдвоём за одним телефоном: левый и правый стик")
+                    InfoRow("Два телефона", "ключ подземелья уходит по NFC — карта одинаковая")
+                    InfoRow("Сравнение", "у кого больше убийств и счёт, тот и победил")
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Поле игры рисуется в полосе фронтальной камеры, управление — под большими " +
+                            "пальцами. Ничего не скачивается: движок считается на телефоне.",
+                        color = TextDim,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+                if (invite != null) {
+                    Spacer(Modifier.height(12.dp))
+                    SurfaceCard(borderColor = GrapeViolet.copy(alpha = 0.6f)) {
+                        Text("Вызов по NFC", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Ключ ${invite?.seed} от «${invite?.from}» — подземелье уже готово.",
+                            color = TextPrimary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        PrimaryButton(
+                            text = "Играть на этом ключе",
+                            onClick = { onPlayGame(invite?.seed) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Нужен обмен данными? Переключитесь на «Передать» или «Принять».",
+                    color = TextDim,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+
+            1 -> {
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = "Обмен по касанию",
+                    color = TextPrimary,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Ниже — что и как передаётся. Игра живёт в соседней вкладке «Играть».",
+                    color = TextDim,
+                    style = MaterialTheme.typography.labelSmall
+                )
                 Spacer(Modifier.height(14.dp))
                 SectionTitle("Что передаём")
                 Spacer(Modifier.height(9.dp))
@@ -335,7 +439,7 @@ fun NfcLinkScreen(onBack: () -> Unit) {
                 }
             }
 
-            1 -> {
+            2 -> {
                 Spacer(Modifier.height(14.dp))
                 SurfaceCard(borderColor = GrapeCyan.copy(alpha = 0.45f)) {
                     Text("Режим приёма включён", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
@@ -357,24 +461,6 @@ fun NfcLinkScreen(onBack: () -> Unit) {
                 }
             }
 
-            else -> {
-                Spacer(Modifier.height(14.dp))
-                DuelPanel(
-                    invite = duel,
-                    onInviteOpponent = {
-                        val invite = NfcLink.GameInvite("reaction", android.os.Build.MODEL ?: "GSYNK", Random.nextLong())
-                        prepareTransfer(
-                            NfcLink.Payload(NfcLink.KIND_GAME, "Дуэль", "${invite.game};${invite.from};${invite.seed}")
-                        )
-                    },
-                    onWin = {
-                        scope.launch {
-                            withContext(Dispatchers.IO) { GameScores(context).saveWin() }
-                            status = "Победа записана!"
-                        }
-                    }
-                )
-            }
         }
 
         if (status.isNotBlank()) {
@@ -526,94 +612,6 @@ private fun ReceivedCard(payload: NfcLink.Payload, onImported: (String) -> Unit)
                 modifier = Modifier.fillMaxWidth()
             )
         }
-    }
-}
-
-/** Дуэль на реакцию: сначала приглашение, затем две кнопки-попытки. */
-@Composable
-private fun DuelPanel(
-    invite: NfcLink.GameInvite?,
-    onInviteOpponent: () -> Unit,
-    onWin: () -> Unit
-) {
-    SurfaceCard(borderColor = GrapeViolet.copy(alpha = 0.5f)) {
-        Text("Дуэль на реакцию", color = TextPrimary, style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = invite?.let { "Вызов от «${it.from}». Игра: реакция." }
-                ?: "Позовите друга одним касанием — телефон сам передаст вызов.",
-            color = if (invite != null) GrapeVioletSoft else TextDim,
-            style = MaterialTheme.typography.labelSmall
-        )
-        Spacer(Modifier.height(12.dp))
-        PrimaryButton(
-            text = if (invite == null) "Позвать в дуэль" else "Ответить вызовом",
-            onClick = onInviteOpponent,
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-
-    Spacer(Modifier.height(12.dp))
-    var signalAt by remember { mutableStateOf(0L) }
-    var waiting by remember { mutableStateOf(false) }
-    var result by remember { mutableStateOf("") }
-
-    fun start() {
-        waiting = true
-        result = ""
-        // одинаковое зерно у обоих телефонов — сигнал наступает в один момент
-        signalAt = System.currentTimeMillis() + Random.nextInt(1500, 3500).toLong()
-    }
-
-    LaunchedEffect(waiting, signalAt) {
-        if (!waiting) return@LaunchedEffect
-        while (System.currentTimeMillis() < signalAt) delay(40)
-        if (waiting) result = "СИГНАЛ! Жмите!"
-    }
-
-    SurfaceCard {
-        Text("Ваша попытка", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.height(10.dp))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(120.dp)
-                .clip(RectangleShape)
-                .background(
-                    if (result.startsWith("Итог")) TileBrush.Green else TileBrush.Ink
-                )
-                .clickable {
-                    if (!waiting) {
-                        start()
-                    } else if (System.currentTimeMillis() < signalAt) {
-                        result = "Рано! Засчитано как промах"
-                        waiting = false
-                    } else {
-                        val ms = (System.currentTimeMillis() - signalAt).toInt()
-                        result = "Итог: $ms мс"
-                        waiting = false
-                        if (ms < 320) onWin()
-                    }
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = when {
-                    !waiting && result.isEmpty() -> "Начать попытку"
-                    waiting && result.startsWith("СИГНАЛ") -> result
-                    else -> result.ifEmpty { "Ждите…" }
-                },
-                color = TextPrimary,
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "Меньше 320 мс — победа, она сохраняется в рекорды. Соперник играет у себя: " +
-                "сигнал идёт от общей программы, поэтому результат сравнивается честно.",
-            color = TextDim,
-            style = MaterialTheme.typography.labelSmall
-        )
     }
 }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.os.SystemClock
 import com.gsynk.app.BuildConfig
+import androidx.core.content.edit
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -167,10 +168,10 @@ object AppLog {
         }
         runCatching {
             writeJournal(app, listOf("${humanStamp.format(now)} СБОЙ ${error.javaClass.simpleName}: ${error.message}"))
-            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putBoolean(KEY_UNSEEN_CRASH, true)
-                .putInt(KEY_CRASH_TOTAL, crashTotal(app) + 1)
-                .apply()
+            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit(commit = false) {
+                putBoolean(KEY_UNSEEN_CRASH, true)
+                putInt(KEY_CRASH_TOTAL, crashTotal(app) + 1)
+            }
         }
     }
 
@@ -257,9 +258,9 @@ object AppLog {
 
     fun markCrashSeen(app: Context) {
         runCatching {
-            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putBoolean(KEY_UNSEEN_CRASH, false)
-                .apply()
+            app.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit(commit = false) {
+                putBoolean(KEY_UNSEEN_CRASH, false)
+            }
         }
     }
 

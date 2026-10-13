@@ -8,6 +8,8 @@ import com.gsynk.app.core.Passwords
 import com.gsynk.app.core.PayloadCodec
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.CrashAnalyzer
+import com.gsynk.app.core.RealtimeAi
+import com.gsynk.app.core.RogueGame
 import com.gsynk.app.core.ReportSanitizer
 import com.gsynk.app.core.RuleSort
 import com.gsynk.app.core.TileGame
@@ -242,6 +244,125 @@ class MultiToolTest {
         assertTrue(TileGame.hasReached(listOf(2048) + List(15) { 0 }))
         assertFalse(TileGame.hasReached(listOf(1024) + List(15) { 0 }))
         assertEquals(2048, TileGame.maxTile(listOf(2, 2048, 4)))
+    }
+
+    // ————— подземелье (игра Grape Link) —————
+
+    @Test
+    fun rogue_startsWithRoomAndPlayer() {
+        val world = RogueGame.start(1234L, 1)
+        assertEquals(1, world.floor)
+        assertEquals(1, world.room)
+        assertEquals(1, world.players.size)
+        assertTrue("в первой комнате должны быть враги", world.enemies.isNotEmpty())
+        assertTrue("дверь закрыта, пока комната не зачищена", !world.doorOpen)
+    }
+
+    @Test
+    fun rogue_isDeterministicForSameSeed() {
+        val one = RogueGame.start(777L, 2)
+        val two = RogueGame.start(777L, 2)
+        assertEquals(one.rocks.size, two.rocks.size)
+        assertEquals(one.enemies.map { it.x to it.y }, two.enemies.map { it.x to it.y })
+    }
+
+    @Test
+    fun rogue_playerMovesAndStaysInsideRoom() {
+        var world = RogueGame.start(42L, 1)
+        val startX = world.players.first().x
+        repeat(30) {
+            world = RogueGame.step(world, 1f / 60f, listOf(RogueGame.Input(1f, 0f, shooting = false)))
+        }
+        assertTrue("игрок должен сдвинуться вправо", world.players.first().x > startX)
+        assertTrue("игрок не должен выйти за комнату", world.players.first().x <= 1f)
+    }
+
+    @Test
+    fun rogue_shootingCreatesTearsAndKillsEnemies() {
+        var world = RogueGame.start(99L, 1)
+        val enemy = world.enemies.minByOrNull { kotlin.math.hypot(it.x - 0.5f, it.y - 0.62f) }!!
+        world = world.copy(enemies = listOf(enemy.copy(x = 0.5f, y = 0.3f, hp = 2, maxHp = 2, speed = 0f)))
+        var shotsSeen = 0
+        repeat(240) {
+            world = RogueGame.step(world, 1f / 60f, listOf(RogueGame.Input(0f, -1f, shooting = true)))
+            shotsSeen = maxOf(shotsSeen, world.shots.count { !it.hostile })
+            if (world.enemies.isEmpty()) return@repeat
+        }
+        assertTrue("игрок должен стрелять слезами", shotsSeen > 0)
+        assertTrue("слеза должна наносить урон", world.enemies.isEmpty() || world.enemies.first().hp < 2)
+    }
+
+    @Test
+    fun rogue_clearedRoomOpensDoor() {
+        val world = RogueGame.start(5L, 1).copy(enemies = emptyList())
+        val stepped = RogueGame.step(world, 1f / 60f, listOf(RogueGame.Input()))
+        assertTrue("после зачистки комнаты дверь открывается", stepped.doorOpen)
+    }
+
+    @Test
+    fun rogue_bossRoomIsLast() {
+        val world = RogueGame.start(11L, 1).copy(room = RogueGame.ROOMS_PER_FLOOR)
+        val boss = RogueGame.buildRoom(world, floor = 3, room = RogueGame.ROOMS_PER_FLOOR)
+        assertEquals(1, boss.enemies.size)
+        assertEquals(RogueGame.EnemyKind.BOSS, boss.enemies.first().kind)
+        assertTrue(boss.isBossRoom)
+    }
+
+    @Test
+    fun rogue_gameOverWhenAllPlayersDown() {
+        var world = RogueGame.start(3L, 1)
+        world = world.copy(players = world.players.map { it.copy(hp = 0) })
+        val stepped = RogueGame.step(world, 1f / 60f, listOf(RogueGame.Input()))
+        assertTrue("если игроки кончились — игра завершена", stepped.over)
+    }
+
+    @Test
+    fun rogue_twoPlayersStartSeparately() {
+        val world = RogueGame.start(8L, 2)
+        assertEquals(2, world.players.size)
+        assertTrue("игроки стоят рядом, но не в одной точке", world.players[0].x != world.players[1].x)
+    }
+
+    // ————— нейросеть на телефоне —————
+
+    @Test
+    fun ai_returnsProbabilities() {
+        val ai = RealtimeAi(1L)
+        val result = ai.infer(floatArrayOf(0.9f, 0.5f, 0.4f, 0.8f, 0.5f, 0.3f, 0.2f, 0.8f))
+        assertEquals(RealtimeAi.OUTPUT, result.size)
+        val sum = result.sum()
+        assertTrue("вероятности должны давать единицу, а не $sum", sum > 0.99f && sum < 1.01f)
+        result.forEach { assertTrue(it in 0f..1f) }
+    }
+
+    @Test
+    fun ai_isDeterministicForSameWeights() {
+        val one = RealtimeAi(7L)
+        val two = RealtimeAi(7L)
+        val features = floatArrayOf(0.2f, 0.2f, 0.3f, 0.9f, 0.9f, 0.1f, 0.1f, 0.8f)
+        assertEquals(
+            one.infer(features).toList(),
+            two.infer(features).toList()
+        )
+    }
+
+    @Test
+    fun ai_learnsAndLowersLoss() {
+        val ai = RealtimeAi(5L)
+        val features = floatArrayOf(0.9f, 0.8f, 0.3f, 0.8f, 0.5f, 0.2f, 0.2f, 0.8f)
+        repeat(40) { ai.learn(features, batteryPercent = 90) }
+        assertTrue(ai.steps == 40L)
+        assertTrue("после обучения ошибка должна быть вменяемой, а не ${ai.lastLoss}", ai.lastLoss < 1.2f)
+    }
+
+    @Test
+    fun ai_operationsCountMatchesLayers() {
+        val ai = RealtimeAi()
+        val expected = RealtimeAi.INPUT * RealtimeAi.HIDDEN_ONE +
+            RealtimeAi.HIDDEN_ONE * RealtimeAi.HIDDEN_TWO +
+            RealtimeAi.HIDDEN_TWO * RealtimeAi.OUTPUT
+        assertEquals(expected, ai.operationsPerRun)
+        assertTrue("сеть должна быть достаточно тяжёлой для нагрузки", expected > 500)
     }
 
     // ————— анализатор отчётов —————

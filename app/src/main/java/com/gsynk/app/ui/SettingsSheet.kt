@@ -146,8 +146,14 @@ fun SettingsSheet(
                 onChange = { vm.setIslandPersistent(it) }
             )
             SettingRow(
+                title = "Широкий остров",
+                subtitle = if (settings.islandWide) "полоса на всю ширину, в одну строку" else "узкая капсула",
+                checked = settings.islandWide,
+                onChange = { vm.setIslandWide(it) }
+            )
+            SettingRow(
                 title = "Компактный размер",
-                subtitle = if (settings.islandCompact) "маленькая капсула" else "обычная капсула",
+                subtitle = if (settings.islandCompact) "низкая строка" else "обычная высота",
                 checked = settings.islandCompact,
                 onChange = { vm.setIslandCompact(it) }
             )

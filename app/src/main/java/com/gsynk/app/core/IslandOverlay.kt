@@ -12,6 +12,7 @@ import android.provider.Settings
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
 import android.view.WindowManager
 import android.view.animation.OvershootInterpolator
 import android.widget.ImageView
@@ -68,13 +69,14 @@ object IslandOverlay {
         position: Int = IslandPosition.TOP_CENTER,
         durationMs: Long = 3200L,
         compact: Boolean = true,
-        offsetY: Int = 0
+        offsetY: Int = 0,
+        wide: Boolean = true
     ) {
         val app = context.applicationContext
         if (!isAvailable(app)) return
         handler.post {
             runCatching {
-                showInternal(app, iconRes, title, subtitle, position, durationMs, false, "", false, compact, offsetY)
+                showInternal(app, iconRes, title, subtitle, position, durationMs, false, "", false, compact, offsetY, wide)
             }
         }
     }
@@ -87,14 +89,15 @@ object IslandOverlay {
         expandedText: String,
         position: Int,
         compact: Boolean = true,
-        offsetY: Int = 0
+        offsetY: Int = 0,
+        wide: Boolean = true
     ) {
         val app = context.applicationContext
         if (!isAvailable(app)) return
         persistent = true
         handler.post {
             runCatching {
-                showInternal(app, 0, title, subtitle, position, 0L, true, expandedText, true, compact, offsetY)
+                showInternal(app, 0, title, subtitle, position, 0L, true, expandedText, true, compact, offsetY, wide)
             }
         }
     }
@@ -106,13 +109,14 @@ object IslandOverlay {
         expandedText: String,
         position: Int,
         compact: Boolean = true,
-        offsetY: Int = 0
+        offsetY: Int = 0,
+        wide: Boolean = true
     ) {
         if (!persistent) return
         val app = context.applicationContext
         handler.post {
             runCatching {
-                showInternal(app, 0, title, subtitle, position, 0L, true, expandedText, true, compact, offsetY)
+                showInternal(app, 0, title, subtitle, position, 0L, true, expandedText, true, compact, offsetY, wide)
             }
         }
     }
@@ -154,7 +158,8 @@ object IslandOverlay {
         expandedText: String,
         keepIcons: Boolean,
         compact: Boolean,
-        offsetY: Int
+        offsetY: Int,
+        wide: Boolean = true
     ) {
         val existing = root
         if (existing != null && existing.parent != null) {
@@ -201,8 +206,10 @@ object IslandOverlay {
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         if (!persistent) flags = flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
 
+        // Остров широкий и низкий: одна строка на всю ширину экрана.
+        val screenWidth = context.resources.displayMetrics.widthPixels
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (wide) (screenWidth * 0.90f).toInt() else WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             flags,
@@ -211,13 +218,21 @@ object IslandOverlay {
         applyLayout(view, params, position, offsetY)
 
         view.alpha = 0f
-        view.translationY = -dp(context, 14f)
+        view.translationY = -dp(context, 12f)
+        view.scaleX = 0.92f
         runCatching { wm.addView(view, params) }
         root = view
         rootPersistent = persistent
         windowManager = wm
 
-        view.animate().alpha(1f).translationY(0f).setDuration(200).start()
+        view.pivotX = view.width / 2f
+        view.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .scaleX(1f)
+            .setDuration(260)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(1.6f))
+            .start()
 
         if (!persistent) {
             restartProgress(view, durationMs)
@@ -312,6 +327,10 @@ object IslandOverlay {
 
     // ————— построение вида —————
 
+    /**
+     * Широкая низкая капсула: в одну строку иконка, название и значение справа.
+     * Поверх содержимого лежит [IslandShimmerView] — бегущий блик и дышащая рамка.
+     */
     private fun buildView(
         context: Context,
         iconRes: Int,
@@ -321,13 +340,12 @@ object IslandOverlay {
         persistent: Boolean,
         compact: Boolean
     ): View {
-        // компактный размер по умолчанию: капсула не должна быть крупнее системной
-        val padH = dp(context, if (compact) 10f else 14f).toInt()
-        val padV = dp(context, if (compact) 5f else 8f).toInt()
-        val iconSize = dp(context, if (compact) 13f else 18f).toInt()
-        val titleSp = if (compact) 11f else 12.5f
-        val subtitleSp = if (compact) 9f else 10.5f
-        val expandedSp = if (compact) 8.5f else 10f
+        val padH = dp(context, if (compact) 12f else 15f).toInt()
+        val padV = dp(context, if (compact) 4f else 5f).toInt()
+        val iconSize = dp(context, if (compact) 14f else 17f).toInt()
+        val titleSp = if (compact) 11.5f else 13f
+        val valueSp = if (compact) 10.5f else 12f
+        val expandedSp = if (compact) 9f else 10f
 
         val outer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -354,12 +372,11 @@ object IslandOverlay {
             row.addView(
                 icon,
                 LinearLayout.LayoutParams(iconSize, iconSize).apply {
-                    marginEnd = dp(context, if (compact) 6f else 9f).toInt()
+                    marginEnd = dp(context, if (compact) 7f else 9f).toInt()
                 }
             )
         }
 
-        val texts = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         val titleView = TextView(context).apply {
             tag = TAG_TITLE
             text = title
@@ -367,55 +384,57 @@ object IslandOverlay {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, titleSp)
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             isSingleLine = true
+            ellipsize = android.text.TextUtils.TruncateAt.END
             includeFontPadding = false
         }
+        row.addView(
+            titleView,
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        )
+
+        // значение справа — то, ради чего остров и нужен: заряд, часы, счётчик
         val subtitleView = TextView(context).apply {
             tag = TAG_SUBTITLE
             text = subtitle
-            setTextColor(COLOR_TEXT_DIM)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, subtitleSp)
+            setTextColor(COLOR_ACCENT)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, valueSp)
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             isSingleLine = true
             includeFontPadding = false
         }
-        texts.addView(titleView)
-        texts.addView(
+        row.addView(
             subtitleView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(context, 1f).toInt() }
+            ).apply { marginStart = dp(context, 8f).toInt() }
         )
-        row.addView(
-            texts,
-            LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        )
+
         outer.addView(
             row,
             LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
 
-        // раскрытая строка постоянного острова
+        // раскрытая строка постоянного острова (по касанию)
         val expandedView = TextView(context).apply {
             tag = TAG_EXPANDED
             text = expandedText
             setTextColor(COLOR_TEXT_DIM)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, expandedSp)
             isSingleLine = true
+            ellipsize = android.text.TextUtils.TruncateAt.END
             includeFontPadding = false
             isVisible = false
         }
         outer.addView(
             expandedView,
             LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(context, 4f).toInt() }
+            ).apply { topMargin = dp(context, 3f).toInt() }
         )
 
         if (!persistent) {
@@ -431,17 +450,34 @@ object IslandOverlay {
                 LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     dp(context, 2f).toInt().coerceAtLeast(1)
-                ).apply { topMargin = dp(context, 4f).toInt() }
+                ).apply { topMargin = dp(context, 3f).toInt() }
+            )
+        }
+
+        val container = FrameLayout(context).apply {
+            addView(
+                outer,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+            )
+            addView(
+                IslandShimmerView(context),
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
             )
         }
 
         if (persistent) {
-            outer.isClickable = true
-            outer.setOnClickListener { tapped ->
+            container.isClickable = true
+            container.setOnClickListener { tapped ->
                 tapped.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
                 tapped.animate().cancel()
                 tapped.animate()
-                    .scaleX(1.05f).scaleY(1.05f)
+                    .scaleX(1.04f).scaleY(1.04f)
                     .setDuration(100)
                     .withEndAction {
                         tapped.animate().scaleX(1f).scaleY(1f)
@@ -466,7 +502,7 @@ object IslandOverlay {
             }
         }
 
-        return outer
+        return container
     }
 
     private fun dp(context: Context, value: Float): Float =

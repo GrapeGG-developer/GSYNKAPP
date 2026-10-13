@@ -127,6 +127,8 @@ fun MainScreen(vm: MainViewModel) {
     var showUpdateSheet by remember { mutableStateOf(false) }
     var showScenes by remember { mutableStateOf(false) }
     var showDiagnostics by remember { mutableStateOf(false) }
+    var showRogue by remember { mutableStateOf(false) }
+    var rogueInvite by remember { mutableStateOf<NfcLinkInvite?>(null) }
     val profile = remember { DeviceProfile.detect(context) }
 
     // пересчёт разрешений при возвращении из системных экранов
@@ -166,6 +168,8 @@ fun MainScreen(vm: MainViewModel) {
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.statusBars)
         ) {
+            // Обязательная панель разрешений: рисуется последней, поверх всего.
+            PermissionGate()
             LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
@@ -212,81 +216,92 @@ fun MainScreen(vm: MainViewModel) {
                     )
                 }
 
-                item {
-                    AutopilotTile(
-                        enabled = settings.autopilot,
-                        countdown = nextRule?.let { "через " + humanDelta(ZonedDateTime.now(), it) } ?: "правил нет",
-                        rulesCount = rules.size,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { vm.setAutopilot(!settings.autopilot) }
-                    )
-                }
-
+                // ————— плитки Metro: 2×2, 1×1 и во всю ширину —————
                 item {
                     TileRow {
-                        ToggleTile(
-                            title = "Остров",
-                            on = settings.islandPersistent,
-                            iconRes = R.drawable.ic_brightness,
-                            onText = "постоянный",
-                            offText = "только вспышки",
-                            modifier = Modifier.weight(1f),
-                            onClick = { vm.setIslandPersistent(!settings.islandPersistent) }
+                        MetroAutopilotTile(
+                            enabled = settings.autopilot,
+                            countdown = nextRule?.let { humanDelta(ZonedDateTime.now(), it) } ?: "правил нет",
+                            rulesCount = rules.size,
+                            modifier = Modifier.weight(2f),
+                            onClick = { vm.setAutopilot(!settings.autopilot) }
                         )
-                        ToggleTile(
-                            title = "Уведомления",
-                            on = settings.notifications,
-                            iconRes = R.drawable.ic_shield,
-                            onText = "приходят",
-                            offText = "тишина",
-                            modifier = Modifier.weight(1f),
-                            onClick = { vm.setNotifications(!settings.notifications) }
-                        )
+                        Column(
+                            Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(11.dp)
+                        ) {
+                            MetroTile(
+                                title = "остров",
+                                brush = if (settings.islandPersistent) TileBrush.Green else TileBrush.Ink,
+                                iconRes = R.drawable.ic_brightness,
+                                subtitle = if (settings.islandPersistent) "постоянный" else "вспышки",
+                                size = TileSize.Small,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { vm.setIslandPersistent(!settings.islandPersistent) }
+                            )
+                            MetroTile(
+                                title = "тишина",
+                                brush = if (settings.notifications) TileBrush.Ink else TileBrush.Blue,
+                                iconRes = R.drawable.ic_shield,
+                                subtitle = if (settings.notifications) "уведомления" else "не беспокоить",
+                                size = TileSize.Small,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { vm.setNotifications(!settings.notifications) }
+                            )
+                        }
                     }
                 }
 
                 item {
                     TileRow {
-                        NavTile(
-                            title = "Grape Link",
-                            subtitle = "обмен по NFC",
-                            iconRes = R.drawable.ic_bolt,
+                        MetroTile(
+                            title = "grape link",
+                            subtitle = "nfc · игра и обмен",
                             brush = TileBrush.Cyan,
-                            liveText = "касаний: ${settings.nfcTouches}",
-                            modifier = Modifier.weight(1f),
+                            iconRes = R.drawable.ic_bolt,
+                            badge = if (settings.nfcTouches > 0) "${settings.nfcTouches}" else null,
+                            liveText = "${settings.nfcTouches}",
+                            liveLabel = "касаний меткой",
+                            size = TileSize.Medium,
+                            modifier = Modifier.weight(2f),
                             onClick = { showNfc = true }
                         )
-                        NavTile(
-                            title = "Сцены",
-                            subtitle = "один тап",
-                            iconRes = R.drawable.ic_shield,
-                            brush = TileBrush.Green,
-                            liveText = "Ночь · Кино",
-                            modifier = Modifier.weight(1f),
-                            onClick = { showScenes = true }
-                        )
+                        Column(
+                            Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(11.dp)
+                        ) {
+                            MetroTile(
+                                title = "инструменты",
+                                brush = TileBrush.Blue,
+                                iconRes = R.drawable.ic_tune,
+                                size = TileSize.Small,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { showTools = true }
+                            )
+                            MetroTile(
+                                title = "игры",
+                                brush = TileBrush.Pink,
+                                iconRes = R.drawable.ic_schedule,
+                                size = TileSize.Small,
+                                modifier = Modifier.fillMaxWidth(),
+                                onClick = { showGames = true }
+                            )
+                        }
                     }
                 }
 
                 item {
-                    TileRow {
-                        NavTile(
-                            title = "Инструменты",
-                            subtitle = "мультитул",
-                            iconRes = R.drawable.ic_tune,
-                            brush = TileBrush.Blue,
-                            modifier = Modifier.weight(1f),
-                            onClick = { showTools = true }
-                        )
-                        NavTile(
-                            title = "Мини-игры",
-                            subtitle = "на счёт",
-                            iconRes = R.drawable.ic_schedule,
-                            brush = TileBrush.Pink,
-                            modifier = Modifier.weight(1f),
-                            onClick = { showGames = true }
-                        )
-                    }
+                    MetroTile(
+                        title = "сцены и нагрузка",
+                        subtitle = "один тап · ии и графика в реальном времени",
+                        brush = TileBrush.Violet,
+                        iconRes = R.drawable.ic_shield,
+                        liveText = "готово",
+                        liveLabel = "сцены: ночь · кино · турбо",
+                        size = TileSize.Wide,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { showScenes = true }
+                    )
                 }
 
                 if (!permissions.allGranted) {
@@ -415,7 +430,23 @@ fun MainScreen(vm: MainViewModel) {
     }
 
     if (showNfc) {
-        NfcLinkScreen(onBack = { showNfc = false })
+        NfcLinkScreen(
+            onBack = { showNfc = false },
+            onPlayGame = { seed ->
+                rogueInvite = seed?.let { NfcLinkInvite(it, profile.model.ifBlank { "второй телефон" }) }
+                showRogue = true
+            }
+        )
+    }
+
+    if (showRogue) {
+        RogueScreen(
+            onBack = { showRogue = false },
+            invite = rogueInvite, onInviteByNfc = {
+                showRogue = false
+                showNfc = true
+            }
+        )
     }
 
     if (showUpdateSheet) {

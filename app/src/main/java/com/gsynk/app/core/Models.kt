@@ -115,6 +115,8 @@ data class AppSettings(
     val islandWidgets: List<String> = IslandWidget.DEFAULTS,
     /** Компактный размер капсулы. */
     val islandCompact: Boolean = true,
+    /** Широкая низкая капсула на всю ширину экрана (по умолчанию). */
+    val islandWide: Boolean = true,
     /** Смещение острова по вертикали, dp (можно поднять/опустить под свой вырез). */
     val islandOffsetY: Int = 0,
     /** После перезагрузки применить правило, чьё время было последним по графику. */

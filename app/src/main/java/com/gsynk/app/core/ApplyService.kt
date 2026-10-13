@@ -53,6 +53,13 @@ class ApplyService : Service() {
                     val rule = rules.firstOrNull { it.id == ruleId }
                     if (rule != null) {
                         val result = RuleEngine.apply(applicationContext, rule)
+                        // пишем в журнал: из этих записей собирается «Хроника дня»
+                        AppLog.event(
+                            "Правило",
+                            "«${rule.name}»" +
+                                (if (result.brightness) ", яркость ${rule.brightness}%" else "") +
+                                (if (result.volume) ", звук ${rule.volume}%" else "")
+                        )
                         if (settings.islandEnabled && (result.brightness || result.volume)) {
                             islandShown = showIsland(
                                 rule, result, settings.islandPosition, settings.islandCompact, settings.islandOffsetY

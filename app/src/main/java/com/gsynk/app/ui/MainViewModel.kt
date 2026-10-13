@@ -14,6 +14,8 @@ import com.gsynk.app.core.RuleEngine
 import com.gsynk.app.core.RuleRepository
 import com.gsynk.app.core.ReportUploader
 import com.gsynk.app.core.RuleScheduler
+import com.gsynk.app.core.TurboEngine
+import com.gsynk.app.core.TurboState
 import kotlinx.coroutines.flow.combine
 import com.gsynk.app.core.UpdateChecker
 import kotlinx.coroutines.Dispatchers
@@ -374,6 +376,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // ————— нагрузка: процессор, видеоускоритель и нейросеть —————
+    private val turbo = TurboEngine(app())
+
+    /** Включить или выключить максимальную нагрузку. */
+    fun toggleTurbo() {
+        if (TurboState.active.value) turbo.stop() else turbo.start()
+    }
+
+    val turboActive: StateFlow<Boolean> = TurboState.active.asStateFlow()
+
+    fun stopTurbo() {
+        turbo.stop()
+    }
+
     fun refreshReports() = viewModelScope.launch {
         _reports.value = withContext(Dispatchers.IO) { AppLog.reports(app()) }
         _journal.value = withContext(Dispatchers.IO) { AppLog.journalTail(app()) }
@@ -531,6 +547,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Размер капсулы: компактный или обычный. */
+    override fun onCleared() {
+        runCatching { turbo.release() }
+        super.onCleared()
+    }
+
+    fun setIslandWide(wide: Boolean) = viewModelScope.launch {
+        guarded {
+            repository.saveSettings(repository.currentSettings().copy(islandWide = wide))
+            if (settings.value.islandPersistent) IslandService.start(app()) else fullIslandPreview()
+        }
+    }
+
     fun setIslandCompact(compact: Boolean) = viewModelScope.launch {
         guarded {
             repository.saveSettings(repository.currentSettings().copy(islandCompact = compact))

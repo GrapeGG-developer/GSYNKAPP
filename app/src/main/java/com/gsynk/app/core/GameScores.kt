@@ -19,6 +19,7 @@ class GameScores(context: Context) {
     private val bestMemory = intPreferencesKey("best_memory")
     private val best2048 = intPreferencesKey("best_2048")
     private val playedGames = intPreferencesKey("played_games")
+    private val bestRogue = intPreferencesKey("best_rogue")
 
     val reaction: Flow<Int> = appContext.gameStore.data.map { it[bestReaction] ?: 0 }
     val snake: Flow<Int> = appContext.gameStore.data.map { it[bestSnake] ?: 0 }
@@ -26,6 +27,7 @@ class GameScores(context: Context) {
     val memory: Flow<Int> = appContext.gameStore.data.map { it[bestMemory] ?: 0 }
     val tiles: Flow<Int> = appContext.gameStore.data.map { it[best2048] ?: 0 }
     val played: Flow<Int> = appContext.gameStore.data.map { it[playedGames] ?: 0 }
+    val rogueScore: Flow<Int> = appContext.gameStore.data.map { it[bestRogue] ?: 0 }
 
     suspend fun saveReaction(ms: Int) {
         appContext.gameStore.edit { prefs ->
@@ -52,6 +54,13 @@ class GameScores(context: Context) {
         appContext.gameStore.edit { prefs ->
             val current = prefs[best2048] ?: 0
             if (score > current) prefs[best2048] = score
+        }
+    }
+
+    suspend fun saveRogue(score: Int) {
+        appContext.gameStore.edit { prefs ->
+            val current = prefs[bestRogue] ?: 0
+            if (score > current) prefs[bestRogue] = score
         }
     }
 

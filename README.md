@@ -210,7 +210,7 @@ bash gradlew testDebugUnitTest lintDebug assembleDebug   # полная пров
 
 | Проверка | Результат |
 |---|---|
-| Юнит-тесты (`testDebugUnitTest`) | **50 / 50** (22 — правила, 28 — мультитул) |
+| Юнит-тесты (`testDebugUnitTest`) | **62 / 62** (22 — правила, 40 — движки и сервисы) |
 | Android Lint (`lintDebug`) | **0 ошибок**, 12 предупреждений — только про версии библиотек |
 | Сборка (`assembleDebug`) | успешно, APK ~32.5 МБ |
 | Компиляция с новыми модулями | без предупреждений, кроме deprecation `Locale` в синтезе речи |

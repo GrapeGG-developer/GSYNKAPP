@@ -45,6 +45,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -322,5 +324,193 @@ fun TilePanel(
             .border(1.dp, CardBorder, RectangleShape)
             .padding(16.dp),
         content = content
+    )
+}
+
+// ————————————————————————————————————————————————
+//  Плитки в духе Windows Phone 8–10 (Metro): переменный размер,
+//  плоский цвет, подпись снизу слева, живой оборот обратной стороны.
+// ————————————————————————————————————————————————
+
+/** Размер плитки по сетке Metro: 1×1, 2×2 и во всю ширину. */
+enum class TileSize { Small, Medium, Wide }
+
+/**
+ * Живая плитка Metro.
+ *
+ * Лицевая сторона — иконка и подпись снизу слева (подписи строчными, как в WP).
+ * Каждые несколько секунд плитка переворачивается вокруг вертикальной оси и
+ * показывает обратную сторону с живым значением: это и есть «live tile».
+ */
+@Composable
+fun MetroTile(
+    title: String,
+    brush: Brush,
+    modifier: Modifier = Modifier,
+    subtitle: String = "",
+    iconRes: Int? = null,
+    badge: String? = null,
+    liveText: String? = null,
+    liveLabel: String? = null,
+    size: TileSize = TileSize.Medium,
+    onClick: () -> Unit
+) {
+    val haptics = LocalHapticFeedback.current
+    var pressed by remember { mutableStateOf(false) }
+    val press by animateFloatAsState(
+        targetValue = if (pressed) 0.95f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "metroPress"
+    )
+    val height = when (size) {
+        TileSize.Small -> 60.dp
+        TileSize.Medium -> 132.dp
+        TileSize.Wide -> 96.dp
+    }
+    val iconSize = when (size) {
+        TileSize.Small -> 17.dp
+        TileSize.Medium -> 26.dp
+        TileSize.Wide -> 22.dp
+    }
+
+    // оборот: 9 секунд лицом, затем 3,5 секунды обратной стороной
+    val flip = rememberInfiniteTransition(label = "flip")
+    val angle by flip.animateFloat(
+        initialValue = 0f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = androidx.compose.animation.core.keyframes {
+                durationMillis = 13_000
+                0f at 0
+                0f at 8_600
+                180f at 9_100
+                180f at 12_100
+                360f at 12_600
+                360f at 13_000
+            },
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "flipAngle"
+    )
+    val showBack = liveText != null && angle > 90f && angle < 270f
+
+    Box(
+        modifier
+            .height(height)
+            .scale(press)
+            .graphicsLayer {
+                rotationY = if (liveText == null) 0f else angle
+                cameraDistance = 24f * density
+            }
+            .clip(RectangleShape)
+            .background(brush)
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RectangleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            }
+    ) {
+        if (!showBack) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(if (size == TileSize.Small) 8.dp else 12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (iconRes != null) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(iconRes),
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.95f),
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
+                    if (badge != null && size != TileSize.Small) {
+                        Spacer(Modifier.weight(1f))
+                        Box(
+                            Modifier
+                                .background(Color.Black.copy(alpha = 0.28f))
+                                .padding(horizontal = 6.dp, vertical = 1.dp)
+                        ) {
+                            Text(badge, color = Color.White, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = title.lowercase(),
+                    color = Color.White,
+                    style = if (size == TileSize.Small) {
+                        MaterialTheme.typography.labelSmall
+                    } else {
+                        MaterialTheme.typography.titleSmall
+                    },
+                    fontWeight = FontWeight.Light,
+                    maxLines = 2
+                )
+                if (subtitle.isNotEmpty() && size != TileSize.Small) {
+                    Text(
+                        text = subtitle.lowercase(),
+                        color = Color.White.copy(alpha = 0.72f),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1
+                    )
+                }
+            }
+        } else {
+            // обратная сторона: крупное живое значение
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { rotationY = 180f }
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                if (liveLabel != null) {
+                    Text(
+                        text = liveLabel.lowercase(),
+                        color = Color.White.copy(alpha = 0.72f),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+                Text(
+                    text = liveText.orEmpty(),
+                    color = Color.White,
+                    style = if (size == TileSize.Small) {
+                        MaterialTheme.typography.titleSmall
+                    } else {
+                        MaterialTheme.typography.titleMedium
+                    },
+                    fontWeight = FontWeight.Light,
+                    maxLines = 2
+                )
+            }
+        }
+    }
+}
+
+/** Плитка автопилота в стиле Metro: 2×2, обратная сторона — отсчёт до правила. */
+@Composable
+fun MetroAutopilotTile(
+    enabled: Boolean,
+    countdown: String,
+    rulesCount: Int,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    MetroTile(
+        title = "автопилот",
+        subtitle = if (enabled) "правил: $rulesCount" else "выключен",
+        brush = if (enabled) TileBrush.Violet else TileBrush.Ink,
+        iconRes = com.gsynk.app.R.drawable.ic_bolt,
+        badge = if (enabled) "вкл" else null,
+        liveText = if (enabled) countdown else "пауза",
+        liveLabel = "следующее правило",
+        size = TileSize.Medium,
+        modifier = modifier,
+        onClick = onClick
     )
 }

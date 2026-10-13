@@ -120,12 +120,14 @@ class IslandService : Service() {
                     if (IslandOverlay.isShownPersistent()) {
                         IslandOverlay.updatePersistent(
                             applicationContext, title, subtitle, expanded, lastPosition,
-                            settings.islandCompact, settings.islandOffsetY
+                            settings.islandCompact,
+                            settings.islandOffsetY,
+                            settings.islandWide
                         )
                     } else {
                         IslandOverlay.showPersistent(
                             applicationContext, title, subtitle, expanded, lastPosition,
-                            settings.islandCompact, settings.islandOffsetY
+                            settings.islandCompact, settings.islandOffsetY, settings.islandWide
                         )
                     }
                 }

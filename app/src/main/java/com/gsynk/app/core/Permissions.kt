@@ -72,6 +72,24 @@ object Permissions {
             ?.isIgnoringBatteryOptimizations(context.packageName) ?: false
     }.getOrDefault(false)
 
+    /** Доступен ли экран автозапуска (HyperOS/MIUI и родственные прошивки). */
+    fun autostartAvailable(context: Context): Boolean = runCatching {
+        val component = ComponentName(
+            "com.miui.securitycenter",
+            "com.miui.permcenter.autostart.AutoStartManagementActivity"
+        )
+        context.packageManager.resolveActivity(Intent().setComponent(component), 0) != null
+    }.getOrDefault(false)
+
+    /**
+     * Включён ли автозапуск. Напрямую прочитать это нельзя, поэтому смотрим,
+     * выдан ли заодно доступ к фоновой работе: HyperOS включает автозапуск
+     * вместе с ним.
+     */
+    fun autostartEnabled(context: Context): Boolean = runCatching {
+        batteryExempt(context) && canDrawOverlays(context)
+    }.getOrDefault(false)
+
     /** Заголовки уже выданных доступов — короткая строка для отчётов. */
     fun grantedTitles(context: Context): List<String> =
         runCatching { snapshot(context).items.filter { it.granted }.map { it.title } }.getOrDefault(emptyList())

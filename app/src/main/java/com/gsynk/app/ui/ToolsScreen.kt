@@ -53,6 +53,8 @@ fun ToolsScreen(
     val toolsMessage by tools.message.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val updateAvailable by vm.updateAvailable.collectAsStateWithLifecycle()
+    val turboActive by vm.turboActive.collectAsStateWithLifecycle()
+    val turboSpeed by com.gsynk.app.core.TurboState.cpuGflops.collectAsStateWithLifecycle()
 
     val profile = remember { DeviceProfile.detect(context) }
     var openExtra by remember { mutableStateOf<String?>(null) }
@@ -60,6 +62,8 @@ fun ToolsScreen(
     var showChat by remember { mutableStateOf(false) }
     var showUpdate by remember { mutableStateOf(false) }
     var showScreensaver by remember { mutableStateOf(false) }
+    var showTurbo by remember { mutableStateOf(false) }
+    var showChronicle by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         tools.startStats()
@@ -89,6 +93,14 @@ fun ToolsScreen(
     if (showDiagnostics) {
         DiagnosticsScreen(vm = vm, onBack = { showDiagnostics = false })
         return
+    }
+
+    if (showTurbo) {
+        TurboScreen(vm = vm, onBack = { showTurbo = false })
+    }
+
+    if (showChronicle) {
+        ChronicleScreen(onBack = { showChronicle = false })
     }
 
     if (showChat) {
@@ -375,6 +387,32 @@ fun ToolsScreen(
                 text = "Показать образец",
                 onClick = { vm.fullIslandPreview() },
                 modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // ————— нагрузка: процессор, ускоритель и ИИ —————
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Нагрузка и вычисления")
+        Spacer(Modifier.height(9.dp))
+        TileRow {
+            NavTile(
+                title = "Нагрузка",
+                subtitle = "все ядра и ускоритель",
+                iconRes = R.drawable.ic_bolt,
+                brush = TileBrush.Cyan,
+                badge = if (turboActive) "идёт" else null,
+                liveText = if (turboActive) "%.1f млрд оп/с".format(turboSpeed) else "выключено",
+                modifier = Modifier.weight(1f),
+                onClick = { showTurbo = true }
+            )
+            NavTile(
+                title = "Хроника",
+                subtitle = "что было за день",
+                iconRes = R.drawable.ic_schedule,
+                brush = TileBrush.Violet,
+                liveText = "события",
+                modifier = Modifier.weight(1f),
+                onClick = { showChronicle = true }
             )
         }
 

@@ -52,6 +52,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -88,6 +89,8 @@ import com.gsynk.app.ui.theme.BgBottomA
 import com.gsynk.app.ui.theme.BgBottomB
 import com.gsynk.app.ui.theme.BgMidA
 import com.gsynk.app.ui.theme.BgMidB
+import com.gsynk.app.core.RealtimeAi
+import com.gsynk.app.core.TurboState
 import com.gsynk.app.ui.theme.BgTopA
 import com.gsynk.app.ui.theme.BgTopB
 import com.gsynk.app.ui.theme.CardBg
@@ -120,6 +123,11 @@ fun AnimatedGrapeBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
+    // Пока считает «турбо», фон переливается: фазу задаёт нейросеть,
+    // которая крутится на процессоре в реальном времени.
+    val turboActive by TurboState.active.collectAsState()
+    val turboPhase by TurboState.progress.collectAsState()
+    val aiMode by TurboState.aiMode.collectAsState()
     val transition = rememberInfiniteTransition(label = "bg")
     val breath by transition.animateFloat(
         initialValue = 0f,
@@ -183,6 +191,42 @@ fun AnimatedGrapeBackground(
                         size.height * (0.10f + 0.03f * tilt)
                     )
                 )
+
+                // циклическое переливание во время нагрузки: слой, который
+                // проносится по экрану и меняет оттенок вместе с режимом ИИ
+                if (turboActive) {
+                    val phase = turboPhase
+                    val accent = when (aiMode) {
+                        RealtimeAi.MODE_ACTIVE -> Color(0xFF7C3AED)
+                        RealtimeAi.MODE_NIGHT -> Color(0xFF1E3A8A)
+                        else -> Color(0xFF22C55E)
+                    }
+                    val travel = phase * size.height * 1.6f - size.height * 0.3f
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                accent.copy(alpha = 0.30f),
+                                Color(0xFFC4B5FD).copy(alpha = 0.16f),
+                                Color.Transparent
+                            ),
+                            start = Offset(0f, travel),
+                            end = Offset(size.width, travel + size.height * 0.55f)
+                        )
+                    )
+                    val stripe = ((phase * 3f) % 1f) * size.width * 1.4f - size.width * 0.2f
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(alpha = 0.07f),
+                                Color.Transparent
+                            ),
+                            start = Offset(stripe, 0f),
+                            end = Offset(stripe + size.width * 0.35f, size.height)
+                        )
+                    )
+                }
 
                 // зелёная засветка снизу
                 val radius2 = size.minDimension * (0.85f + 0.15f * (1f - drift))
