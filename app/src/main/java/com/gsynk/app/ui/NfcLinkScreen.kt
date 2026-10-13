@@ -155,6 +155,8 @@ fun NfcLinkScreen(
         }
         onDispose {
             if (activity != null && nfc != null) runCatching { nfc.disableReaderMode(activity) }
+            // прощаемся с ролью метки: иначе телефон остаётся эмулировать карту
+            NdefHceService.setEnabled(context, false)
         }
     }
 

@@ -154,6 +154,9 @@ fun CoopScreen(
         }
         onDispose {
             if (activity != null && nfc != null) runCatching { nfc.disableReaderMode(activity) }
+            // уходя с сопряжения, телефон больше не притворяется меткой:
+            // иначе NFC-касания перестают работать до перезапуска приложения
+            NdefHceService.setEnabled(context, false)
         }
     }
 
