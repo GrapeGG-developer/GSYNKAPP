@@ -253,11 +253,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // ————— обновления (OTA) —————
 
     private companion object {
-        /** Круг автопроверки: раз в 20 минут. */
-        const val REFRESH_INTERVAL_MS = 20 * 60 * 1000L
+        /**
+         * Круг автопроверки: раз в 2 минуты.
+         *
+         * Раньше было раз в 6 часов, потом 20 минут — и всё равно обновление ждало
+         * человека. GitHub без токена пускает 60 запросов в час с одного адреса,
+         * поэтому 2 минуты (30 запросов в час) — это «почти постоянная» проверка
+         * без риска упереться в лимит.
+         */
+        const val REFRESH_INTERVAL_MS = 2 * 60 * 1000L
 
-        /** Насколько «старой» должна быть проверка, чтобы дёрнуть её при возврате в приложение. */
-        const val STALE_INTERVAL_MS = 15 * 60 * 1000L
+        /** Возвращение в приложение: проверяем, если прошло больше полутора минут. */
+        const val STALE_INTERVAL_MS = 90 * 1000L
     }
 
     private val _update = MutableStateFlow<UpdateChecker.Result?>(null)
@@ -280,7 +287,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Автопроверка обновлений: сразу при запуске, дальше каждые 20 минут,
+     * Автопроверка обновлений: сразу при запуске, дальше каждые 2 минуты,
      * плюс отдельный пинок при возвращении в приложение ([checkUpdateIfStale]) —
      * раньше проверка была раз в 6 часов, и обновление ждало ручного нажатия.
      */
@@ -600,6 +607,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Порядок правил на главном экране. */
+    // ————— кастомизация —————
+
+    fun setAccent(value: Int) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(accent = value.coerceIn(0, 4))) }
+    }
+
+    fun setBackgroundSpeed(value: Int) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(backgroundSpeed = value.coerceIn(0, 2))) }
+    }
+
+    fun setHaptics(enabled: Boolean) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(haptics = enabled)) }
+    }
+
+    fun setClickSound(enabled: Boolean) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(clickSound = enabled)) }
+    }
+
+    fun setTileScale(value: Int) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(tileScale = value.coerceIn(1, 3))) }
+    }
+
+    fun setTileCounters(enabled: Boolean) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(tileCounters = enabled)) }
+    }
+
+    fun setCompactList(enabled: Boolean) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(compactList = enabled)) }
+    }
+
     fun setRuleSort(mode: Int) = viewModelScope.launch {
         guarded {
             repository.saveSettings(repository.currentSettings().copy(ruleSort = mode))

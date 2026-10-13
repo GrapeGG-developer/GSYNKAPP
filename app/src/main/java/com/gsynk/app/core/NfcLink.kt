@@ -33,6 +33,12 @@ object NfcLink {
 
     /** Показ по касанию: салют, сердечки, вспышка, надпись или команда второму телефону. */
     const val KIND_SHOW = "show"
+    /** Передача обновления GSYNK: версия, ссылка на APK и контрольная сумма. */
+    const val KIND_UPDATE = "update"
+    /** Сигнал «проверь обновление» — просто просьба другу дёрнуть проверку. */
+    const val KIND_UPDATE_PING = "update-ping"
+
+    const val MIME_UPDATE = "application/vnd.gsynk.update"
 
     /** Пользовательские типы: кодируем как текст с префиксом вида gsynk:password|… */
     private const val PREFIX = "gsynk"
@@ -112,7 +118,9 @@ object NfcLink {
         TransferOption(KIND_PASSWORD, "Пароль", "Случайный пароль или ключ"),
         TransferOption(KIND_GEO, "Координаты", "Точка на карте"),
         TransferOption(KIND_PROFILE, "Профиль GSYNK", "Правила расписания целиком"),
-        TransferOption(KIND_GAME, "Вызов в игру", "Приглашение в дуэль")
+        TransferOption(KIND_GAME, "Вызов в игру", "Приглашение в дуэль"),
+        TransferOption(KIND_UPDATE, "Обновление GSYNK", "Версия и ссылка на APK — друг скачает сам"),
+        TransferOption(KIND_UPDATE_PING, "Сигнал «проверь обновление»", "Друг одним касанием проверит версию")
     )
 
     data class TransferOption(val kind: String, val title: String, val hint: String)
@@ -132,6 +140,7 @@ object NfcLink {
             KIND_URL -> NdefRecord.createUri(payload.body)
             KIND_CONTACT -> mime(MIME_CONTACT, payload.body)
             KIND_GAME -> mime(MIME_GAME, payload.body)
+            KIND_UPDATE, KIND_UPDATE_PING -> mime(MIME_UPDATE, payload.body)
             KIND_PROFILE -> mime(MIME_PROFILE, payload.body)
             else -> NdefRecord.createTextRecord(
                 "ru",
@@ -143,6 +152,14 @@ object NfcLink {
 
     fun buildGameInvite(invite: GameInvite, appPackage: String): NdefMessage =
         buildMessage(Payload(KIND_GAME, "GSYNK-игра", gameInviteBody(invite)), appPackage)
+
+    /** Сообщение с описанием релиза: второй телефон сам скачает APK. */
+    fun buildUpdateShare(share: com.gsynk.app.core.UpdateShare.Share, appPackage: String): NdefMessage =
+        buildMessage(Payload(KIND_UPDATE, "Обновление GSYNK", com.gsynk.app.core.UpdateShare.body(share)), appPackage)
+
+    /** Короткий сигнал «проверь обновление». */
+    fun buildUpdatePing(from: String, appPackage: String): NdefMessage =
+        buildMessage(Payload(KIND_UPDATE_PING, "Сигнал обновления", com.gsynk.app.core.UpdateShare.ping(from)), appPackage)
 
     /** Тело вызова: игра;отправитель;ключ;адрес;порт;код комнаты. */
     fun gameInviteBody(invite: GameInvite): String =
@@ -192,6 +209,12 @@ object NfcLink {
             record.tnf == NdefRecord.TNF_MIME_MEDIA && type == MIME_FILE ->
                 Payload(KIND_FILE, "Файл", String(record.payload, StandardCharsets.UTF_8))
 
+            record.tnf == NdefRecord.TNF_MIME_MEDIA && type == MIME_UPDATE -> {
+                val body = String(record.payload, StandardCharsets.UTF_8)
+                val kind = if (com.gsynk.app.core.UpdateShare.isPing(body)) KIND_UPDATE_PING else KIND_UPDATE
+                Payload(kind, if (kind == KIND_UPDATE) "Обновление GSYNK" else "Сигнал обновления", body)
+            }
+
             record.tnf == NdefRecord.TNF_WELL_KNOWN && record.type.contentEquals(NdefRecord.RTD_TEXT) -> {
                 val statusByte = record.payload.firstOrNull()?.toInt() ?: 0
                 val langLen = statusByte and 0x3F
@@ -232,6 +255,8 @@ object NfcLink {
 
     /** Краткое описание того, что пришло — для карточки «Получено». */
     fun describe(payload: Payload): String = when (payload.kind) {
+        KIND_UPDATE -> "Передано обновление GSYNK — можно проверить и скачать"
+        KIND_UPDATE_PING -> "Друг просит проверить обновление"
         KIND_URL -> "Ссылка готова к открытию"
         KIND_CONTACT -> "Контакт: откройте, чтобы добавить в телефонную книгу"
         KIND_PASSWORD -> "Пароль можно скопировать в буфер"

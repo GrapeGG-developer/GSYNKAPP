@@ -33,7 +33,9 @@ object UpdateChecker {
     private data class Asset(
         val name: String = "",
         @SerialName("browser_download_url") val url: String = "",
-        val size: Long = 0
+        val size: Long = 0,
+        /** «sha256:…» — GitHub отдаёт это поле у файлов релиза. */
+        val digest: String = ""
     )
 
     data class Result(
@@ -44,7 +46,9 @@ object UpdateChecker {
         val updateAvailable: Boolean = false,
         val notes: String = "",
         val apkUrl: String = "",
-        val pageUrl: String = ""
+        val pageUrl: String = "",
+        /** sha256 файла APK из GitHub: по нему проверяем, что скачалось то же самое. */
+        val sha256: String = ""
     )
 
     private val json = Json { ignoreUnknownKeys = true }
@@ -95,7 +99,8 @@ object UpdateChecker {
                 updateAvailable = newer && apk != null,
                 notes = release.body.take(1200),
                 apkUrl = apk?.url.orEmpty(),
-                pageUrl = release.htmlUrl
+                pageUrl = release.htmlUrl,
+                sha256 = apk?.digest.orEmpty().substringAfter("sha256:", "").trim()
             )
         }.getOrElse { error ->
             Result(

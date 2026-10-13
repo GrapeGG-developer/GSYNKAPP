@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.gsynk.app.BuildConfig
 import com.gsynk.app.core.AppLog
 import com.gsynk.app.core.AutomationActions
 import com.gsynk.app.core.FileLink
@@ -79,7 +80,20 @@ import kotlinx.coroutines.withContext
 fun NfcLinkScreen(
     onBack: () -> Unit,
     onJoinGame: (NfcLink.GameInvite) -> Unit = {},
-    onHostGame: () -> Unit = {}
+    onHostGame: () -> Unit = {},
+    /** Что положить в касание, если выбран пункт «Обновление GSYNK». */
+    provideUpdateShare: () -> com.gsynk.app.core.UpdateShare.Share = {
+        com.gsynk.app.core.UpdateShare.Share(
+            version = "v" + BuildConfig.VERSION_NAME,
+            url = com.gsynk.app.core.UpdateShare.apkUrl(
+                "GrapeGG-developer/GSYNKAPP",
+                "v" + BuildConfig.VERSION_NAME
+            ),
+            from = android.os.Build.MODEL
+        )
+    },
+    /** Касание принесло просьбу или описание обновления — проверить версию. */
+    onCheckUpdate: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
@@ -218,6 +232,27 @@ fun NfcLinkScreen(
                             NfcShow.show(decoded.first, decoded.second)
                             status = "Показ: " + decoded.first.label.lowercase()
                         }
+                    }
+
+                    // 4) обновление: описание релиза или сигнал «проверь версию»
+                    NfcLink.KIND_UPDATE -> {
+                        val share = com.gsynk.app.core.UpdateShare.parse(payload.body)
+                        if (share == null) {
+                            status = "Описание обновления не разобралось"
+                        } else {
+                            com.gsynk.app.core.UpdateShare.put(share)
+                            received = payload
+                            status = "Передано обновление " + share.version +
+                                " — откройте панель обновлений или нажмите «Проверить»"
+                        }
+                    }
+
+                    NfcLink.KIND_UPDATE_PING -> {
+                        com.gsynk.app.core.UpdateShare.putPing(
+                            com.gsynk.app.core.UpdateShare.pingFrom(payload.body)
+                        )
+                        received = payload
+                        status = "Друг просит проверить обновление"
                     }
 
                     else -> {
@@ -426,7 +461,27 @@ fun NfcLinkScreen(
                     onTitle = { dataTitle = it },
                     onBody = { dataBody = it },
                     onSend = {
-                        if (dataKind == NfcLink.KIND_PROFILE) {
+                        if (dataKind == NfcLink.KIND_UPDATE) {
+                            val share = provideUpdateShare()
+                            putToTouch(
+                                NfcLink.Payload(
+                                    NfcLink.KIND_UPDATE,
+                                    "Обновление GSYNK",
+                                    com.gsynk.app.core.UpdateShare.body(share)
+                                )
+                            )
+                            status = "Обновление " + share.version +
+                                " ждёт касания — приложите телефон к другу"
+                        } else if (dataKind == NfcLink.KIND_UPDATE_PING) {
+                            putToTouch(
+                                NfcLink.Payload(
+                                    NfcLink.KIND_UPDATE_PING,
+                                    "Сигнал обновления",
+                                    com.gsynk.app.core.UpdateShare.ping(android.os.Build.MODEL)
+                                )
+                            )
+                            status = "Сигнал «проверь обновление» готов — коснитесь телефона друга"
+                        } else if (dataKind == NfcLink.KIND_PROFILE) {
                             scope.launch {
                                 val rules = withContext(Dispatchers.IO) { profilePayload(context) }
                                 putToTouch(
@@ -455,7 +510,11 @@ fun NfcLinkScreen(
         val incoming = received
         if (incoming != null) {
             Spacer(Modifier.height(12.dp))
-            ReceivedCard(payload = incoming, onImported = { status = it })
+            ReceivedCard(
+                payload = incoming,
+                onImported = { status = it },
+                onCheckUpdate = onCheckUpdate
+            )
         }
 
         if (status.isNotBlank()) {
@@ -781,7 +840,11 @@ private suspend fun profilePayload(context: android.content.Context): String = r
 
 /** Карточка полученных данных: одно действие по типу — без лишних кнопок. */
 @Composable
-private fun ReceivedCard(payload: NfcLink.Payload, onImported: (String) -> Unit) {
+private fun ReceivedCard(
+    payload: NfcLink.Payload,
+    onImported: (String) -> Unit,
+    onCheckUpdate: () -> Unit = {}
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -802,6 +865,62 @@ private fun ReceivedCard(payload: NfcLink.Payload, onImported: (String) -> Unit)
         Spacer(Modifier.height(12.dp))
 
         when (payload.kind) {
+            NfcLink.KIND_UPDATE -> {
+                val share = com.gsynk.app.core.UpdateShare.parse(payload.body)
+                if (share != null) {
+                    Text(
+                        text = "Версия ${share.version}" +
+                            if (share.sha256.isNotBlank()) " • сумма ${share.shortSha}" else "",
+                        color = TextPrimary,
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(share.url, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Spacer(Modifier.height(10.dp))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clip(RectangleShape)
+                            .background(CardBg)
+                            .border(1.dp, ChipBorder, RectangleShape)
+                            .clickable { onCheckUpdate() },
+                        contentAlignment = Alignment.Center
+                    ) { Text("Проверить обновление", color = GrapeGreen, style = MaterialTheme.typography.labelLarge) }
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clip(RectangleShape)
+                            .background(CardBg)
+                            .border(1.dp, ChipBorder, RectangleShape)
+                            .clickable {
+                                val share = com.gsynk.app.core.UpdateShare.parse(payload.body)
+                                if (share != null) {
+                                    runCatching {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse(share.url)
+                                            )
+                                        )
+                                    }
+                                    onImported("Открыл ссылку на APK")
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) { Text("Скачать APK", color = GrapeCyan, style = MaterialTheme.typography.labelLarge) }
+                }
+            }
+
+            NfcLink.KIND_UPDATE_PING -> PrimaryButton(
+                text = "Проверить обновление сейчас",
+                onClick = { onCheckUpdate() },
+                modifier = Modifier.fillMaxWidth()
+            )
+
             NfcLink.KIND_URL -> PrimaryButton(
                 text = "Открыть ссылку",
                 onClick = {

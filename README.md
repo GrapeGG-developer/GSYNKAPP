@@ -1,4 +1,4 @@
-# GSYNK 2.3.1 — мультитул для телефона
+# GSYNK 3.0 — мультитул для телефона
 
 **GSYNK** — приложение-мультитул для Android: расписание яркости и громкости, компактный
 «остров» рядом с фронтальной камерой, Grape Link (NFC для данных и знакомства, Wi-Fi для
@@ -19,7 +19,8 @@
 
 | Версия | Ссылка |
 |---|---|
-| **2.3.1** (текущая, versionCode 13) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.3.1/GSYNK-v2.3.1-debug.apk |
+| **3.0** (текущая, versionCode 14) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v3.0/GSYNK-v3.0-debug.apk |
+| 2.3.1 (починка NFC и датчиков) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.3.1/GSYNK-v2.3.1-debug.apk |
 | 2.3.0 (лаборатория железа, бот без модели) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.3.0/GSYNK-v2.3.0-debug.apk |
 | 2.2.1 (остров, фон, Wi-Fi-мультиплеер) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.2.1/GSYNK-v2.2.1-debug.apk |
 | 2.2.0 (подземелье, нагрузка CPU/GPU+ИИ, плитки Metro) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.2.0/GSYNK-v2.2.0-debug.apk |
@@ -230,7 +231,7 @@ bash gradlew testDebugUnitTest lintDebug assembleDebug   # полная пров
 
 | Проверка | Результат |
 |---|---|
-| Юнит-тесты (`testDebugUnitTest`) | **102 / 102** (22 — правила, 40 — движки и сервисы, 19 — лаборатория железа и датчики, 8 — сеть подземелья, 4+5 — сторожа прокрутки и датчиков, 2 — сторож острова, 2 — сторож формата строк) |
+| Юнит-тесты (`testDebugUnitTest`) | **127 / 127** (22 — правила, 40 — движки и сервисы, 19 — лаборатория, 8 — сеть подземелья, 17 — связь/музыка/вибрация/обновление, 7 — сторож интерфейса, + сторожа прокрутки, датчиков, острова и строк) |
 | Android Lint (`lintDebug`) | **0 ошибок**, 25 предупреждений — только про версии библиотек |
 | Сборка (`assembleDebug`) | успешно, APK ~35 МБ (модель ИИ и MediaPipe удалены в 2.3.0) |
 | Компиляция | без ошибок; предупреждения только про доступные обновления зависимостей |

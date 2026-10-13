@@ -38,6 +38,8 @@ import com.gsynk.app.core.AppLog
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBorder
+import com.gsynk.app.ui.theme.GrapeCyan
+import com.gsynk.app.ui.theme.GrapePink
 import com.gsynk.app.ui.theme.GrapeGreen
 import com.gsynk.app.ui.theme.GrapeRed
 import com.gsynk.app.ui.theme.GrapeVioletSoft
@@ -95,6 +97,58 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                     text = "Журнал",
                     onClick = { showJournal = !showJournal }
                 )
+            }
+        }
+
+        // ————— проверка железа по кнопке: вибро, тон, фонарь —————
+        Spacer(Modifier.height(14.dp))
+        SectionTitle("Проверка железа")
+        Spacer(Modifier.height(9.dp))
+        SurfaceCard(borderColor = CardBorder) {
+            Text(
+                text = "Вибрация на HyperOS молчит, если у неё не задано назначение — GSYNK " +
+                    "играет её как «сигнал». Нажмите и проверьте: должно тряхнуть ощутимо.",
+                color = TextDim,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = if (com.gsynk.app.core.Haptics.available(context)) {
+                    "Мотор: есть" + if (vibratorHasControl(context)) ", умеет менять силу" else ", сила не меняется"
+                } else {
+                    "Мотор не отвечает — вибрации на этом телефоне нет"
+                },
+                color = if (com.gsynk.app.core.Haptics.available(context)) GrapeGreen else GrapeRed,
+                style = MaterialTheme.typography.labelMedium
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clip(androidx.compose.ui.graphics.RectangleShape)
+                        .background(CardBg)
+                        .border(1.dp, ChipBorder, androidx.compose.ui.graphics.RectangleShape)
+                        .clickable {
+                            com.gsynk.app.core.Haptics.play(
+                                context,
+                                longArrayOf(0, 160, 90, 160, 90, 320),
+                                com.gsynk.app.core.Haptics.Use.ALARM
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) { Text("Проверить вибрацию", color = GrapePink, style = MaterialTheme.typography.labelMedium) }
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clip(androidx.compose.ui.graphics.RectangleShape)
+                        .background(CardBg)
+                        .border(1.dp, ChipBorder, androidx.compose.ui.graphics.RectangleShape)
+                        .clickable { com.gsynk.app.core.AutomationActions.playTone(440, 700) },
+                    contentAlignment = Alignment.Center
+                ) { Text("Проверить звук", color = GrapeCyan, style = MaterialTheme.typography.labelMedium) }
             }
         }
 
@@ -358,4 +412,10 @@ private fun shareReport(context: android.content.Context, file: java.io.File) {
         }
         context.startActivity(Intent.createChooser(intent, "Отправить отчёт"))
     }
+
 }
+
+/** Умеет ли мотор менять силу вибрации — для строки состояния в «Проверке железа». */
+private fun vibratorHasControl(context: android.content.Context): Boolean = runCatching {
+    com.gsynk.app.core.Haptics.vibrator(context)?.hasAmplitudeControl() == true
+}.getOrDefault(false)

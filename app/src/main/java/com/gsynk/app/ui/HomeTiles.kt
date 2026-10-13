@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +55,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.TileBrush
@@ -95,9 +97,13 @@ fun LiveTile(
         label = "shift"
     )
 
+    val tileContext = LocalContext.current
+    val tweakRevision by UiTweaks.revision.collectAsStateWithLifecycle()
+    val scaledHeight = if (tweakRevision >= 0) (height.value * UiTweaks.titleScale).dp else height
+
     Box(
         modifier
-            .height(height)
+            .height(scaledHeight)
             .scale(scale)
             .clip(RectangleShape)
             .background(brush)
@@ -106,6 +112,8 @@ fun LiveTile(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) {
+                // Отклик по настройкам: вибрация и/или щелчок (в «Кастомизации»).
+                UiTweaks.tap(tileContext)
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()
             }
@@ -166,7 +174,7 @@ fun LiveTile(
 
             Spacer(Modifier.weight(1f))
 
-            if (liveText != null) {
+            if (liveText != null && UiTweaks.tileCounters) {
                 AnimatedContent(
                     targetState = liveText,
                     transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(140)) },
@@ -394,6 +402,9 @@ fun MetroTile(
     )
     val showBack = liveText != null && angle > 90f && angle < 270f
 
+    val tileContext = LocalContext.current
+    val tweakRevision by UiTweaks.revision.collectAsStateWithLifecycle()
+
     Box(
         modifier
             .height(height)
@@ -409,6 +420,8 @@ fun MetroTile(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) {
+                // Отклик по настройкам: вибрация и/или щелчок (в «Кастомизации»).
+                UiTweaks.tap(tileContext)
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()
             }

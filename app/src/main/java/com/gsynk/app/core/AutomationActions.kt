@@ -89,10 +89,9 @@ object AutomationActions {
     }
 
     fun vibrate(context: Context, ms: Long = 60) {
-        runCatching {
-            val vibrator = context.getSystemService(Vibrator::class.java) ?: return
-            vibrator.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
-        }
+        // Через Haptics: HyperOS глушит вибрацию без явного назначения, а нам нужно,
+        // чтобы «Вибрация» в инструментах и отклик на логотип чувствовались всегда.
+        Haptics.play(context, longArrayOf(0, ms.coerceIn(10L, 10_000L)), Haptics.Use.ALARM)
     }
 
     /** Открыть системный экран по ключу: звук, батарея, приложения, дисплей. */

@@ -21,6 +21,30 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Обмен по NFC -->
     <uses-permission android:name="android.permission.NFC" />
+    <!-- «GSYNK рядом»: Bluetooth-канал (до Android 12 разрешения обычные) -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <!-- «GSYNK рядом»: быстрый канал Wi-Fi Direct (своя сеть между двумя телефонами) -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+    <!-- Точная и грубая геолокация нужны только для поиска Wi-Fi Direct на Android ≤ 12:
+         служба поиска сетей объявлена как «чувствительная к местоположению». -->
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="32" />
     <!-- «Не беспокоить» из инструментов и сцен -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <!-- Шумомер: короткое измерение уровня микрофоном -->

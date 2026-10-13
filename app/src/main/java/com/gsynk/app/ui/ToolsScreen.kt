@@ -42,7 +42,9 @@ import com.gsynk.app.ui.theme.TileBrush
 fun ToolsScreen(
     vm: MainViewModel,
     onBack: () -> Unit,
-    onOpenNfc: () -> Unit
+    onOpenNfc: () -> Unit,
+    onHostGame: () -> Unit = {},
+    onJoinGame: (com.gsynk.app.core.NfcLink.GameInvite) -> Unit = {}
 ) {
     val context = LocalContext.current
     val tools: ToolsViewModel = viewModel()
@@ -87,6 +89,13 @@ fun ToolsScreen(
         "coder" -> EncoderScreen(onBack = { openExtra = null })
         "subnet" -> SubnetScreen(onBack = { openExtra = null })
         "lab" -> LabScreen(onBack = { openExtra = null })
+        "nearby" -> NearbyScreen(
+            vm = vm,
+            onBack = { openExtra = null },
+            onOpenNfc = onOpenNfc,
+            onHostGame = onHostGame,
+            onJoinGame = onJoinGame
+        )
     }
 
     if (openExtra != null) return
@@ -96,12 +105,16 @@ fun ToolsScreen(
         return
     }
 
+    // Панели обязаны заканчиваться return: без него список инструментов рисовался
+    // ПОВЕРХ панели и перехватывал нажатия — «Нагрузка» и «Хроника» не открывались.
     if (showTurbo) {
         TurboScreen(vm = vm, onBack = { showTurbo = false })
+        return
     }
 
     if (showChronicle) {
         ChronicleScreen(onBack = { showChronicle = false })
+        return
     }
 
     if (showChat) {
@@ -179,6 +192,18 @@ fun ToolsScreen(
                 onClick = onOpenNfc
             )
             NavTile(
+                title = "GSYNK рядом",
+                subtitle = "Bluetooth и Wi-Fi Direct",
+                iconRes = R.drawable.ic_bolt,
+                brush = TileBrush.Blue,
+                liveText = if (com.gsynk.app.core.Nearby.isConnected()) "связь есть" else "связаться",
+                modifier = Modifier.weight(1f),
+                onClick = { openExtra = "nearby" }
+            )
+        }
+        Spacer(Modifier.height(11.dp))
+        TileRow {
+            NavTile(
                 title = "Локальный ИИ",
                 subtitle = "чат офлайн",
                 iconRes = R.drawable.ic_shield,
@@ -186,9 +211,6 @@ fun ToolsScreen(
                 modifier = Modifier.weight(1f),
                 onClick = { showChat = true }
             )
-        }
-        Spacer(Modifier.height(11.dp))
-        TileRow {
             NavTile(
                 title = "Скринсейвер",
                 subtitle = "полка с часами",
@@ -197,6 +219,9 @@ fun ToolsScreen(
                 modifier = Modifier.weight(1f),
                 onClick = { showScreensaver = true }
             )
+        }
+        Spacer(Modifier.height(11.dp))
+        TileRow {
             NavTile(
                 title = "Обновления",
                 subtitle = "версия ${com.gsynk.app.BuildConfig.VERSION_NAME}",

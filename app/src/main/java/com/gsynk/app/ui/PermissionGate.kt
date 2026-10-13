@@ -4,7 +4,10 @@ import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -102,6 +105,9 @@ fun PermissionGate() {
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
+                // Панель разрешений полноэкранная: без этих отступов заголовок уезжал
+                // под строку состояния, а кнопки — под панель навигации.
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 18.dp, vertical = 26.dp)
         ) {
             Text(

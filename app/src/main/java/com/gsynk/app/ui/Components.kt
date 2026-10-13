@@ -90,6 +90,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.ui.theme.BgBottomA
 import com.gsynk.app.ui.theme.BgBottomB
 import com.gsynk.app.ui.theme.BgMidA
@@ -129,6 +130,8 @@ fun AnimatedGrapeBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
+    // Настройки внешнего вида (акцент, скорость) читаем как состояние: сменил — фон ожил.
+    val tweakRevision by UiTweaks.revision.collectAsStateWithLifecycle()
     // Фон переливается ВСЕГДА — независимо от нейросети. Пока идёт нагрузка,
     // фазу дополнительно подгоняет «турбо», поэтому поток бежит быстрее.
     val turboActive by TurboState.active.collectAsState()
@@ -141,7 +144,7 @@ fun AnimatedGrapeBackground(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 24_000, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = UiTweaks.breathMs, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "breath"
@@ -151,7 +154,7 @@ fun AnimatedGrapeBackground(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6_500, easing = LinearEasing),
+            animation = tween(durationMillis = UiTweaks.shimmerMs, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "shimmer"
@@ -160,7 +163,7 @@ fun AnimatedGrapeBackground(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 22_000, easing = LinearEasing),
+            animation = tween(durationMillis = UiTweaks.driftMs, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "drift"
@@ -201,7 +204,8 @@ fun AnimatedGrapeBackground(
                         else -> Color(0xFF22C55E)
                     }
                 } else {
-                    lerp(Color(0xFF7C3AED), Color(0xFF22D3EE), breath)
+                    // Акцент из «Кастомизации»: фон подстраивается под выбранный оттенок.
+                    lerp(UiTweaks.accentStart, Color(0xFF22D3EE), breath)
                 }
 
                 // виноградная засветка сверху
@@ -323,15 +327,25 @@ fun GradientText(
     text: String,
     style: TextStyle,
     modifier: Modifier = Modifier,
-    brush: Brush = GrapeGradient,
+    brush: Brush? = null,
     textAlign: TextAlign? = null
 ) {
-    Text(
-        text = text,
-        modifier = modifier,
-        style = style.copy(brush = brush),
-        textAlign = textAlign
-    )
+    // Акцент из настроек: если явный градиент не задан (или это прежний «виноград» по
+    // умолчанию), берём выбранный пользователем. revision заставляет перечитать цвет.
+    val revision by UiTweaks.revision.collectAsStateWithLifecycle()
+    val actual = when {
+        brush == null -> UiTweaks.accentBrush
+        brush === GrapeGradient -> UiTweaks.accentBrush
+        else -> brush
+    }
+    if (revision >= 0) {
+        Text(
+            text = text,
+            modifier = modifier,
+            style = style.copy(brush = actual),
+            textAlign = textAlign
+        )
+    }
 }
 
 // ————————————————————————————————————————————————

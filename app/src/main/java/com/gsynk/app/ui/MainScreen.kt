@@ -154,9 +154,35 @@ fun MainScreen(vm: MainViewModel) {
         }
     }
 
-    // пришли по касанию метки — открываем Grape Link сразу
+    // Настройки внешнего вида живут в одном месте: акцент, скорость фона, отклик.
+    LaunchedEffect(settings) { UiTweaks.apply(settings) }
+
+    // пришли по касанию метки — открываем Grape Link сразу.
+    // Исключение: касание принесло обновление или просьбу «проверь версию» — тогда
+    // открываем панель обновлений и сразу дёргаем проверку.
     LaunchedEffect(Unit) {
-        if (PendingNfcPayload.payload != null) panel = "nfc"
+        val pending = PendingNfcPayload.payload
+        when (pending?.kind) {
+            com.gsynk.app.core.NfcLink.KIND_UPDATE -> {
+                com.gsynk.app.core.UpdateShare.parse(pending.body)?.let {
+                    com.gsynk.app.core.UpdateShare.put(it)
+                }
+                com.gsynk.app.core.UpdateShare.takePing()
+                vm.checkUpdate(silent = true)
+                panel = "update"
+            }
+
+            com.gsynk.app.core.NfcLink.KIND_UPDATE_PING -> {
+                com.gsynk.app.core.UpdateShare.putPing(
+                    com.gsynk.app.core.UpdateShare.pingFrom(pending.body)
+                )
+                vm.checkUpdate(silent = true)
+                panel = "update"
+            }
+
+            null -> Unit
+            else -> panel = "nfc"
+        }
     }
 
     // Новая версия сама вылезает на экран и закрывает все лишние панели.
@@ -431,7 +457,25 @@ fun MainScreen(vm: MainViewModel) {
     }
 
     if (panel == "tools") {
-        ToolsScreen(vm = vm, onBack = { panel = null }, onOpenNfc = { panel = "nfc" })
+        ToolsScreen(
+            vm = vm,
+            onBack = { panel = null },
+            onOpenNfc = { panel = "nfc" },
+            // «GSYNK рядом» умеет передать игру в те же экраны, что и NFC
+            onHostGame = {
+                coopInvite = null
+                coopAutoHost = true
+                panel = null
+                panel = "coop"
+            },
+            onJoinGame = { invite ->
+                coopInvite = invite
+                coopRole = com.gsynk.app.core.WifiCoop.Role.GUEST
+                rogueInvite = NfcLinkInvite(invite.seed, invite.from.ifBlank { "второй телефон" })
+                panel = null
+                panel = "rogue"
+            }
+        )
     }
 
     if (panel == "diagnostics") {
@@ -477,6 +521,24 @@ fun MainScreen(vm: MainViewModel) {
                 rogueInvite = NfcLinkInvite(invite.seed, invite.from.ifBlank { "второй телефон" })
                 panel = null
                 panel = "rogue"
+            },
+            // «Передать обновление по NFC»: APK в метку не влезет, поэтому уезжает
+            // описание релиза — версия и прямая ссылка, а второй телефон скачает сам.
+            provideUpdateShare = {
+                val tag = vm.update.value?.latestTag?.takeIf { it.isNotBlank() }
+                    ?: ("v" + com.gsynk.app.BuildConfig.VERSION_NAME)
+                com.gsynk.app.core.UpdateShare.Share(
+                    version = tag,
+                    url = vm.update.value?.apkUrl?.takeIf { it.isNotBlank() }
+                        ?: com.gsynk.app.core.UpdateShare.apkUrl(settings.updateRepo, tag),
+                    sha256 = vm.update.value?.sha256.orEmpty(),
+                    from = profile.model
+                )
+            },
+            onCheckUpdate = {
+                vm.checkUpdate(silent = true)
+                panelBeforeUpdate = "nfc"
+                panel = "update"
             }
         )
     }

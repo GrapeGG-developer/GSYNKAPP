@@ -11,6 +11,8 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,16 +24,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +57,12 @@ import androidx.compose.ui.unit.dp
 import com.gsynk.app.core.AppLog
 import com.gsynk.app.core.AutomationActions
 import com.gsynk.app.core.DeviceLab
+import com.gsynk.app.core.Haptics
+import com.gsynk.app.core.Melody
+import com.gsynk.app.core.MelodyStore
+import com.gsynk.app.core.Nearby
+import com.gsynk.app.core.SineGenerator
+import com.gsynk.app.core.ToneSynth
 import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.ScreenDimmer
 import com.gsynk.app.ui.theme.CardBg
@@ -93,10 +105,10 @@ fun LabScreen(onBack: () -> Unit) {
         "screen" -> ScreenTestScreen(onBack = { tool = null })
         "sensors" -> SensorsScreen(onBack = { tool = null })
         "coils" -> CoilsScreen(onBack = { tool = null })
+        "music" -> ComposerScreen(onBack = { tool = null })
+        "tone" -> ToneLabScreen(onBack = { tool = null })
         "metal" -> InductionScreen(onBack = { tool = null })
         "torch" -> TorchStrobeScreen(onBack = { tool = null })
-        "hidden" -> HiddenScreensScreen(onBack = { tool = null })
-        "hyperos" -> HyperOsScreen(onBack = { tool = null })
         "codes" -> DialCodesScreen(onBack = { tool = null })
         "ir" -> if (DeviceLab.hasIr(context)) {
             IrRemoteScreen(onBack = { tool = null })
@@ -187,21 +199,24 @@ fun LabScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(11.dp))
         TileRow {
+            // Списки «скрытых экранов Android» и разделов HyperOS убраны по итогам отчёта
+            // с телефона: на Android 16 и HyperOS они не открываются и ничего не прячут.
+            // Вместо них — то, что действительно работает с железом.
             NavTile(
-                title = "Скрытое Android",
-                subtitle = "10 спрятанных экранов",
-                iconRes = com.gsynk.app.R.drawable.ic_copy,
+                title = "Композитор",
+                subtitle = "музыка из частот",
+                iconRes = com.gsynk.app.R.drawable.ic_volume,
                 brush = TileBrush.Green,
                 modifier = Modifier.weight(1f),
-                onClick = { tool = "hidden" }
+                onClick = { tool = "music" }
             )
             NavTile(
-                title = "HyperOS",
-                subtitle = "разделы MIUI и Xiaomi",
+                title = "Камертон",
+                subtitle = "держу — играет частота",
                 iconRes = com.gsynk.app.R.drawable.ic_tune,
                 brush = TileBrush.Amber,
                 modifier = Modifier.weight(1f),
-                onClick = { tool = "hyperos" }
+                onClick = { tool = "tone" }
             )
         }
         Spacer(Modifier.height(11.dp))
@@ -832,20 +847,10 @@ private fun CoilsScreen(onBack: () -> Unit) {
     var sweep by remember { mutableStateOf(false) }
 
     fun buzz(pattern: LongArray) {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        } ?: return
-        runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(pattern, -1)
-            }
-        }
+        // Раньше вибрация молчала на HyperOS: система глушит её без явного назначения.
+        // Haptics играет как «сигнал» (USAGE_ALARM) и имеет запасные дорожки.
+        val ok = Haptics.play(context, pattern, Haptics.Use.ALARM)
+        if (!ok) AppLog.warn("Лаборатория", "вибромотор не ответил", null)
     }
 
     DisposableEffect(Unit) {
@@ -967,6 +972,10 @@ private fun CoilsScreen(onBack: () -> Unit) {
                 ) {
                     Text(if (sweep) "развёртка идёт…" else "Развёртка 20→20к", color = GrapeAmber, style = MaterialTheme.typography.labelLarge)
                 }
+            }
+            Spacer(Modifier.height(10.dp))
+            ToneHoldPanel(initialHz = toneHz.toDouble()) { hz ->
+                AppLog.event("Лаборатория", "удержание: " + hz.toInt() + " Гц")
             }
             Spacer(Modifier.height(8.dp))
             Text(
@@ -1149,70 +1158,8 @@ private fun TorchStrobeScreen(onBack: () -> Unit) {
 }
 
 // ————————————————————————————————————————————————
-//  Скрытые экраны Android и HyperOS, коды
-// —————————————————————————————————————————————————
-
-@Composable
-private fun HiddenScreensScreen(onBack: () -> Unit) {
-    val context = LocalContext.current
-    GrapeScreen(title = "Скрытое в Android", subtitle = "экраны, до которых обычно не добраться", onBack = onBack) {
-        SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.4f)) {
-            Text(
-                text = "Это обычные системные экраны, просто спрятанные от пользователя. GSYNK " +
-                    "открывает их напрямую — без root, без ADB.",
-                color = TextDim,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        DeviceLab.screens.forEach { screen ->
-            SurfaceCard(borderColor = CardBorder, onClick = {
-                val ok = screen.open(context)
-                AppLog.event("Лаборатория", "скрытый экран: " + screen.title + " → " + ok)
-            }) {
-                Text(screen.title, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(2.dp))
-                Text(screen.hint, color = TextDim, style = MaterialTheme.typography.labelSmall)
-            }
-            Spacer(Modifier.height(9.dp))
-        }
-        Spacer(Modifier.height(20.dp))
-    }
-}
-
-@Composable
-private fun HyperOsScreen(onBack: () -> Unit) {
-    val context = LocalContext.current
-    val profile = remember { DeviceProfile.detect(context) }
-    GrapeScreen(title = "HyperOS", subtitle = "разделы Xiaomi и MIUI", onBack = onBack) {
-        SurfaceCard(borderColor = if (profile.isHyperOs) GrapeAmber.copy(alpha = 0.5f) else CardBorder) {
-            Text(
-                text = if (profile.isHyperOs) {
-                    "Телефон на HyperOS/MIUI: разделы ниже откроются. Это те самые экраны, " +
-                        "которые Xiaomi прячет в «Центре безопасности»."
-                } else {
-                    "Это не Xiaomi: разделы HyperOS не откроются, но попробовать можно — " +
-                        "на MIUI-прошивках вроде Poco X3 Pro они есть."
-                },
-                color = TextDim,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-        DeviceLab.hyperOsScreens.forEach { screen ->
-            SurfaceCard(borderColor = CardBorder, onClick = {
-                val ok = screen.open(context)
-                AppLog.event("HyperOS", screen.title + " → " + ok)
-            }) {
-                Text(screen.title, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(2.dp))
-                Text(screen.hint, color = TextDim, style = MaterialTheme.typography.labelSmall)
-            }
-            Spacer(Modifier.height(9.dp))
-        }
-        Spacer(Modifier.height(20.dp))
-    }
-}
+//  Коды, ИК-пульт
+// ————————————————————————————————————————————————
 
 @Composable
 private fun DialCodesScreen(onBack: () -> Unit) {
@@ -1309,6 +1256,503 @@ private fun IrRemoteScreen(onBack: () -> Unit) {
             InfoRow("Адрес кода", "0x" + deviceCode.toString(16).uppercase(), GrapeVioletSoft)
             Spacer(Modifier.height(6.dp))
             Text(log, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+        }
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+// ————————————————————————————————————————————————
+//  Тон: кнопка «держу — играет», музыка из частот
+// —————————————————————————————————————————————————
+
+/**
+ * Кнопка, которая держит частоту, пока палец на экране.
+ *
+ * Пока держишь — [ToneSynth] тянет непрерывную ноту, а шкала под пальцем меняет её на ходу
+ * (переносишь палец вправо — выше). Отпустил — тишина. Рядом «в мотив»: текущая частота
+ * уходит в список, из которого потом собирается музыка.
+ */
+@Composable
+fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
+    val localContext = LocalContext.current
+    var hz by remember { mutableDoubleStateOf(initialHz) }
+    val generator = remember { SineGenerator() }
+    var holding by remember { mutableStateOf(false) }
+    var level by remember { mutableIntStateOf(55) }
+    var collected by remember { mutableStateOf(listOf<Double>()) }
+
+    fun stopHold() {
+        if (holding) {
+            ToneSynth.stop()
+            holding = false
+        }
+    }
+
+    DisposableEffect(Unit) { onDispose { ToneSynth.stop() } }
+
+    SurfaceCard(borderColor = if (holding) GrapeGreen.copy(alpha = 0.6f) else GrapeCyan.copy(alpha = 0.4f)) {
+        Text("Держу — играет", color = if (holding) GrapeGreen else GrapeCyan, style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = if (holding) {
+                "звучит " + hz.toInt() + " Гц • нота " + Melody.nameOf(hz) + " • тяните палец в сторону, чтобы вести"
+            } else {
+                "Нажмите и держите: пока палец на кнопке, идёт ровный тон. Двигайте палец по кнопке — " +
+                    "частота едет без разрывов."
+            },
+            color = TextDim,
+            style = MaterialTheme.typography.labelSmall
+        )
+        Spacer(Modifier.height(10.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(92.dp)
+                .clip(RectangleShape)
+                .background(if (holding) GrapeGreen.copy(alpha = 0.18f) else CardBg)
+                .border(1.dp, if (holding) GrapeGreen else ChipBorder, RectangleShape)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        holding = true
+                        ToneSynth.start(hz, level)
+                        onHold(hz)
+                        var position = down.position
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+                            if (!change.pressed) break
+                            position = change.position
+                            val percent = (position.x / size.width * 100f).coerceIn(0f, 100f)
+                            hz = generator.frequencyAtPercent(percent.toInt())
+                            ToneSynth.setFrequency(hz)
+                        }
+                        stopHold()
+                        ToneSynth.setFrequency(hz)
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = if (holding) "звучит ${hz.toInt()} Гц" else "ДЕРЖАТЬ",
+                color = if (holding) GrapeGreen else TextPrimary,
+                style = MaterialTheme.typography.headlineSmall
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(1, 5, 10, 25, 50).forEach { step ->
+                SortChip(label = "+" + step, selected = false) {
+                    hz = ToneSynth.clampHz(hz + step)
+                    if (holding) ToneSynth.setFrequency(hz)
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(1, 5, 10, 25, 50).forEach { step ->
+                SortChip(label = "−" + step, selected = false) {
+                    hz = ToneSynth.clampHz(hz - step)
+                    if (holding) ToneSynth.setFrequency(hz)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        InfoRow("Частота", "${hz.toInt()} Гц • ${Melody.nameOf(hz)}", GrapeCyan)
+        InfoRow("Громкость", "$level проц.")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(20, 55, 80, 100).forEach { value ->
+                SortChip(label = value.toString(), selected = level == value) {
+                    level = value
+                    ToneSynth.setVolume(value)
+                }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(46.dp)
+                    .clip(RectangleShape)
+                    .background(CardBg)
+                    .border(1.dp, ChipBorder, RectangleShape)
+                    .clickable {
+                        collected = (collected + hz).takeLast(64)
+                        AppLog.event("Лаборатория", "в мотив: " + hz.toInt() + " Гц")
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("В мотив (${collected.size})", color = GrapeAmber, style = MaterialTheme.typography.labelLarge)
+            }
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(46.dp)
+                    .clip(RectangleShape)
+                    .background(CardBg)
+                    .border(1.dp, ChipBorder, RectangleShape)
+                    .clickable {
+                        if (collected.isNotEmpty()) {
+                            ToneSynth.stop()
+                            ToneSynth.playSequence(Melody.fromFrequencies(collected, 320L))
+                            AppLog.event("Лаборатория", "мотив из " + collected.size + " частот")
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Играть мотив", color = GrapeGreen, style = MaterialTheme.typography.labelLarge)
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .clip(RectangleShape)
+                    .background(CardBg)
+                    .border(1.dp, ChipBorder, RectangleShape)
+                    .clickable { collected = emptyList() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Очистить мотив", color = TextDim, style = MaterialTheme.typography.labelMedium)
+            }
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(40.dp)
+                    .clip(RectangleShape)
+                    .background(CardBg)
+                    .border(1.dp, ChipBorder, RectangleShape)
+                    .clickable {
+                        val text = Melody.encode(Melody.fromFrequencies(collected, 320L))
+                        runCatching {
+                            val manager = localContext.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                                as? android.content.ClipboardManager
+                            manager?.setPrimaryClip(android.content.ClipData.newPlainText("GSYNK-мотив", text))
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Мотив в буфер", color = TextDim, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+/** Камертон: одна частота, которую удобно «вести» и запоминать. */
+@Composable
+private fun ToneLabScreen(onBack: () -> Unit) {
+    GrapeScreen(title = "Камертон", subtitle = "удержание даёт ровный тон", onBack = onBack) {
+        ToneHoldPanel(initialHz = 440.0) { }
+        Spacer(Modifier.height(14.dp))
+        SurfaceCard(borderColor = GrapeAmber.copy(alpha = 0.4f)) {
+            Text("Что это даёт", color = GrapeAmber, style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = "Катушка динамика работает как излучатель: можно проверить слух на высоких " +
+                    "частотах, найти резонанс корпуса, «спеть» телефоном или собрать из частот мотив. " +
+                    "Держите кнопку — тон идёт ровно, ведите палец — частота едет плавно.",
+                color = TextDim,
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
+/** Композитор: пианино из частот, запись, готовые мотивы, сохранение и передача. */
+@Composable
+private fun ComposerScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    var octave by remember { mutableIntStateOf(4) }
+    var mode by remember { mutableStateOf("мажор") }
+    var recording by remember { mutableStateOf(false) }
+    var melody by remember { mutableStateOf(listOf<Melody.Note>()) }
+    var lastTap by remember { mutableLongStateOf(0L) }
+    var name by remember { mutableStateOf("") }
+    var saved by remember { mutableStateOf(MelodyStore.load(context)) }
+    var status by remember { mutableStateOf("") }
+    val scale = remember(octave, mode) { Melody.scale("C" + octave, mode, 12) }
+
+    DisposableEffect(Unit) { onDispose { ToneSynth.stop() } }
+
+    fun remember4(notes: List<Melody.Note>) {
+        melody = (melody + notes).takeLast(96)
+    }
+
+    GrapeScreen(title = "Композитор", subtitle = "музыка из частот", onBack = onBack) {
+        SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.45f)) {
+            Text("Клавиши", color = GrapeGreen, style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (recording) "Запись идёт: каждое нажатие попадёт в мотив" else
+                    "Нажмите клавишу — играет частота. Включите запись, и из нажатий соберётся мотив.",
+                color = if (recording) GrapeRed else TextDim,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(3, 4, 5, 6).forEach { value ->
+                    SortChip(label = "окт " + value, selected = octave == value) {
+                        octave = value
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("мажор", "минор", "пентатоника", "целотон").forEach { value ->
+                    SortChip(label = value, selected = mode == value) { mode = value }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                scale.chunked(6).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                        row.forEach { noteHz ->
+                            val now = System.currentTimeMillis()
+                            Box(
+                                Modifier
+                                    .weight(1f)
+                                    .height(58.dp)
+                                    .clip(RectangleShape)
+                                    .background(CardBg)
+                                    .border(1.dp, ChipBorder, RectangleShape)
+                                    .clickable {
+                                        ToneSynth.stop()
+                                        ToneSynth.playSequence(listOf(Melody.Note(noteHz, 320L)))
+                                        if (recording) {
+                                            val gap = (now - lastTap).coerceIn(120L, 1_200L)
+                                            remember4(listOf(Melody.Note(noteHz, gap)))
+                                            lastTap = now
+                                        }
+                                        AppLog.event("Лаборатория", "нота " + Melody.nameOf(noteHz))
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = Melody.nameOf(noteHz),
+                                    color = TextPrimary,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clip(RectangleShape)
+                        .background(if (recording) GrapeRed.copy(alpha = 0.2f) else CardBg)
+                        .border(1.dp, if (recording) GrapeRed else ChipBorder, RectangleShape)
+                        .clickable {
+                            recording = !recording
+                            if (recording) {
+                                lastTap = System.currentTimeMillis()
+                                status = "Пишу ноты — играйте"
+                            } else {
+                                status = "Запись остановлена"
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(if (recording) "Стоп запись" else "Запись", color = if (recording) GrapeRed else TextPrimary, style = MaterialTheme.typography.labelLarge)
+                }
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clip(RectangleShape)
+                        .background(CardBg)
+                        .border(1.dp, ChipBorder, RectangleShape)
+                        .clickable {
+                            if (melody.isNotEmpty()) {
+                                ToneSynth.stop()
+                                ToneSynth.playSequence(melody)
+                                AppLog.event("Лаборатория", "играю мотив: " + melody.size + " нот")
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Играть мотив", color = GrapeGreen, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            InfoRow("В мотиве", Melody.summary(melody), GrapeCyan)
+            Text(melody.take(24).joinToString(" ") { it.name }, color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                        .clip(RectangleShape)
+                        .background(CardBg)
+                        .border(1.dp, ChipBorder, RectangleShape)
+                        .clickable { melody = Melody.transpose(melody, 1) },
+                    contentAlignment = Alignment.Center
+                ) { Text("выше на 1", color = TextDim, style = MaterialTheme.typography.labelMedium) }
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                        .clip(RectangleShape)
+                        .background(CardBg)
+                        .border(1.dp, ChipBorder, RectangleShape)
+                        .clickable { melody = Melody.tempo(melody, 125) },
+                    contentAlignment = Alignment.Center
+                ) { Text("быстрее", color = TextDim, style = MaterialTheme.typography.labelMedium) }
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                        .clip(RectangleShape)
+                        .background(CardBg)
+                        .border(1.dp, ChipBorder, RectangleShape)
+                        .clickable { melody = emptyList() },
+                    contentAlignment = Alignment.Center
+                ) { Text("очистить", color = TextDim, style = MaterialTheme.typography.labelMedium) }
+            }
+        }
+
+        Spacer(Modifier.height(14.dp))
+        SectionTitle("Готовые мотивы")
+        Spacer(Modifier.height(8.dp))
+        Melody.PRESETS.keys.forEach { preset ->
+            SurfaceCard(borderColor = CardBorder, onClick = {
+                val notes = Melody.preset(preset)
+                ToneSynth.stop()
+                ToneSynth.playSequence(notes)
+                melody = notes
+                status = "Мотив «" + preset + "» играет"
+            }) {
+                Text(preset, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = Melody.summary(Melody.preset(preset)) + " • нажмите, чтобы послушать",
+                    color = TextDim,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        Spacer(Modifier.height(10.dp))
+        SectionTitle("Мои мотивы")
+        Spacer(Modifier.height(8.dp))
+        SurfaceCard(borderColor = CardBorder) {
+            TextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Название мотива") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clip(RectangleShape)
+                        .background(CardBg)
+                        .border(1.dp, ChipBorder, RectangleShape)
+                        .clickable {
+                            if (melody.isNotEmpty()) {
+                                val ok = MelodyStore.save(context, name, Melody.encode(melody))
+                                status = if (ok) "Сохранено" else "Не сохранилось — слишком много мотивов"
+                                saved = MelodyStore.load(context)
+                            } else {
+                                status = "Сначала сыграйте ноты"
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) { Text("Сохранить", color = GrapeGreen, style = MaterialTheme.typography.labelLarge) }
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(46.dp)
+                        .clip(RectangleShape)
+                        .background(CardBg)
+                        .border(1.dp, ChipBorder, RectangleShape)
+                        .clickable {
+                            if (melody.isNotEmpty()) {
+                                val ok = Nearby.sendProfile(
+                                    name.ifBlank { "мотив" },
+                                    "MELODY;" + Melody.encode(melody)
+                                )
+                                status = if (ok) "Мотив ушёл другу по связи" else "Нет связи — сначала подключитесь в «GSYNK рядом»"
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) { Text("Другу по связи", color = GrapeCyan, style = MaterialTheme.typography.labelLarge) }
+            }
+            if (status.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(status, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+
+        Spacer(Modifier.height(10.dp))
+        if (saved.isEmpty()) {
+            Text("Сохранённых мотивов пока нет.", color = TextDim, style = MaterialTheme.typography.labelSmall)
+        } else {
+            saved.forEach { (title, encoded) ->
+                SurfaceCard(borderColor = CardBorder) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(title, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                text = Melody.summary(Melody.decode(encoded)),
+                                color = TextDim,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+                        Box(
+                            Modifier
+                                .size(44.dp)
+                                .clip(RectangleShape)
+                                .background(CardBg)
+                                .border(1.dp, ChipBorder, RectangleShape)
+                                .clickable {
+                                    ToneSynth.stop()
+                                    ToneSynth.playSequence(Melody.decode(encoded))
+                                },
+                            contentAlignment = Alignment.Center
+                        ) { Text("▶", color = GrapeGreen, style = MaterialTheme.typography.labelLarge) }
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            Modifier
+                                .size(44.dp)
+                                .clip(RectangleShape)
+                                .background(CardBg)
+                                .border(1.dp, ChipBorder, RectangleShape)
+                                .clickable {
+                                    melody = Melody.decode(encoded)
+                                    name = title
+                                },
+                            contentAlignment = Alignment.Center
+                        ) { Text("↑", color = GrapeCyan, style = MaterialTheme.typography.labelLarge) }
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            Modifier
+                                .size(44.dp)
+                                .clip(RectangleShape)
+                                .background(CardBg)
+                                .border(1.dp, ChipBorder, RectangleShape)
+                                .clickable {
+                                    MelodyStore.remove(context, title)
+                                    saved = MelodyStore.load(context)
+                                },
+                            contentAlignment = Alignment.Center
+                        ) { Text("✕", color = GrapeRed, style = MaterialTheme.typography.labelLarge) }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
         }
         Spacer(Modifier.height(20.dp))
     }

@@ -17,6 +17,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,7 +54,101 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
         if (update == null) vm.checkUpdate(silent = true)
     }
 
+    var shared by remember { mutableStateOf(com.gsynk.app.core.UpdateShare.last) }
+
     GrapeScreen(title = "Обновления", subtitle = "версия ${BuildConfig.VERSION_NAME}", onBack = onDismiss) {
+        // ————— версию принесли касанием NFC или связью «GSYNK рядом» —————
+        val carried = shared
+        if (carried != null) {
+            SurfaceCard(borderColor = com.gsynk.app.ui.theme.GrapeCyan.copy(alpha = 0.5f)) {
+                androidx.compose.material3.Text(
+                    text = "Обновление передано вам",
+                    color = com.gsynk.app.ui.theme.GrapeCyan,
+                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall
+                )
+                Spacer(Modifier.height(4.dp))
+                androidx.compose.material3.Text(
+                    text = com.gsynk.app.core.UpdateShare.describe(carried),
+                    color = com.gsynk.app.ui.theme.TextDim,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clip(androidx.compose.ui.graphics.RectangleShape)
+                            .background(com.gsynk.app.ui.theme.CardBg)
+                            .border(1.dp, com.gsynk.app.ui.theme.ChipBorder, androidx.compose.ui.graphics.RectangleShape)
+                            .clickable {
+                                runCatching {
+                                    context.startActivity(
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse(carried.url)
+                                        )
+                                    )
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.Text(
+                            "Скачать APK",
+                            color = com.gsynk.app.ui.theme.GrapeGreen,
+                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clip(androidx.compose.ui.graphics.RectangleShape)
+                            .background(com.gsynk.app.ui.theme.CardBg)
+                            .border(1.dp, com.gsynk.app.ui.theme.ChipBorder, androidx.compose.ui.graphics.RectangleShape)
+                            .clickable { vm.checkUpdate() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.Text(
+                            "Проверить",
+                            color = com.gsynk.app.ui.theme.GrapeCyan,
+                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                androidx.compose.material3.Text(
+                    text = "Забыть это предложение",
+                    color = com.gsynk.app.ui.theme.TextDim,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.clickable {
+                        com.gsynk.app.core.UpdateShare.clearLast()
+                        shared = null
+                    }
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
+        // ————— чем поделиться: передать другу то, что нашли сами —————
+        if (update?.updateAvailable == true) {
+            SurfaceCard(borderColor = com.gsynk.app.ui.theme.GrapeVioletSoft.copy(alpha = 0.45f)) {
+                androidx.compose.material3.Text(
+                    text = "Передать обновление другу",
+                    color = com.gsynk.app.ui.theme.GrapeVioletSoft,
+                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall
+                )
+                Spacer(Modifier.height(4.dp))
+                androidx.compose.material3.Text(
+                    text = "Приложите телефоны (касание NFC) — в метке уедут версия и ссылка на APK, " +
+                        "а друг скачает файл сам. Или свяжитесь по Bluetooth/Wi-Fi в разделе «GSYNK рядом».",
+                    color = com.gsynk.app.ui.theme.TextDim,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
         SurfaceCard(borderColor = if (update?.updateAvailable == true) GrapeGreen.copy(alpha = 0.5f) else CardBorder) {
             when {
                 update == null -> {

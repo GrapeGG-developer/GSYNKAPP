@@ -224,6 +224,70 @@ fun SettingsSheet(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            // ————— кастомизация: как выглядит и отзывается приложение —————
+            Spacer(Modifier.height(16.dp))
+            SectionTitle("Кастомизация")
+            Spacer(Modifier.height(8.dp))
+            SurfaceCard(borderColor = CardBorder) {
+                Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    UiTweaks.ACCENTS.forEachIndexed { index, (name, _) ->
+                        SortChip(label = name, selected = settings.accent == index) {
+                            vm.setAccent(index)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Переливание фона", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    listOf("спокойно", "обычно", "быстро").forEachIndexed { index, name ->
+                        SortChip(label = name, selected = settings.backgroundSpeed == index) {
+                            vm.setBackgroundSpeed(index)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Плитки", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    listOf("мелкие", "обычные", "крупные").forEachIndexed { index, name ->
+                        SortChip(label = name, selected = settings.tileScale == index + 1) {
+                            vm.setTileScale(index + 1)
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            SettingRow(
+                title = "Отклик вибрацией",
+                subtitle = "касание плиток подтверждается короткой вибрацией",
+                checked = settings.haptics
+            ) { vm.setHaptics(it) }
+
+            Spacer(Modifier.height(8.dp))
+            SettingRow(
+                title = "Щелчок при нажатии",
+                subtitle = "короткий тон вместо тишины",
+                checked = settings.clickSound
+            ) { vm.setClickSound(it) }
+
+            Spacer(Modifier.height(8.dp))
+            SettingRow(
+                title = "Счётчики на плитках",
+                subtitle = "живые значения: касания, нагрузка, обновления",
+                checked = settings.tileCounters
+            ) { vm.setTileCounters(it) }
+
+            Spacer(Modifier.height(8.dp))
+            SettingRow(
+                title = "Плотный список",
+                subtitle = "меньше воздуха между карточками на главном экране",
+                checked = settings.compactList
+            ) { vm.setCompactList(it) }
+
             // ————— доступы —————
             Spacer(Modifier.height(16.dp))
             SectionTitle("Доступы и приложение")

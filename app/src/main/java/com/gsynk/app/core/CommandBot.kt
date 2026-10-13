@@ -125,16 +125,6 @@ object CommandBot {
             )
         }
 
-        // ————— открыть экран приложения или системы —————
-        val openScreen = matchScreen(phrase)
-        if (openScreen != null) {
-            val opened = openScreen.open(context)
-            return Reply(
-                if (opened) "Открываю: " + openScreen.title + "."
-                else "Этот экран на вашем телефоне не нашёлся: " + openScreen.title + "."
-            )
-        }
-
         // ————— поиск в браузере —————
         if (phrase.contains("найди") || phrase.contains("поищи") || phrase.contains("загугли")) {
             val query = phrase
@@ -163,8 +153,4 @@ object CommandBot {
 
     private fun callSystemTool(block: () -> Boolean): String =
         if (block()) "Готово." else "Не вышло — проверьте доступы приложения."
-
-    /** Экраны, которые можно открыть словами: системные и разделы HyperOS. */
-    private fun matchScreen(phrase: String): DeviceLab.HiddenScreen? =
-        (DeviceLab.screens + DeviceLab.hyperOsScreens).firstOrNull { phrase.contains(it.keyword) }
 }

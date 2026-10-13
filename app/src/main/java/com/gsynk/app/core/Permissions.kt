@@ -23,6 +23,8 @@ object Permissions {
     const val ID_OVERLAY = "overlay"
     const val ID_AUTOSTART = "autostart"
     const val ID_MIC = "mic"
+    const val ID_NEARBY_BT = "nearby-bt"
+    const val ID_NEARBY_WIFI = "nearby-wifi"
 
     data class Item(
         val id: String,
