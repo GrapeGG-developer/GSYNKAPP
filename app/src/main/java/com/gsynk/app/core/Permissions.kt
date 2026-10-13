@@ -72,6 +72,10 @@ object Permissions {
             ?.isIgnoringBatteryOptimizations(context.packageName) ?: false
     }.getOrDefault(false)
 
+    /** Заголовки уже выданных доступов — короткая строка для отчётов. */
+    fun grantedTitles(context: Context): List<String> =
+        runCatching { snapshot(context).items.filter { it.granted }.map { it.title } }.getOrDefault(emptyList())
+
     fun snapshot(context: Context): Snapshot = Snapshot(
         listOf(
             Item(ID_EXACT, "Точные будильники", canScheduleExact(context)),

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gsynk.app.R
+import com.gsynk.app.core.AppLog
 import com.gsynk.app.core.AppSettings
 import com.gsynk.app.core.IslandOverlay
 import com.gsynk.app.core.IslandService
@@ -11,7 +12,9 @@ import com.gsynk.app.core.Permissions
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleEngine
 import com.gsynk.app.core.RuleRepository
+import com.gsynk.app.core.ReportUploader
 import com.gsynk.app.core.RuleScheduler
+import kotlinx.coroutines.flow.combine
 import com.gsynk.app.core.UpdateChecker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -339,6 +342,135 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             _message.value = "Не удалось запустить установку"
         }
+    }
+
+
+    // ————— отчёты и диагностика —————
+
+    private val _reports = MutableStateFlow<List<AppLog.ReportItem>>(emptyList())
+    val reports: StateFlow<List<AppLog.ReportItem>> = _reports.asStateFlow()
+
+    private val _lastCrash = MutableStateFlow(AppLog.unseenCrash(application))
+    val lastCrash: StateFlow<Boolean> = _lastCrash.asStateFlow()
+
+    private val _journal = MutableStateFlow("")
+    val journal: StateFlow<String> = _journal.asStateFlow()
+
+    private val _uploading = MutableStateFlow(false)
+    val uploading: StateFlow<Boolean> = _uploading.asStateFlow()
+
+    init {
+        viewModelScope.launch { AppLog.setEnabled(repository.currentSettings().reportEnabled) }
+        viewModelScope.launch { refreshReports() }
+        viewModelScope.launch { maybeAutoUpload() }
+        // держим снимок состояния готовым заранее: в момент сбоя читать хранилище поздно
+        viewModelScope.launch {
+            combine(settings, rules) { current, list -> current to list }
+                .collect { (current, list) ->
+                    AppLog.rememberState(
+                        AppLog.describeState(current, list, Permissions.grantedTitles(app()))
+                    )
+                }
+        }
+    }
+
+    fun refreshReports() = viewModelScope.launch {
+        _reports.value = withContext(Dispatchers.IO) { AppLog.reports(app()) }
+        _journal.value = withContext(Dispatchers.IO) { AppLog.journalTail(app()) }
+    }
+
+    /** Собрать отчёт по кнопке — например, когда что-то работает неправильно. */
+    fun collectReport(reason: String = "Отчёт по кнопке") = viewModelScope.launch {
+        val file = withContext(Dispatchers.IO) { AppLog.buildReport(app(), reason) }
+        refreshReports()
+        _message.value = if (file == null) "Не удалось собрать отчёт" else "Отчёт собран: ${file.name}"
+    }
+
+    fun deleteReport(item: AppLog.ReportItem) = viewModelScope.launch {
+        withContext(Dispatchers.IO) { AppLog.delete(item.file) }
+        refreshReports()
+    }
+
+    fun clearReports() = viewModelScope.launch {
+        withContext(Dispatchers.IO) { AppLog.clearAll(app()) }
+        refreshReports()
+        _message.value = "Отчёты удалены"
+    }
+
+    /** Сколько сбоев зафиксировано за всё время (для плитки «Диагностика»). */
+    fun crashCountNow(): Int = AppLog.crashTotal(app())
+
+    fun markCrashSeen() {
+        AppLog.markCrashSeen(app())
+        _lastCrash.value = false
+    }
+
+    fun setReportEnabled(enabled: Boolean) = viewModelScope.launch {
+        guarded {
+            repository.saveSettings(repository.currentSettings().copy(reportEnabled = enabled))
+            AppLog.setEnabled(enabled)
+        }
+    }
+
+    fun setReportAutoUpload(enabled: Boolean) = viewModelScope.launch {
+        guarded {
+            repository.saveSettings(repository.currentSettings().copy(reportAutoUpload = enabled))
+        }
+    }
+
+    fun setReportRepo(repo: String) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(reportRepo = repo.trim())) }
+    }
+
+    fun setReportToken(token: String) = viewModelScope.launch {
+        guarded { repository.saveSettings(repository.currentSettings().copy(reportToken = token.trim())) }
+    }
+
+    /** Отправить все отчёты в GitHub (токен и репозиторий берём из настроек). */
+    fun uploadReports() = viewModelScope.launch {
+        val current = repository.currentSettings()
+        if (current.reportRepo.isBlank() || current.reportToken.isBlank()) {
+            _message.value = "Укажите репозиторий и токен для отправки"
+            return@launch
+        }
+        _uploading.value = true
+        val result = withContext(Dispatchers.IO) {
+            ReportUploader.upload(app(), current.reportRepo, current.reportToken)
+        }
+        _uploading.value = false
+        repository.saveSettings(repository.currentSettings().copy(reportLastUpload = System.currentTimeMillis()))
+        _message.value = result.message
+        refreshReports()
+    }
+
+    /** Отправить один отчёт. */
+    fun uploadReport(item: AppLog.ReportItem) = viewModelScope.launch {
+        val current = repository.currentSettings()
+        if (current.reportRepo.isBlank() || current.reportToken.isBlank()) {
+            _message.value = "Укажите репозиторий и токен для отправки"
+            return@launch
+        }
+        _uploading.value = true
+        val result = withContext(Dispatchers.IO) {
+            ReportUploader.uploadOne(app(), current.reportRepo, current.reportToken, item.file)
+        }
+        _uploading.value = false
+        _message.value = result.message
+        refreshReports()
+    }
+
+    /** После сбоя: если пользователь разрешил — отправляем отчёт сами. */
+    private fun maybeAutoUpload() = viewModelScope.launch {
+        val current = repository.currentSettings()
+        if (!current.reportAutoUpload || current.reportToken.isBlank()) return@launch
+        val hasCrash = withContext(Dispatchers.IO) {
+            AppLog.reports(app()).any { it.isCrash && !ReportUploader.isUploaded(it.file) }
+        }
+        if (!hasCrash) return@launch
+        val result = withContext(Dispatchers.IO) {
+            ReportUploader.upload(app(), current.reportRepo, current.reportToken)
+        }
+        AppLog.event("Reports", "автоотправка: ${result.message}")
     }
 
     // ————— настройки —————

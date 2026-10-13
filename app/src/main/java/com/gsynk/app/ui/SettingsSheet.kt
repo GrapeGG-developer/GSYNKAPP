@@ -21,8 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +68,7 @@ fun SettingsSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = CardBg,
+        shape = RectangleShape,
         dragHandle = null
     ) {
         Column(
@@ -100,7 +100,7 @@ fun SettingsSheet(
                 Box(
                     Modifier
                         .size(38.dp)
-                        .clip(CircleShape)
+                        .clip(RectangleShape)
                         .background(CardBorder)
                         .clickable { onDismiss() },
                     contentAlignment = Alignment.Center
@@ -233,7 +233,7 @@ fun SettingsSheet(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RectangleShape)
                         .clickable { Permissions.open(context, item.id) }
                         .padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -279,7 +279,7 @@ fun SettingsSheet(
 }
 
 @Composable
-private fun SettingRow(
+fun SettingRow(
     title: String,
     subtitle: String,
     checked: Boolean,
@@ -288,7 +288,7 @@ private fun SettingRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RectangleShape)
             .clickable { onChange(!checked) }
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically

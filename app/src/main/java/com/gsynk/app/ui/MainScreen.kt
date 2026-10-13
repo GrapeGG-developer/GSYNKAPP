@@ -33,8 +33,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -47,7 +47,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -110,6 +112,7 @@ fun MainScreen(vm: MainViewModel) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val message by vm.message.collectAsStateWithLifecycle()
     val hasUpdate by vm.updateAvailable.collectAsStateWithLifecycle()
+    val hadCrash by vm.lastCrash.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
@@ -123,6 +126,7 @@ fun MainScreen(vm: MainViewModel) {
     var permissions by remember { mutableStateOf(Permissions.snapshot(context)) }
     var showUpdateSheet by remember { mutableStateOf(false) }
     var showScenes by remember { mutableStateOf(false) }
+    var showDiagnostics by remember { mutableStateOf(false) }
     val profile = remember { DeviceProfile.detect(context) }
 
     // пересчёт разрешений при возвращении из системных экранов
@@ -173,6 +177,16 @@ fun MainScreen(vm: MainViewModel) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item { HomeHeader(model = profile.model, onSettings = { showSettings = true }) }
+
+                item {
+                    AnimatedVisibility(
+                        visible = hadCrash,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        CrashBanner(onClick = { showDiagnostics = true })
+                    }
+                }
 
                 item {
                     AnimatedVisibility(
@@ -342,6 +356,14 @@ fun MainScreen(vm: MainViewModel) {
 
             SnackbarHost(
                 hostState = snackbar,
+                snackbar = { data ->
+                    Snackbar(
+                        snackbarData = data,
+                        shape = RectangleShape,
+                        containerColor = CardBgAlt,
+                        contentColor = TextPrimary
+                    )
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .windowInsetsPadding(WindowInsets.navigationBars)
@@ -378,6 +400,10 @@ fun MainScreen(vm: MainViewModel) {
 
     if (showTools) {
         ToolsScreen(vm = vm, onBack = { showTools = false }, onOpenNfc = { showNfc = true })
+    }
+
+    if (showDiagnostics) {
+        DiagnosticsScreen(vm = vm, onBack = { showDiagnostics = false })
     }
 
     if (showScenes) {
@@ -423,9 +449,9 @@ private fun HomeHeader(model: String, onSettings: () -> Unit) {
             Box(
                 Modifier
                     .size(42.dp)
-                    .clip(CircleShape)
+                    .clip(RectangleShape)
                     .background(CardBg)
-                    .border(1.dp, ChipBorder, CircleShape)
+                    .border(1.dp, ChipBorder, RectangleShape)
                     .clickable { onSettings() },
                 contentAlignment = Alignment.Center
             ) {
@@ -440,13 +466,41 @@ private fun HomeHeader(model: String, onSettings: () -> Unit) {
     }
 }
 
+/** Сообщение о том, что приложение закрывалось с ошибкой: отчёт уже готов. */
+@Composable
+private fun CrashBanner(onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RectangleShape)
+            .background(TileBrush.Red)
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = "Был сбой",
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "Отчёт собран — нажмите, чтобы посмотреть и отправить",
+                color = Color.White.copy(alpha = 0.85f),
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+        Text("→", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+    }
+}
+
 /** Панель обновления: выезжает сама, ничего искать не нужно. */
 @Composable
 private fun UpdateBanner(onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RectangleShape)
             .background(TileBrush.Green)
             .clickable { onClick() }
             .padding(16.dp),
@@ -507,7 +561,7 @@ private fun PermissionRow(item: Permissions.Item, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RectangleShape)
             .clickable { onClick() }
             .padding(vertical = 9.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -594,7 +648,7 @@ private fun RuleCard(
                     Box(
                         Modifier
                             .size(36.dp)
-                            .clip(CircleShape)
+                            .clip(RectangleShape)
                             .clickable { menuOpen = true },
                         contentAlignment = Alignment.Center
                     ) {
@@ -608,6 +662,7 @@ private fun RuleCard(
                     DropdownMenu(
                         expanded = menuOpen,
                         onDismissRequest = { menuOpen = false },
+                        shape = RectangleShape,
                         containerColor = CardBgAlt
                     ) {
                         DropdownMenuItem(
@@ -651,17 +706,7 @@ private fun RuleCard(
                     }
                 }
                 Spacer(Modifier.height(6.dp))
-                Switch(
-                    checked = rule.enabled,
-                    onCheckedChange = onToggle,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color(0xFF120720),
-                        checkedTrackColor = GrapeViolet,
-                        uncheckedThumbColor = TextSecondary,
-                        uncheckedTrackColor = Color(0xFF2A1E40),
-                        uncheckedBorderColor = ChipBorder
-                    )
-                )
+                ToggleDot(checked = rule.enabled, onChange = { onToggle(!rule.enabled) })
             }
         }
 

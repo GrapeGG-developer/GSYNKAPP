@@ -3,6 +3,7 @@ package com.gsynk.app.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.gsynk.app.core.AppLog
 import com.gsynk.app.core.AutomationActions
 import com.gsynk.app.core.DeviceStats
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +39,7 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
     private var statsJob: Job? = null
 
     init {
+        AppLog.event("Tools", "открыт раздел «Инструменты»")
         refreshDnd()
     }
 
@@ -46,7 +48,12 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
         if (statsJob?.isActive == true) return
         statsJob = viewModelScope.launch {
             while (true) {
-                _stats.value = withContext(Dispatchers.IO) { DeviceStats.snapshot(getApplication()) }
+                // любая ошибка чтения показателей логируется, но не роняет приложение
+                try {
+                    _stats.value = withContext(Dispatchers.IO) { DeviceStats.snapshot(getApplication()) }
+                } catch (error: Throwable) {
+                    AppLog.warn("Stats", "цикл показателей", error)
+                }
                 delay(2_000L)
             }
         }
@@ -59,7 +66,11 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleTorch() = viewModelScope.launch {
         val next = !_torch.value
-        val ok = withContext(Dispatchers.IO) { AutomationActions.setTorch(getApplication(), next) }
+        val ok = withContext(Dispatchers.IO) {
+            AppLog.guard("Torch", "переключение фонарика") {
+                AutomationActions.setTorch(getApplication(), next)
+            } ?: false
+        }
         if (ok) {
             _torch.value = next
         } else {
@@ -69,7 +80,11 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleDnd() = viewModelScope.launch {
         val next = !_dnd.value
-        val ok = withContext(Dispatchers.IO) { AutomationActions.setDnd(getApplication(), next) }
+        val ok = withContext(Dispatchers.IO) {
+            AppLog.guard("Dnd", "переключение режима тишины") {
+                AutomationActions.setDnd(getApplication(), next)
+            } ?: false
+        }
         if (ok) {
             _dnd.value = next
         } else {

@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -173,7 +173,7 @@ private fun DvdLogo(hue: Int) {
         val h = size.height * 0.62f
         val top = (size.height - h) / 2f
         // корпус логотипа
-        drawRoundRect(
+        drawRect(
             brush = Brush.linearGradient(
                 listOf(base, GrapeViolet, GrapeGreen),
                 start = Offset(0f, top),
@@ -181,19 +181,17 @@ private fun DvdLogo(hue: Int) {
             ),
             topLeft = Offset(0f, top),
             size = Size(w, h),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2f, h / 2f)
         )
         // контур
-        drawRoundRect(
+        drawRect(
             color = Color.White.copy(alpha = 0.55f),
             topLeft = Offset(0f, top),
             size = Size(w, h),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2f, h / 2f),
             style = Stroke(width = 2.5f)
         )
         // блик, бегущий слева направо
         val shineX = -w + shine * (2.2f * w)
-        drawRoundRect(
+        drawRect(
             brush = Brush.linearGradient(
                 listOf(Color.Transparent, Color.White.copy(alpha = 0.35f), Color.Transparent),
                 start = Offset(shineX, top),
@@ -201,7 +199,6 @@ private fun DvdLogo(hue: Int) {
             ),
             topLeft = Offset(0f, top),
             size = Size(w, h),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2f, h / 2f)
         )
         // «крылья» DVD
         val wing = Path().apply {
@@ -228,9 +225,9 @@ private fun DvdLogo(hue: Int) {
 private fun SmallAction(label: String, onClick: () -> Unit) {
     Box(
         Modifier
-            .clip(RoundedCornerShape(50))
+            .clip(RectangleShape)
             .background(CardBgAlt)
-            .border(1.dp, ChipBorder, RoundedCornerShape(50))
+            .border(1.dp, ChipBorder, RectangleShape)
             .clickable { onClick() }
             .padding(horizontal = 13.dp, vertical = 8.dp)
     ) {

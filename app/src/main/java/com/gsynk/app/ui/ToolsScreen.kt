@@ -56,6 +56,7 @@ fun ToolsScreen(
 
     val profile = remember { DeviceProfile.detect(context) }
     var openExtra by remember { mutableStateOf<String?>(null) }
+    var showDiagnostics by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
     var showUpdate by remember { mutableStateOf(false) }
     var showScreensaver by remember { mutableStateOf(false) }
@@ -84,6 +85,11 @@ fun ToolsScreen(
     }
 
     if (openExtra != null) return
+
+    if (showDiagnostics) {
+        DiagnosticsScreen(vm = vm, onBack = { showDiagnostics = false })
+        return
+    }
 
     if (showChat) {
         ChatScreen(onBack = { showChat = false })
@@ -369,6 +375,32 @@ fun ToolsScreen(
                 text = "Показать образец",
                 onClick = { vm.fullIslandPreview() },
                 modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // ————— приложение: отчёты и диагностика —————
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Приложение")
+        Spacer(Modifier.height(9.dp))
+        TileRow {
+            NavTile(
+                title = "Диагностика",
+                subtitle = "отчёты и журнал",
+                iconRes = R.drawable.ic_tune,
+                brush = TileBrush.Ink,
+                badge = if (vm.crashCountNow() > 0) vm.crashCountNow().toString() else null,
+                liveText = "Сбоев: ${vm.crashCountNow()}",
+                modifier = Modifier.weight(1f),
+                onClick = { showDiagnostics = true }
+            )
+            NavTile(
+                title = "Собрать отчёт",
+                subtitle = "состояние телефона",
+                iconRes = R.drawable.ic_copy,
+                brush = TileBrush.Violet,
+                liveText = "Сейчас",
+                modifier = Modifier.weight(1f),
+                onClick = { vm.collectReport("Отчёт по кнопке из мультитула") }
             )
         }
 

@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -96,7 +96,7 @@ fun PasswordToolScreen(onBack: () -> Unit) {
                         Modifier
                             .weight(1f)
                             .height(6.dp)
-                            .clip(RoundedCornerShape(50))
+                            .clip(RectangleShape)
                             .background(
                                 when {
                                     index >= strength -> CardBorder
@@ -185,7 +185,7 @@ fun QrImage(content: String, modifier: Modifier = Modifier) {
     }
     Box(
         modifier
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RectangleShape)
             .background(Color(0xFFF6F4FF))
             .padding(10.dp)
     ) {
@@ -342,15 +342,15 @@ fun LevelToolScreen(onBack: () -> Unit) {
                 Box(
                     Modifier
                         .size(120.dp)
-                        .clip(RoundedCornerShape(50))
+                        .clip(RectangleShape)
                         .background(if (aligned) TileBrush.Green else TileBrush.Ink)
-                        .border(1.dp, ChipBorder, RoundedCornerShape(50)),
+                        .border(1.dp, ChipBorder, RectangleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         Modifier
                             .size(18.dp)
-                            .clip(RoundedCornerShape(50))
+                            .clip(RectangleShape)
                             .background(if (aligned) GrapeGreenSoft else GrapeViolet)
                             .rotate(tiltX)
                     )
@@ -489,7 +489,12 @@ fun SysDashboardScreen(onBack: () -> Unit) {
 
     LaunchedEffect(Unit) {
         while (true) {
-            snapshot = withContext(Dispatchers.IO) { DeviceStats.snapshot(context) }
+            snapshot = try {
+                withContext(Dispatchers.IO) { DeviceStats.snapshot(context) }
+            } catch (error: Throwable) {
+                com.gsynk.app.core.AppLog.warn("Stats", "дашборд системы", error)
+                snapshot
+            }
             delay(1_500L)
         }
     }
@@ -561,9 +566,9 @@ fun EncoderScreen(onBack: () -> Unit) {
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RectangleShape)
                     .background(CardBg)
-                    .border(1.dp, ChipBorder, RoundedCornerShape(16.dp))
+                    .border(1.dp, ChipBorder, RectangleShape)
                     .padding(12.dp)
             ) {
                 Text(output, color = GrapeGreenSoft, style = MaterialTheme.typography.bodyMedium)

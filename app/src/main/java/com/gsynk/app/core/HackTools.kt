@@ -121,7 +121,32 @@ object DeviceStats {
             else (((storageTotalGb - storageFreeGb) / storageTotalGb) * 100).toInt()
     }
 
-    fun snapshot(context: Context): Snapshot {
+    /**
+     * Снимок состояния телефона.
+     *
+     * Полностью защищён: раньше любое исключение системного вызова (например,
+     * запрет на чтение /proc на некоторых прошивках) всплывало из корутины и
+     * роняло приложение при входе в «Инструменты». Теперь вместо падения —
+     * значения по умолчанию и запись в журнал.
+     */
+    fun snapshot(context: Context): Snapshot = runCatching { snapshotUnsafe(context) }
+        .getOrElse { error ->
+            AppLog.warn("Stats", "не удалось прочитать показатели", error)
+            Snapshot(
+                ramUsedMb = 0,
+                ramTotalMb = 0,
+                storageFreeGb = 0.0,
+                storageTotalGb = 0.0,
+                batteryPercent = 0,
+                batteryTempC = 0.0,
+                uptimeHours = SystemClock.elapsedRealtime() / 3_600_000,
+                cores = Runtime.getRuntime().availableProcessors(),
+                androidVersion = Build.VERSION.RELEASE ?: "?",
+                model = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
+            )
+        }
+
+    private fun snapshotUnsafe(context: Context): Snapshot {
         val runtime = Runtime.getRuntime()
         val usedHeap = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
         val (totalRam, _) = readRamInfo()
@@ -130,7 +155,9 @@ object DeviceStats {
         val freeGb = stat?.let { it.availableBytes / 1024.0 / 1024 / 1024 } ?: 0.0
         val totalGb = stat?.let { it.totalBytes / 1024.0 / 1024 / 1024 } ?: 0.0
 
-        val battery = context.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+        val battery = runCatching {
+            context.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+        }.getOrNull()
         val level = battery?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = battery?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100) ?: 100
         val temp = (battery?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10.0

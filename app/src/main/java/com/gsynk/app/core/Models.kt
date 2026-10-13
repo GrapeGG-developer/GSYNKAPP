@@ -134,7 +134,18 @@ data class AppSettings(
     /** Имя импортированной модели — для отображения. */
     val modelName: String = "",
     /** Сколько раз телефон касался другого по NFC (счётчик «рукопожатий»). */
-    val nfcTouches: Int = 0
+    val nfcTouches: Int = 0,
+
+    // ————— отчёты и диагностика —————
+    /** Собирать отчёты о сбоях на телефоне. */
+    val reportEnabled: Boolean = true,
+    /** Отправлять отчёты в GitHub сразу после сбоя (нужны токен и репозиторий). */
+    val reportAutoUpload: Boolean = false,
+    /** Репозиторий для отчётов — по умолчанию тот же, где лежат релизы. */
+    val reportRepo: String = "GrapeGG-developer/GSYNKAPP",
+    /** Токен пользователя: нужен только для загрузки отчётов, хранится на устройстве. */
+    val reportToken: String = "",
+    val reportLastUpload: Long = 0L
 )
 
 object IslandPosition {

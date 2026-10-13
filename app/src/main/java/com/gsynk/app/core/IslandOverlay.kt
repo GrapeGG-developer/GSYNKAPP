@@ -332,7 +332,7 @@ object IslandOverlay {
         val outer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                cornerRadius = dp(context, if (compact) 16f else 22f)
+                cornerRadius = 0f
                 setColor(COLOR_BG)
                 setStroke(dp(context, 1f).toInt().coerceAtLeast(1), COLOR_BORDER)
             }
@@ -424,7 +424,7 @@ object IslandOverlay {
                 background = GradientDrawable(
                     GradientDrawable.Orientation.LEFT_RIGHT,
                     intArrayOf(0xFFA855F7.toInt(), COLOR_GREEN)
-                ).apply { cornerRadius = dp(context, 2f) }
+                ).apply { cornerRadius = 0f }
             }
             outer.addView(
                 progress,

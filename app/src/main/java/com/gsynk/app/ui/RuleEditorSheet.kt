@@ -18,8 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -90,6 +89,7 @@ fun RuleEditorSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        shape = RectangleShape,
         containerColor = CardBg,
         scrimColor = Color(0xE60A0514),
         dragHandle = null
@@ -125,9 +125,9 @@ fun RuleEditorSheet(
                     Box(
                         Modifier
                             .size(38.dp)
-                            .clip(CircleShape)
+                            .clip(RectangleShape)
                             .background(CardBgAlt)
-                            .border(1.dp, ChipBorder, CircleShape)
+                            .border(1.dp, ChipBorder, RectangleShape)
                             .clickable { onDismiss() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -147,7 +147,7 @@ fun RuleEditorSheet(
                     onValueChange = { draft = draft.copy(name = it.take(40)) },
                     label = { Text("Название") },
                     singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RectangleShape,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = GrapeViolet,
                         unfocusedBorderColor = ChipBorder,
@@ -197,7 +197,7 @@ fun RuleEditorSheet(
                         color = GrapeVioletSoft,
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(50))
+                            .clip(RectangleShape)
                             .clickable { weekGridOpen = true }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     )
@@ -235,7 +235,7 @@ fun RuleEditorSheet(
                             color = GrapeVioletSoft,
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(50))
+                                .clip(RectangleShape)
                                 .clickable { draft = draft.withDates(emptyList()) }
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         )
@@ -282,16 +282,9 @@ fun RuleEditorSheet(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
-                        Switch(
+                        ToggleDot(
                             checked = draft.useInterval,
-                            onCheckedChange = { draft = draft.copy(useInterval = it) },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color(0xFF120720),
-                                checkedTrackColor = GrapeGreen,
-                                uncheckedThumbColor = TextSecondary,
-                                uncheckedTrackColor = ChipBg,
-                                uncheckedBorderColor = ChipBorder
-                            )
+                            onChange = { draft = draft.copy(useInterval = !draft.useInterval) }
                         )
                     }
 
@@ -591,17 +584,7 @@ private fun ValueBlock(
                 color = if (enabled) TextPrimary else TextDim
             )
             Spacer(Modifier.width(10.dp))
-            Switch(
-                checked = enabled,
-                onCheckedChange = onEnabledChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color(0xFF120720),
-                    checkedTrackColor = accent,
-                    uncheckedThumbColor = TextSecondary,
-                    uncheckedTrackColor = ChipBg,
-                    uncheckedBorderColor = ChipBorder
-                )
-            )
+            ToggleDot(checked = enabled, onChange = { onEnabledChange(!enabled) })
         }
         Spacer(Modifier.height(8.dp))
         NeoSlider(

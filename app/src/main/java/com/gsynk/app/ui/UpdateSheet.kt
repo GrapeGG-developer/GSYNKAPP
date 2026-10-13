@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -161,19 +161,19 @@ fun ToggleDot(checked: Boolean, onChange: () -> Unit) {
         Modifier
             .width(52.dp)
             .height(30.dp)
-            .clip(RoundedCornerShape(50))
+            .clip(RectangleShape)
             .background(if (checked) TileBrush.Green else TileBrush.Ink)
-            .border(1.dp, if (checked) GrapeGreen else ChipBorder, RoundedCornerShape(50))
+            .border(1.dp, if (checked) GrapeGreen else ChipBorder, RectangleShape)
             .clickable { onChange() }
             .padding(3.dp),
         horizontalArrangement = if (checked) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // бегунок — квадрат: интерфейс 2.1 полностью острый
         Box(
             Modifier
                 .width(22.dp)
                 .height(22.dp)
-                .clip(RoundedCornerShape(50))
                 .background(if (checked) GrapeGreenSoft else CardBg)
         )
     }

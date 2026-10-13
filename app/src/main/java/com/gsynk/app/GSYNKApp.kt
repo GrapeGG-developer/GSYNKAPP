@@ -3,6 +3,7 @@ package com.gsynk.app
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import com.gsynk.app.core.AppLog
 
 /**
  * GSYNK — мультитул: расписание яркости и громкости, компактный остров,
@@ -15,6 +16,8 @@ class GSYNKApp : Application() {
     override fun onCreate() {
         super.onCreate()
         createChannels()
+        // приём сбоев и журнал: включаются раньше всего остального
+        AppLog.install(this)
     }
 
     private fun createChannels() {

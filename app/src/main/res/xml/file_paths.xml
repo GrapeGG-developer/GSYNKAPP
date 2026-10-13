@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- APK, скачанный для OTA-обновления -->
-    <cache-path name="updates" path="." />
-    <files-path name="shared" path="." />
+    <!-- Скачанные обновления и сформированные отчёты -->
+    <files-path name="files" path="." />
+    <cache-path name="cache" path="." />
 </paths>

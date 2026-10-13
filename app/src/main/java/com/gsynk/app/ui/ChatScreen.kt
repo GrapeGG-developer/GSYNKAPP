@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -174,7 +174,7 @@ fun ChatScreen(onBack: () -> Unit) {
                 Box(
                     Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RectangleShape)
                         .background(TileBrush.Violet),
                     contentAlignment = Alignment.Center
                 ) {
@@ -259,7 +259,7 @@ fun ChatScreen(onBack: () -> Unit) {
                             Box(
                                 Modifier
                                     .fillMaxWidth(0.86f)
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .clip(RectangleShape)
                                     .background(bubble)
                                     .padding(12.dp)
                             ) {
@@ -288,9 +288,9 @@ fun ChatScreen(onBack: () -> Unit) {
             Box(
                 Modifier
                     .size(52.dp)
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RectangleShape)
                     .background(if (busy) TileBrush.Ink else TileBrush.Green)
-                    .border(1.dp, ChipBorder, RoundedCornerShape(18.dp))
+                    .border(1.dp, ChipBorder, RectangleShape)
                     .clickable { send() },
                 contentAlignment = Alignment.Center
             ) {

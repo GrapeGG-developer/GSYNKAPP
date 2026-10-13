@@ -43,8 +43,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -215,13 +214,13 @@ fun AnimatedGrapeBackground(
 @Composable
 fun SurfaceCard(
     modifier: Modifier = Modifier,
-    corner: Dp = 26.dp,
+    corner: Dp = 0.dp,
     borderColor: Color = CardBorder,
     onClick: (() -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(18.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val shape = RoundedCornerShape(corner)
+    val shape: androidx.compose.ui.graphics.Shape = RectangleShape
     Column(
         modifier
             .fillMaxWidth()
@@ -277,7 +276,7 @@ fun PrimaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RectangleShape
     val scale by animateFloatAsState(
         targetValue = if (enabled) 1f else 0.99f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -322,7 +321,7 @@ fun SecondaryButton(
     tint: Color = TextPrimary,
     enabled: Boolean = true
 ) {
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RectangleShape
     Row(
         modifier
             .clip(shape)
@@ -420,14 +419,14 @@ fun NeoSlider(
             Modifier
                 .fillMaxWidth()
                 .height(14.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(RectangleShape)
                 .background(TrackBg)
         ) {
             Box(
                 Modifier
                     .fillMaxWidth(animatedFill)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(50))
+                    .clip(RectangleShape)
                     .background(
                         if (enabled) {
                             brush
@@ -442,9 +441,9 @@ fun NeoSlider(
             Modifier
                 .offset { IntOffset(((widthState.floatValue - thumbPx) * animatedFill).roundToInt(), 0) }
                 .size(thumbSize)
-                .clip(CircleShape)
+                .clip(RectangleShape)
                 .background(if (enabled) Color(0xFFF3ECFF) else Color(0xFF8E82A8))
-                .border(1.dp, if (enabled) GrapeViolet else ChipBorder, CircleShape)
+                .border(1.dp, if (enabled) GrapeViolet else ChipBorder, RectangleShape)
         )
     }
 }
@@ -461,7 +460,7 @@ fun DayChip(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RectangleShape
     val bg by animateColorAsState(
         targetValue = if (selected) GrapeVioletDeep else ChipBg,
         animationSpec = tween(220),
@@ -502,7 +501,7 @@ fun TagChip(
     selected: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
-    val shape = RoundedCornerShape(50)
+    val shape = RectangleShape
     Box(
         Modifier
             .clip(shape)
@@ -555,14 +554,14 @@ fun ProgressLine(
         modifier
             .width(width)
             .height(8.dp)
-            .clip(RoundedCornerShape(50))
+            .clip(RectangleShape)
             .background(TrackBg)
     ) {
         Box(
             Modifier
                 .fillMaxWidth(fraction)
                 .fillMaxHeight()
-                .clip(RoundedCornerShape(50))
+                .clip(RectangleShape)
                 .background(brush)
         )
     }
@@ -577,9 +576,9 @@ fun MetricPill(
 ) {
     Row(
         modifier
-            .clip(RoundedCornerShape(50))
+            .clip(RectangleShape)
             .background(ChipBg)
-            .border(1.dp, ChipBorder, RoundedCornerShape(50))
+            .border(1.dp, ChipBorder, RectangleShape)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -615,7 +614,7 @@ fun PulseDot(color: Color, modifier: Modifier = Modifier) {
         modifier
             .size(10.dp)
             .scale(scale)
-            .clip(CircleShape)
+            .clip(RectangleShape)
             .background(color.copy(alpha = alpha))
     )
 }
@@ -670,7 +669,7 @@ fun SheetGrabber(modifier: Modifier = Modifier) {
         modifier
             .width(44.dp)
             .height(5.dp)
-            .clip(RoundedCornerShape(50))
+            .clip(RectangleShape)
             .background(ChipBorder)
     )
 }
@@ -687,14 +686,20 @@ fun GrapeTextField(
     label: String,
     modifier: Modifier = Modifier,
     singleLine: Boolean = true,
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    masked: Boolean = false
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = singleLine,
-        shape = RoundedCornerShape(16.dp),
+        visualTransformation = if (masked) {
+            androidx.compose.ui.text.input.PasswordVisualTransformation()
+        } else {
+            androidx.compose.ui.text.input.VisualTransformation.None
+        },
+        shape = RectangleShape,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = GrapeViolet,
@@ -741,9 +746,9 @@ fun GrapeScreen(
                 Box(
                     Modifier
                         .size(38.dp)
-                        .clip(RoundedCornerShape(50))
+                        .clip(RectangleShape)
                         .background(CardBg)
-                        .border(1.dp, ChipBorder, RoundedCornerShape(50))
+                        .border(1.dp, ChipBorder, RectangleShape)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -790,7 +795,7 @@ fun SortChip(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(50)
+    val shape = RectangleShape
     val bg by animateColorAsState(
         targetValue = if (selected) GrapeVioletDeep else ChipBg,
         animationSpec = tween(180),
@@ -843,14 +848,14 @@ fun BarIndicator(percent: Int, brush: Brush, modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .height(7.dp)
-            .clip(RoundedCornerShape(50))
+            .clip(RectangleShape)
             .background(TrackBg)
     ) {
         Box(
             Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(animated.coerceAtLeast(0.01f))
-                .clip(RoundedCornerShape(50))
+                .clip(RectangleShape)
                 .background(brush)
         )
     }
@@ -867,9 +872,9 @@ fun GlowIconButton(
     Box(
         modifier
             .size(40.dp)
-            .clip(RoundedCornerShape(50))
+            .clip(RectangleShape)
             .background(CardBg)
-            .border(1.dp, ChipBorder, RoundedCornerShape(50))
+            .border(1.dp, ChipBorder, RectangleShape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {

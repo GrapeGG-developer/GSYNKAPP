@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -201,7 +201,7 @@ private fun ReactionGame(scores: GameScores, onBack: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(28.dp))
+                .clip(RectangleShape)
                 .background(
                     when {
                         lit -> TileBrush.Green
@@ -209,7 +209,7 @@ private fun ReactionGame(scores: GameScores, onBack: () -> Unit) {
                         else -> TileBrush.Violet
                     }
                 )
-                .border(1.dp, ChipBorder, RoundedCornerShape(28.dp))
+                .border(1.dp, ChipBorder, RectangleShape)
                 .clickable { tap() },
             contentAlignment = Alignment.Center
         ) {
@@ -327,12 +327,12 @@ private fun MemoryGame(scores: GameScores, onBack: () -> Unit) {
                             Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
-                                .clip(RoundedCornerShape(24.dp))
+                                .clip(RectangleShape)
                                 .background(if (active) palette[pad] else TileBrush.Ink)
                                 .border(
                                     1.dp,
                                     if (active) Color.White.copy(alpha = 0.5f) else ChipBorder,
-                                    RoundedCornerShape(24.dp)
+                                    RectangleShape
                                 )
                                 .clickable { press(pad) }
                         )
@@ -406,9 +406,9 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RectangleShape)
                 .background(CardBg)
-                .border(1.dp, CardBorder, RoundedCornerShape(24.dp))
+                .border(1.dp, CardBorder, RectangleShape)
                 .padding(8.dp)
                 .pointerInput(over) {
                     detectDragGestures(
@@ -449,7 +449,7 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
                                     .weight(1f)
                                     .aspectRatio(1f)
                                     .scale(appear.value)
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .clip(RectangleShape)
                                     .background(tileColor(value)),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -475,7 +475,7 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
                 Column(
                     Modifier
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RectangleShape)
                         .background(Color(0xE60B0714))
                         .clickable {
                             board = TileGame.start()

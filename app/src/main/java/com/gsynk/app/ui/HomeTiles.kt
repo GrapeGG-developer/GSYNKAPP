@@ -30,7 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -97,9 +97,9 @@ fun LiveTile(
         modifier
             .height(height)
             .scale(scale)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RectangleShape)
             .background(brush)
-            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(20.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.14f), RectangleShape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -149,7 +149,7 @@ fun LiveTile(
                 if (badge != null) {
                     Box(
                         Modifier
-                            .clip(RoundedCornerShape(50))
+                            .clip(RectangleShape)
                             .background(Color.Black.copy(alpha = 0.22f))
                             .padding(horizontal = 7.dp, vertical = 2.dp)
                     ) {
@@ -295,9 +295,9 @@ fun AddRuleTile(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier
             .height(96.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RectangleShape)
             .background(CardBg)
-            .border(1.dp, CardBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, CardBorder, RectangleShape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -317,9 +317,9 @@ fun TilePanel(
     Box(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RectangleShape)
             .background(CardBg)
-            .border(1.dp, CardBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, CardBorder, RectangleShape)
             .padding(16.dp),
         content = content
     )

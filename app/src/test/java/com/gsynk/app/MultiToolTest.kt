@@ -7,6 +7,8 @@ import com.gsynk.app.core.NfcLink
 import com.gsynk.app.core.Passwords
 import com.gsynk.app.core.PayloadCodec
 import com.gsynk.app.core.Rule
+import com.gsynk.app.core.CrashAnalyzer
+import com.gsynk.app.core.ReportSanitizer
 import com.gsynk.app.core.RuleSort
 import com.gsynk.app.core.TileGame
 import com.gsynk.app.core.UpdateChecker
@@ -240,6 +242,82 @@ class MultiToolTest {
         assertTrue(TileGame.hasReached(listOf(2048) + List(15) { 0 }))
         assertFalse(TileGame.hasReached(listOf(1024) + List(15) { 0 }))
         assertEquals(2048, TileGame.maxTile(listOf(2, 2048, 4)))
+    }
+
+    // ————— анализатор отчётов —————
+
+    /** Похоже на токен, но собрано на месте: настоящие секреты в коде не держим. */
+    private val fakeToken = "ghp_" + "A".repeat(36)
+
+    private val crashA = """
+        GSYNK 2.1.1 (versionCode 9)
+        Тип: сбой приложения
+        java.lang.IllegalStateException: не удалось прочитать показатели 1500
+        at android.os.BatteryManager.getIntProperty(BatteryManager.java:1200)
+        at com.gsynk.app.core.DeviceStats.snapshot(HackTools.kt:49)
+        at com.gsynk.app.ui.ToolsViewModel.startStats(ToolsViewModel.kt:49)
+    """.trimIndent()
+
+    @Test
+    fun analyzer_groupsSameCrash() {
+        val groups = CrashAnalyzer.group(
+            listOf(
+                "crash-20261013-101500.txt" to crashA,
+                "crash-20261013-113000.txt" to crashA
+            )
+        )
+        assertEquals(1, groups.size)
+        assertEquals(2, groups.first().count)
+        assertTrue(groups.first().signature.contains("IllegalStateException"))
+        assertTrue(groups.first().signature.contains("DeviceStats"))
+        assertEquals("13.10.2026 11:30", groups.first().lastStamp)
+    }
+
+    @Test
+    fun analyzer_masksNumbersInSignature() {
+        val other = crashA.replace("1500", "20000")
+        val groups = CrashAnalyzer.group(listOf("crash-1-1.txt" to crashA, "crash-2-2.txt" to other))
+        assertEquals(1, groups.size)
+        assertTrue(groups.first().signature.contains("N"))
+    }
+
+    @Test
+    fun analyzer_separatesDifferentCrashes() {
+        val second = "java.lang.NullPointerException: toolsMessage\n\tat com.gsynk.app.ui.ToolsScreen.nav(ToolsScreen.kt:70)"
+        val groups = CrashAnalyzer.group(listOf("crash-a" to crashA, "crash-b" to second))
+        assertEquals(2, groups.size)
+        assertTrue(CrashAnalyzer.verdict(groups).startsWith("Сбой:"))
+    }
+
+    @Test
+    fun analyzer_emptyReports() {
+        assertTrue(CrashAnalyzer.group(emptyList()).isEmpty())
+        assertEquals("Сбоев не зафиксировано", CrashAnalyzer.verdict(emptyList()))
+    }
+
+    // ————— отчёты —————
+
+    @Test
+    fun sanitizer_hidesTokensAndNumbers() {
+        val dirty = "токен $fakeToken и почта user@example.com, номер 89161234567"
+        val clean = ReportSanitizer.scrub(dirty)
+        assertFalse(clean.contains("ghp_"))
+        assertFalse(clean.contains("user@example.com"))
+        assertFalse(clean.contains("89161234567"))
+        assertTrue(clean.contains("[токен скрыт]"))
+    }
+
+    @Test
+    fun sanitizer_keepsOrdinaryText() {
+        val text = "Правил: 3, активных: 2\nОстров: постоянный"
+        assertEquals(text, ReportSanitizer.scrub(text))
+    }
+
+    @Test
+    fun sanitizer_detectsSecrets() {
+        assertTrue(ReportSanitizer.looksSecret(fakeToken))
+        assertTrue(ReportSanitizer.looksSecret("письмо на a@b.ru"))
+        assertFalse(ReportSanitizer.looksSecret("обычный текст отчёта"))
     }
 
     // ————— пароли —————

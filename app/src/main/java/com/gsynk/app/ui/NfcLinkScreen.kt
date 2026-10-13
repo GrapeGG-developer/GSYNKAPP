@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -384,7 +384,7 @@ fun NfcLinkScreen(onBack: () -> Unit) {
                     Box(
                         Modifier
                             .size(10.dp)
-                            .clip(RoundedCornerShape(50))
+                            .clip(RectangleShape)
                             .background(GrapeGreen)
                     )
                     Spacer(Modifier.width(9.dp))
@@ -398,7 +398,7 @@ fun NfcLinkScreen(onBack: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .height(64.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RectangleShape)
                 .background(TileBrush.Cyan)
                 .clickable { burst.show(3_400L) },
             contentAlignment = Alignment.Center
@@ -429,9 +429,9 @@ private fun ReceivedCard(payload: NfcLink.Payload, onImported: (String) -> Unit)
         Box(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RectangleShape)
                 .background(Color(0xFF0B0714))
-                .border(1.dp, ChipBorder, RoundedCornerShape(16.dp))
+                .border(1.dp, ChipBorder, RectangleShape)
                 .padding(12.dp)
         ) {
             Text(payload.body.ifBlank { "—" }, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
@@ -578,7 +578,7 @@ private fun DuelPanel(
             Modifier
                 .fillMaxWidth()
                 .height(120.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RectangleShape)
                 .background(
                     if (result.startsWith("Итог")) TileBrush.Green else TileBrush.Ink
                 )
