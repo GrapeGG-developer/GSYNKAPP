@@ -252,6 +252,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ————— обновления (OTA) —————
 
+    private companion object {
+        /** Круг автопроверки: раз в 20 минут. */
+        const val REFRESH_INTERVAL_MS = 20 * 60 * 1000L
+
+        /** Насколько «старой» должна быть проверка, чтобы дёрнуть её при возврате в приложение. */
+        const val STALE_INTERVAL_MS = 15 * 60 * 1000L
+    }
+
     private val _update = MutableStateFlow<UpdateChecker.Result?>(null)
     val update: StateFlow<UpdateChecker.Result?> = _update.asStateFlow()
 
@@ -272,17 +280,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Автопроверка обновлений: при запуске и не чаще, чем раз в 6 часов.
-     * Пользователю не нужно искать кнопку — баннер появится сам.
+     * Автопроверка обновлений: сразу при запуске, дальше каждые 20 минут,
+     * плюс отдельный пинок при возвращении в приложение ([checkUpdateIfStale]) —
+     * раньше проверка была раз в 6 часов, и обновление ждало ручного нажатия.
      */
     private fun initUpdateCheck() {
         viewModelScope.launch {
             val current = repository.currentSettings()
-            if (!current.updateAuto) return@launch
-            val sixHours = 6 * 60 * 60 * 1000L
-            if (System.currentTimeMillis() - current.lastUpdateCheck < sixHours) return@launch
-            checkUpdate(silent = true)
+            if (current.updateAuto) {
+                val stale = System.currentTimeMillis() - current.lastUpdateCheck < REFRESH_INTERVAL_MS
+                if (!stale) checkUpdate(silent = true)
+            }
+            // дальше — ровным кругом, пока приложение живёт
+            while (true) {
+                kotlinx.coroutines.delay(REFRESH_INTERVAL_MS)
+                if (repository.currentSettings().updateAuto) checkUpdate(silent = true)
+            }
         }
+    }
+
+    /** Возвращение в приложение: если с последней проверки прошло больше 15 минут — проверяем. */
+    fun checkUpdateIfStale() = viewModelScope.launch {
+        val current = repository.currentSettings()
+        if (!current.updateAuto) return@launch
+        if (System.currentTimeMillis() - current.lastUpdateCheck < STALE_INTERVAL_MS) return@launch
+        checkUpdate(silent = true)
     }
 
     fun checkUpdate(silent: Boolean = false) = viewModelScope.launch {

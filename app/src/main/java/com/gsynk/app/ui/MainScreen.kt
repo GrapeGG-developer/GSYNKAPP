@@ -18,6 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -58,6 +59,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -117,27 +119,25 @@ fun MainScreen(vm: MainViewModel) {
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
 
-    var showSettings by remember { mutableStateOf(false) }
-    var showTools by remember { mutableStateOf(false) }
-    var showGames by remember { mutableStateOf(false) }
-    var showNfc by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Rule?>(null) }
     var creating by remember { mutableStateOf(false) }
     var permissions by remember { mutableStateOf(Permissions.snapshot(context)) }
-    var showUpdateSheet by remember { mutableStateOf(false) }
-    var showScenes by remember { mutableStateOf(false) }
-    var showDiagnostics by remember { mutableStateOf(false) }
-    var showRogue by remember { mutableStateOf(false) }
     var rogueInvite by remember { mutableStateOf<NfcLinkInvite?>(null) }
+    // Ровно одна панель на экране: раньше их можно было открыть несколько сразу,
+    // и они накладывались друг на друга. null — главный экран.
+    var panel by remember { mutableStateOf<String?>(null) }
+    var panelBeforeUpdate by remember { mutableStateOf<String?>(null) }
+
     // подземелье на два телефона: сопряжение NFC + игра по Wi-Fi
-    var showCoop by remember { mutableStateOf(false) }
     var coopInvite by remember { mutableStateOf<com.gsynk.app.core.NfcLink.GameInvite?>(null) }
     var coopRole by remember { mutableStateOf<com.gsynk.app.core.WifiCoop.Role?>(null) }
+    // открыть комнату сразу, без лишнего нажатия: так делает касание в режиме «отдаю»
+    var coopAutoHost by remember { mutableStateOf(false) }
     val profile = remember { DeviceProfile.detect(context) }
 
     // пересчёт разрешений при возвращении из системных экранов
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, showSettings, showTools, showNfc) {
+    DisposableEffect(lifecycleOwner, panel == "settings", panel == "tools", panel == "nfc") {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 permissions = Permissions.snapshot(context)
@@ -156,24 +156,37 @@ fun MainScreen(vm: MainViewModel) {
 
     // пришли по касанию метки — открываем Grape Link сразу
     LaunchedEffect(Unit) {
-        if (PendingNfcPayload.payload != null) showNfc = true
+        if (PendingNfcPayload.payload != null) panel = "nfc"
     }
 
+    // Новая версия сама вылезает на экран и закрывает все лишние панели.
+    // Единственное исключение — живая игра: там перебивать нельзя, баннер подождёт.
     LaunchedEffect(hasUpdate) {
-        if (hasUpdate) showUpdateSheet = true
+        if (!hasUpdate) return@LaunchedEffect
+        if (panel == "rogue" || panel == "coop") return@LaunchedEffect
+        panelBeforeUpdate = panel
+        panel = "update"
+    }
+
+    // Автопроверка почаще: при возвращении в приложение, если прошло больше 15 минут.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) vm.checkUpdateIfStale()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val sortedRules = remember(rules, settings.ruleSort) { RuleSort.apply(rules, settings.ruleSort) }
     val nextRule = remember(rules) { nextOccurrence(rules) }
 
+    Box(Modifier.fillMaxSize()) {
     AnimatedGrapeBackground {
         Box(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.statusBars)
         ) {
-            // Обязательная панель разрешений: рисуется последней, поверх всего.
-            PermissionGate()
             LazyColumn(
                 Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
@@ -184,7 +197,7 @@ fun MainScreen(vm: MainViewModel) {
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item { HomeHeader(model = profile.model, onSettings = { showSettings = true }) }
+                item { HomeHeader(model = profile.model, onSettings = { panel = "settings" }) }
 
                 item {
                     AnimatedVisibility(
@@ -192,7 +205,7 @@ fun MainScreen(vm: MainViewModel) {
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
-                        CrashBanner(onClick = { showDiagnostics = true })
+                        CrashBanner(onClick = { panel = "diagnostics" })
                     }
                 }
 
@@ -202,7 +215,7 @@ fun MainScreen(vm: MainViewModel) {
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
-                        UpdateBanner(onClick = { showUpdateSheet = true })
+                        UpdateBanner(onClick = { panel = "update" })
                     }
                 }
 
@@ -216,7 +229,7 @@ fun MainScreen(vm: MainViewModel) {
                         },
                         isFull = profile.isFull,
                         modifier = Modifier.fillMaxWidth(),
-                        onClick = { showTools = true }
+                        onClick = { panel = "tools" }
                     )
                 }
 
@@ -268,7 +281,7 @@ fun MainScreen(vm: MainViewModel) {
                             liveLabel = "касаний меткой",
                             size = TileSize.Medium,
                             modifier = Modifier.weight(2f),
-                            onClick = { showNfc = true }
+                            onClick = { panel = "nfc" }
                         )
                         Column(
                             Modifier.weight(1f),
@@ -280,7 +293,7 @@ fun MainScreen(vm: MainViewModel) {
                                 iconRes = R.drawable.ic_tune,
                                 size = TileSize.Small,
                                 modifier = Modifier.fillMaxWidth(),
-                                onClick = { showTools = true }
+                                onClick = { panel = "tools" }
                             )
                             MetroTile(
                                 title = "игры",
@@ -288,7 +301,7 @@ fun MainScreen(vm: MainViewModel) {
                                 iconRes = R.drawable.ic_schedule,
                                 size = TileSize.Small,
                                 modifier = Modifier.fillMaxWidth(),
-                                onClick = { showGames = true }
+                                onClick = { panel = "games" }
                             )
                         }
                     }
@@ -304,7 +317,7 @@ fun MainScreen(vm: MainViewModel) {
                         liveLabel = "сцены: ночь · кино · турбо",
                         size = TileSize.Wide,
                         modifier = Modifier.fillMaxWidth(),
-                        onClick = { showScenes = true }
+                        onClick = { panel = "scenes" }
                     )
                 }
 
@@ -406,103 +419,121 @@ fun MainScreen(vm: MainViewModel) {
         )
     }
 
-    if (showSettings) {
+    if (panel == "settings") {
         SettingsSheet(
             vm = vm,
-            onDismiss = { showSettings = false },
+            onDismiss = { panel = null },
             onOpenTools = {
-                showSettings = false
-                showTools = true
+                panel = null
+                panel = "tools"
             }
         )
     }
 
-    if (showTools) {
-        ToolsScreen(vm = vm, onBack = { showTools = false }, onOpenNfc = { showNfc = true })
+    if (panel == "tools") {
+        ToolsScreen(vm = vm, onBack = { panel = null }, onOpenNfc = { panel = "nfc" })
     }
 
-    if (showDiagnostics) {
-        DiagnosticsScreen(vm = vm, onBack = { showDiagnostics = false })
+    if (panel == "diagnostics") {
+        DiagnosticsScreen(vm = vm, onBack = { panel = null })
     }
 
-    if (showScenes) {
-        ScenesScreen(onBack = { showScenes = false })
+    if (panel == "scenes") {
+        ScenesScreen(onBack = { panel = null })
     }
 
-    if (showGames) {
+    if (panel == "games") {
         GamesScreen(
-            onBack = { showGames = false },
+            onBack = { panel = null },
             onDungeon = { coop ->
-                showGames = false
+                panel = null
                 if (coop) {
                     coopInvite = null
-                    showCoop = true
+                    coopAutoHost = true
+                    panel = "coop"
                 } else {
                     rogueInvite = null
                     coopRole = null
-                    showRogue = true
+                    panel = "rogue"
                 }
             }
         )
     }
 
-    if (showNfc) {
+    if (panel == "nfc") {
         NfcLinkScreen(
-            onBack = { showNfc = false },
-            onPlayGame = { seed ->
-                rogueInvite = seed?.let { NfcLinkInvite(it, profile.model.ifBlank { "второй телефон" }) }
-                showRogue = true
+            onBack = { panel = null },
+            // касание в режиме «мой телефон отдаёт» — сразу открываем комнату и игру
+            onHostGame = {
+                coopInvite = null
+                coopAutoHost = true
+                panel = null
+                panel = "coop"
             },
-            onPlayOnline = { invite ->
+            // касание с чужим приглашением — подключаемся и сразу играем
+            onJoinGame = { invite ->
                 coopInvite = invite
-                showNfc = false
-                showCoop = true
+                coopRole = com.gsynk.app.core.WifiCoop.Role.GUEST
+                rogueInvite = NfcLinkInvite(invite.seed, invite.from.ifBlank { "второй телефон" })
+                panel = null
+                panel = "rogue"
             }
         )
     }
 
-    if (showCoop) {
+    if (panel == "coop") {
         CoopScreen(
             onBack = {
-                showCoop = false
+                panel = null
                 coopInvite = null
+                coopAutoHost = false
             },
             autoInvite = coopInvite,
+            autoHost = coopAutoHost,
             onPlay = { role, seed ->
                 coopRole = role
+                coopAutoHost = false
                 rogueInvite = NfcLinkInvite(seed, profile.model.ifBlank { "второй телефон" })
-                showCoop = false
-                showRogue = true
+                panel = null
+                panel = "rogue"
             }
         )
     }
 
-    if (showRogue) {
+    if (panel == "rogue") {
         RogueScreen(
             onBack = {
                 if (coopRole != null) com.gsynk.app.core.WifiCoop.stop()
                 coopRole = null
-                showRogue = false
+                panel = null
             },
             invite = rogueInvite,
             onInviteByNfc = {
-                showRogue = false
-                showNfc = true
+                panel = null
+                panel = "nfc"
             },
             coop = coopRole,
             onCoopSetup = {
-                showRogue = false
+                panel = null
                 coopInvite = null
-                showCoop = true
+                panel = "coop"
             }
         )
     }
 
-    if (showUpdateSheet) {
-        UpdateSheet(vm = vm, onDismiss = {
-            showUpdateSheet = false
-            vm.dismissUpdate()
-        })
+        // ————— слои поверх всего —————
+        // Панель разрешений обязательна и перекрывает приложение, пока всё не выдано.
+        PermissionGate()
+        // «Показ по касанию»: салют, сердечки, надпись от второго телефона.
+        NfcShowHost()
+        // Обновление — самый верхний слой: вылезает само и закрывает прочие панели.
+        if (panel == "update") {
+            UpdateSheet(vm = vm, onDismiss = {
+                panel = panelBeforeUpdate
+                panelBeforeUpdate = null
+                vm.dismissUpdate()
+            })
+        }
     }
 }
 
@@ -512,14 +543,29 @@ fun MainScreen(vm: MainViewModel) {
 
 @Composable
 private fun HomeHeader(model: String, onSettings: () -> Unit) {
+    // нажатие на логотип рассыпает виноградную гроздь — простая радость, ничего лишнего
+    var logoBurst by remember { mutableIntStateOf(0) }
+    val logoContext = LocalContext.current
     Column(Modifier.padding(top = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                GradientText(
-                    text = "GSYNK",
-                    style = MaterialTheme.typography.displaySmall,
-                    brush = GrapeGradient
-                )
+                Box {
+                    GradientText(
+                        text = "GSYNK",
+                        style = MaterialTheme.typography.displaySmall,
+                        brush = GrapeGradient,
+                        modifier = Modifier.clickable {
+                            logoBurst++
+                            com.gsynk.app.core.AutomationActions.vibrate(logoContext, 28L)
+                        }
+                    )
+                    GrapeLogoBurst(
+                        trigger = logoBurst,
+                        modifier = Modifier
+                            .size(180.dp)
+                            .offset(x = (-24).dp, y = (-46).dp)
+                    )
+                }
                 Text(
                     text = model.ifBlank { "мультитул для телефона" },
                     color = TextDim,

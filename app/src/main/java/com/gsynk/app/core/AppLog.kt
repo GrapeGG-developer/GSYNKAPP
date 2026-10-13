@@ -307,6 +307,6 @@ object AppLog {
         }
 
         append("Модель ИИ: ")
-        appendLine(runCatching { LocalLlm.modelFile(app)?.name }.getOrNull() ?: "не импортирована")
+        appendLine("GrapeBot: команды, модель не требуется")
     }
 }

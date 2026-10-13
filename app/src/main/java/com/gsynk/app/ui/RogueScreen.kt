@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -61,6 +62,7 @@ import com.gsynk.app.ui.theme.GrapeViolet
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -149,6 +151,20 @@ fun RogueScreen(
         }
     }
 
+    // ————— хозяин: связь появилась — начинаем сами, без лишнего нажатия —————
+    LaunchedEffect(coopStatus, world == null) {
+        if (coop != WifiCoop.Role.HOST) return@LaunchedEffect
+        if (world != null) return@LaunchedEffect
+        if (coopStatus !is WifiCoop.Status.Live) return@LaunchedEffect
+        delay(600L)
+        val fresh = RogueGame.start(coopSeed.takeIf { it > 0 } ?: seed, 2)
+        seed = fresh.seed
+        world = fresh
+        savedResult = false
+        WifiCoop.publish(fresh)
+        AppLog.event("Игра", "касание принято — подземелье началось, ключ ${fresh.seed}")
+    }
+
     // ————— гость: свой стик уходит хозяину, мир приходит от него —————
     LaunchedEffect(coop) {
         if (coop != WifiCoop.Role.GUEST) return@LaunchedEffect
@@ -210,59 +226,139 @@ fun RogueScreen(
             .fillMaxSize()
             .background(com.gsynk.app.ui.theme.BgTopA)
     ) {
-        Column(Modifier.fillMaxSize()) {
-            // ————— поле у фронтальной камеры —————
-            Box(
+        val current = world
+        if (current != null && !current.over) {
+            // ————— бой на весь экран: поле под управлением, стики поверх него —————
+            Canvas(
                 Modifier
-                    .fillMaxWidth()
-                    .weight(1.42f)
+                    .fillMaxSize()
+                    .alpha(0.34f)
             ) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val current = world
-                    if (current == null) {
-                        drawCover(size, seed)
-                        return@Canvas
-                    }
-                    drawWorld(current, size)
-                }
+                drawWorld(current, size)
+            }
+            Canvas(Modifier.fillMaxSize()) {
+                // рамка комнаты и двери — поверх приглушённого поля, чтобы их было видно
+                drawRoomFrame(current, size)
+            }
 
-                val snapshot = world
-                if (snapshot != null) {
-                    HudBar(
-                        world = snapshot,
-                        best = best,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
-                            .align(Alignment.TopStart)
-                    )
-                    if (snapshot.bannerTime > 0f) {
-                            Text(
-                                text = snapshot.banner,
-                                color = TextPrimary,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Light,
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .background(Color.Black.copy(alpha = 0.45f))
-                                    .padding(horizontal = 14.dp, vertical = 8.dp)
-                            )
+            HudBar(
+                world = current,
+                best = best,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .align(Alignment.TopStart)
+            )
+
+            if (current.bannerTime > 0f) {
+                Text(
+                    text = current.banner,
+                    color = TextPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Light,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .background(Color.Black.copy(alpha = 0.45f))
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                )
+            }
+
+            Row(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 46.dp, end = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TinyChip("пауза") { world = null }
+                TinyChip("заново") {
+                    val fresh = RogueGame.start(seed, if (coop != null) 2 else players)
+                    world = fresh
+                    if (coop == WifiCoop.Role.HOST) WifiCoop.publish(fresh)
+                }
+                if (coop != null) {
+                    TinyChip("выйти") {
+                        WifiCoop.stop()
+                        onBack()
                     }
                 }
             }
 
-            // ————— низ: управление и кнопки —————
-            Column(
+            Row(
                 Modifier
+                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .weight(1f)
-                    .background(CardBg)
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .padding(horizontal = 10.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                val current = world
-                if (current == null) {
-                    if (coop == WifiCoop.Role.GUEST) {
-                        WaitingPanel(
+                Joystick(
+                    label = when {
+                        coop == WifiCoop.Role.GUEST -> "мой герой"
+                        coop == WifiCoop.Role.HOST -> "я, хозяин"
+                        players > 1 -> "игрок 1"
+                        else -> "ход"
+                    },
+                    color = if (players > 1 || coop != null) GrapeBlue else GrapeViolet,
+                    modifier = Modifier.size(152.dp),
+                    onMove = { x, y ->
+                        moveOneX = x
+                        moveOneY = y
+                    }
+                )
+                if (coop == null && players > 1) {
+                    Joystick(
+                        label = "игрок 2",
+                        color = GrapePink,
+                        modifier = Modifier.size(132.dp),
+                        onMove = { x, y ->
+                            moveTwoX = x
+                            moveTwoY = y
+                        }
+                    )
+                } else {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = if (coop != null) "стик ведёт вашего героя" else "стик ведёт героя",
+                            color = TextDim,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        Text(
+                            text = "ключ $seed · этаж ${current.floor}",
+                            color = TextSecondary,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+        } else {
+            Column(Modifier.fillMaxSize()) {
+                // ————— поле у фронтальной камеры —————
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1.42f)
+                ) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val snapshot = world
+                        if (snapshot == null) {
+                            drawCover(size, seed)
+                        } else {
+                            drawWorld(snapshot, size)
+                        }
+                    }
+                }
+
+                // ————— низ: старт, ожидание или итог —————
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .background(CardBg)
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                ) {
+                    val snapshot = world
+                    when {
+                        snapshot == null && coop == WifiCoop.Role.GUEST -> WaitingPanel(
                             status = coopStatus,
                             onCoopSetup = onCoopSetup,
                             onLeave = {
@@ -270,8 +366,8 @@ fun RogueScreen(
                                 onBack()
                             }
                         )
-                    } else {
-                        StartPanel(
+
+                        snapshot == null -> StartPanel(
                             seed = seed,
                             players = players,
                             coop = coop,
@@ -283,137 +379,44 @@ fun RogueScreen(
                             onStart = {
                                 AppLog.event("Игра", "стартуем подземелье, игроков: $players, ключ $seed")
                                 val count = if (coop != null) 2 else players
-                                world = RogueGame.start(seed, count)
+                                val fresh = RogueGame.start(seed, count)
+                                world = fresh
                                 savedResult = false
-                                if (coop == WifiCoop.Role.HOST) {
-                                    WifiCoop.publish(world ?: RogueGame.start(seed, count))
-                                }
+                                if (coop == WifiCoop.Role.HOST) WifiCoop.publish(fresh)
                             }
                         )
-                    }
-                } else if (current.over) {
-                    FinishPanel(
-                        world = current,
-                        best = best,
-                        onAgain = {
-                            seed = RogueGame.newSeed()
-                            world = RogueGame.start(seed, players)
-                            savedResult = false
-                        },
-                        onExit = { world = null }
-                    )
-                } else {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Joystick(
-                            label = when {
-                                coop == WifiCoop.Role.GUEST -> "мой герой"
-                                coop == WifiCoop.Role.HOST -> "я, хозяин"
-                                players > 1 -> "игрок 1"
-                                else -> "ход"
+
+                        else -> FinishPanel(
+                            world = snapshot,
+                            best = best,
+                            onAgain = {
+                                seed = RogueGame.newSeed()
+                                val fresh = RogueGame.start(seed, if (coop != null) 2 else players)
+                                world = fresh
+                                savedResult = false
+                                if (coop == WifiCoop.Role.HOST) WifiCoop.publish(fresh)
                             },
-                            color = if (players > 1 || coop != null) GrapeBlue else GrapeViolet,
-                            modifier = Modifier.weight(1f),
-                            onMove = { x, y -> moveOneX = x; moveOneY = y }
+                            onExit = { world = null }
                         )
-                        Column(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(9.dp)
-                        ) {
-                            Text(
-                                text = "слёзы летят туда, куда ведёт стик",
-                                color = TextDim,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                SortChip("Пауза", selected = false) { world = null }
-                                SortChip("Заново", selected = false) {
-                                    val count = if (coop != null) 2 else players
-                                    val fresh = RogueGame.start(seed, count)
-                                    world = fresh
-                                    if (coop == WifiCoop.Role.HOST) WifiCoop.publish(fresh)
-                                }
-                            }
-                            Text(
-                                text = "ключ подземелья: $seed",
-                                color = TextSecondary,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                        if (coop != null) {
-                            Column(
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "второй герой — на своём телефоне",
-                                    color = GrapePink,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                                Text(
-                                    text = when (val st = coopStatus) {
-                                        is WifiCoop.Status.Live ->
-                                            if (coop == WifiCoop.Role.HOST) "подключён: ${st.peer}"
-                                            else "хозяин: ${st.peer}"
-                                        is WifiCoop.Status.Failed -> st.reason
-                                        else -> "связь по Wi-Fi"
-                                    },
-                                    color = TextDim,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                                Box(
-                                    Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth()
-                                        .border(1.dp, ChipBorder, RectangleShape)
-                                        .clickable {
-                                            WifiCoop.stop()
-                                            onBack()
-                                        },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "выйти\nиз сети",
-                                        color = GrapeRed,
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-                                }
-                            }
-                        } else if (players > 1) {
-                            Joystick(
-                                label = "игрок 2",
-                                color = GrapePink,
-                                modifier = Modifier.weight(1f),
-                                onMove = { x, y -> moveTwoX = x; moveTwoY = y }
-                            )
-                        } else {
-                            Box(
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .border(1.dp, ChipBorder, RectangleShape)
-                                    .clickable { onInviteByNfc(seed) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "позвать второго\nигрока по nfc",
-                                    color = GrapeCyan,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            }
-                        }
                     }
                 }
             }
         }
+    }
+}
+
+/** Короткая кнопка поверх поля: пауза, заново, выход из сети. */
+@Composable
+private fun TinyChip(label: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .clip(RectangleShape)
+            .background(CardBg.copy(alpha = 0.86f))
+            .border(1.dp, ChipBorder, RectangleShape)
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 7.dp)
+    ) {
+        Text(label, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -679,6 +682,26 @@ private fun HudBar(world: RogueGame.World, best: Int, modifier: Modifier = Modif
 }
 
 /** Заставка до начала игры: рамка-видоискатель и напоминание, где будет поле. */
+/** Рамка комнаты и дверь — поверх приглушённого поля, чтобы границы были видны. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawRoomFrame(world: RogueGame.World, canvasSize: Size) {
+    val cell = canvasSize.minDimension
+    val left = (canvasSize.width - cell) / 2f
+    val top = (canvasSize.height - cell) / 2f
+    // поле рисуем в квадрате, рамку — по его краю
+    drawRect(
+        color = Color(0xFFEDE9FE).copy(alpha = 0.55f),
+        topLeft = Offset(left, top),
+        size = Size(cell, cell),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f)
+    )
+    val doorColor = if (world.doorOpen) Color(0xFF34D399) else Color(0xFFF87171)
+    drawRect(
+        color = doorColor.copy(alpha = 0.85f),
+        topLeft = Offset(left + cell * 0.44f, top - 5f),
+        size = Size(cell * 0.12f, 8f)
+    )
+}
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCover(canvasSize: Size, seed: Long) {
     val w = canvasSize.width
     val h = canvasSize.height

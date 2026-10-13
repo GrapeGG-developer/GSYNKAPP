@@ -51,6 +51,7 @@ import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -65,6 +66,8 @@ import kotlinx.coroutines.withContext
 fun CoopScreen(
     onBack: () -> Unit,
     autoInvite: NfcLink.GameInvite? = null,
+    /** Открыть комнату сразу при входе — так делает касание в режиме «мой телефон отдаёт». */
+    autoHost: Boolean = false,
     onPlay: (role: WifiCoop.Role, seed: Long) -> Unit
 ) {
     val context = LocalContext.current
@@ -86,6 +89,43 @@ fun CoopScreen(
     var touches by remember { mutableIntStateOf(0) }
 
     val model = remember { android.os.Build.MODEL ?: "GSYNK" }
+
+    // Касание в режиме «отдаю»: комната открывается сама, а вызов уже лежит в метке —
+    // человеку остаётся только приложить телефон к телефону друга.
+    LaunchedEffect(autoHost) {
+        if (!autoHost) return@LaunchedEffect
+        if (WifiCoop.status.value is WifiCoop.Status.Live) return@LaunchedEffect
+        side = 0
+        WifiCoop.host(model, seed)
+        note = "Комната открыта. Приложите телефон к телефону друга — и игра начнётся сама."
+        // ждём, пока появится наш адрес и порт, и кладём приглашение в метку
+        repeat(20) {
+            val current = WifiCoop.status.value
+            if (current is WifiCoop.Status.Listening) {
+                val invite = NfcLink.GameInvite(
+                    game = "rogue",
+                    from = model,
+                    seed = current.seed,
+                    host = current.ip,
+                    port = current.port,
+                    code = current.code
+                )
+                NdefHceService.store(context, NfcLink.buildGameInvite(invite, context.packageName))
+                NdefHceService.setEnabled(context, true)
+                burst.show(2_200L)
+                return@LaunchedEffect
+            }
+            kotlinx.coroutines.delay(150L)
+        }
+    }
+
+    // Связь есть — сразу в бой, чтобы касание действительно запускало игру.
+    LaunchedEffect(status) {
+        val live = status as? WifiCoop.Status.Live ?: return@LaunchedEffect
+        if (!autoHost) return@LaunchedEffect
+        delay(900L)
+        onPlay(live.role, live.seed)
+    }
 
     // Пришли по NFC — сразу стучимся в комнату, руками ничего вводить не надо.
     LaunchedEffect(autoInvite?.host, autoInvite?.port) {

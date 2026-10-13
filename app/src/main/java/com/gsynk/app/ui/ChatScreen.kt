@@ -1,7 +1,5 @@
 package com.gsynk.app.ui
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,15 +10,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,284 +24,156 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
-import com.gsynk.app.R
-import com.gsynk.app.core.LocalAssistant
-import com.gsynk.app.core.LocalLlm
-import com.gsynk.app.core.LlmEngine
+import com.gsynk.app.core.AppLog
+import com.gsynk.app.core.CommandBot
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBorder
+import com.gsynk.app.ui.theme.GrapeCyan
 import com.gsynk.app.ui.theme.GrapeGreen
-import com.gsynk.app.ui.theme.GrapeGreenSoft
-import com.gsynk.app.ui.theme.GrapeViolet
 import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
 import com.gsynk.app.ui.theme.TileBrush
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
-private data class ChatMessage(val text: String, val fromUser: Boolean, val pending: Boolean = false)
 
 /**
- * Локальный ИИ: чат со своей моделью прямо на телефоне.
+ * GrapeBot без языковой модели: простой помощник, который понимает команды.
  *
- * Если модель не импортирована — работает встроенный ассистент команд
- * («яркость 40», «фонарик вкл»), а кнопка импорта подключает Gemma.
+ * Раньше здесь нужно было импортировать файл Gemma (.task) и ждать загрузку нейросети.
+ * Теперь ничего скачивать не надо: бот разбирает фразу по ключевым словам и делает
+ * дело — яркость, громкость, фонарик, «не беспокоить», открытие системных экранов,
+ * звонок, поиск в браузере. Всё офлайн, ответ мгновенный.
  */
 @Composable
 fun ChatScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val messages = remember { mutableStateListOf<ChatMessage>() }
-    val listState = rememberLazyListState()
+    val log = remember { mutableStateListOf<Pair<String, Boolean>>() } // текст → это бот?
     var input by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
-    var modelName by remember { mutableStateOf(LocalLlm.modelFile(context)?.name ?: "") }
-    var modelLoaded by remember { mutableStateOf(LlmEngine.isLoaded) }
-    var status by remember { mutableStateOf("") }
-    val mainHandler = remember { android.os.Handler(android.os.Looper.getMainLooper()) }
+    val listState = rememberLazyListState()
 
-    val importer = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        busy = true
-        status = "Копирую модель…"
-        scope.launch {
-            val copied = withContext(Dispatchers.IO) {
-                runCatching {
-                    context.contentResolver.openInputStream(uri)?.use { stream ->
-                        LocalLlm.import(context, stream, uri.lastPathSegment ?: "model.task")
-                    }
-                }.getOrNull()
-            }
-            if (copied == null) {
-                status = "Не удалось скопировать файл"
-            } else {
-                modelName = copied.name
-                status = "Загружаю «${copied.name}» в память…"
-                val error = LlmEngine.load(context, copied)
-                modelLoaded = error == null
-                status = error ?: "Модель готова: ${copied.name}"
-            }
-            busy = false
-        }
-    }
-
-    // модель уже в памяти телефона — загружаем её без лишних нажатий
     LaunchedEffect(Unit) {
-        if (!LlmEngine.isLoaded && LocalLlm.isReady(context)) {
-            busy = true
-            status = "Загружаю модель «$modelName» в память…"
-            val error = LlmEngine.load(context, LocalLlm.modelFile(context)!!)
-            modelLoaded = error == null
-            status = error ?: "Модель готова: $modelName"
-            busy = false
-        }
-    }
-
-    // модель уже лежит в телефоне — загружаем её без лишних нажатий
-    LaunchedEffect(Unit) {
-        val file = LocalLlm.modelFile(context)
-        if (!LlmEngine.isLoaded && file != null) {
-            busy = true
-            status = "Загружаю модель «${file.name}» в память…"
-            val error = LlmEngine.load(context, file)
-            modelLoaded = error == null
-            status = error ?: "Модель готова: ${file.name}"
-            busy = false
-        }
-    }
-
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+        log += "Привет. Я GrapeBot — понимаю команды и делаю их сразу." to true
+        log += "Например: «яркость 40», «фонарик вкл», «открой статистику батареи»." to true
     }
 
     fun send() {
-        val text = input.trim()
-        if (text.isEmpty() || busy) return
+        val line = input.trim()
+        if (line.isBlank()) return
+        log += line to false
         input = ""
-        messages.add(ChatMessage(text, fromUser = true))
-        messages.add(ChatMessage("", fromUser = false, pending = true))
-        busy = true
-
-        scope.launch {
-            val index = messages.lastIndex
-            if (modelLoaded) {
-                LlmEngine.askStreaming(text) { partial ->
-                    // модель зовёт слушателя из своего потока: в UI пускаем через главный
-                    mainHandler.post {
-                        if (index <= messages.lastIndex) {
-                            messages[index] = ChatMessage(partial, fromUser = false, pending = true)
-                        }
-                    }
-                }.let { answer ->
-                    messages[index] = ChatMessage(answer, fromUser = false)
-                }
-            } else {
-                val answer = LocalAssistant.answer(context, text)
-                messages[index] = ChatMessage(answer, fromUser = false)
+        val reply = runCatching { CommandBot.ask(context, line) }
+            .getOrElse { CommandBot.Reply("Не вышло: " + (it.message ?: "ошибка")) }
+        log += reply.text to true
+        reply.intent?.let { intent ->
+            runCatching {
+                context.startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
             }
-            busy = false
         }
+        AppLog.event("GrapeBot", "команда: " + line.take(40))
     }
 
     GrapeScreen(
-        title = "Локальный ИИ",
-        subtitle = if (modelLoaded) "модель: $modelName (офлайн)" else "работает встроенный ассистент",
+        title = "GrapeBot",
+        subtitle = "помощник на командах · без модели и интернета",
         onBack = onBack
     ) {
-        // ————— карточка модели —————
-        SurfaceCard(borderColor = if (modelLoaded) GrapeGreen.copy(alpha = 0.5f) else CardBorder) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(40.dp)
-                        .clip(RectangleShape)
-                        .background(TileBrush.Violet),
-                    contentAlignment = Alignment.Center
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(430.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            itemsIndexed(log) { _, item ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = if (item.second) Arrangement.Start else Arrangement.End
                 ) {
-                    Text("AI", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = if (modelLoaded) "Модель загружена" else "Локальная модель не подключена",
-                        color = TextPrimary,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = if (modelName.isNotBlank()) modelName else "Gemma .task — файл 0.3–2.5 ГБ, интернет не нужен",
-                        color = TextDim,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                PrimaryButton(
-                    text = "Импортировать .task",
-                    onClick = { importer.launch(arrayOf("*/*")) },
-                    modifier = Modifier.weight(1f)
-                )
-                if (modelName.isNotBlank()) {
-                    SecondaryButton(
-                        text = "Удалить",
-                        onClick = {
-                            LocalLlm.delete(context)
-                            LlmEngine.close()
-                            modelName = ""
-                            modelLoaded = false
-                            status = "Модель удалена"
-                        }
-                    )
-                }
-            }
-            if (status.isNotBlank()) {
-                Spacer(Modifier.height(10.dp))
-                Text(status, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall)
-            }
-        }
-
-        // ————— быстрые команды —————
-        Spacer(Modifier.height(12.dp))
-        Text("Быстрые команды", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
-        Spacer(Modifier.height(7.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            listOf("яркость 30", "громкость 0", "фонарик вкл").forEach { phrase ->
-                SortChip(label = phrase, selected = false) { input = phrase }
-            }
-        }
-
-        // ————— чат —————
-        Spacer(Modifier.height(14.dp))
-        TilePanel {
-            if (messages.isEmpty()) {
-                Text(
-                    text = if (modelLoaded) {
-                        "Спросите что угодно — модель считает ответ на телефоне, без сети."
-                    } else {
-                        "Я понимаю «яркость 40», «громкость 0», «фонарик вкл», «не беспокоить», " +
-                            "«сколько правил». Импортируйте Gemma — и смогу отвечать на любые вопросы."
-                    },
-                    color = TextDim,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.heightIn(max = 420.dp),
-                    verticalArrangement = Arrangement.spacedBy(9.dp)
-                ) {
-                    itemsIndexed(messages) { _, message ->
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = if (message.fromUser) Arrangement.End else Arrangement.Start
-                        ) {
-                            val bubble = if (message.fromUser) TileBrush.Violet else TileBrush.Ink
-                            Box(
-                                Modifier
-                                    .fillMaxWidth(0.86f)
-                                    .clip(RectangleShape)
-                                    .background(bubble)
-                                    .padding(12.dp)
-                            ) {
-                                Text(
-                                    text = if (message.pending && message.text.isEmpty()) "думаю…" else message.text,
-                                    color = TextPrimary,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
+                    Box(
+                        Modifier
+                            .fillMaxWidth(0.88f)
+                            .clip(RectangleShape)
+                            .background(if (item.second) CardBg else GrapeGreen.copy(alpha = 0.18f))
+                            .border(1.dp, if (item.second) ChipBorder else GrapeGreen.copy(alpha = 0.5f), RectangleShape)
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            text = item.first,
+                            color = if (item.second) TextPrimary else GrapeGreen,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
             }
         }
 
-        // ————— ввод —————
+        LaunchedEffect(log.size) {
+            if (log.isNotEmpty()) listState.animateScrollToItem(log.lastIndex)
+        }
+
         Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            GrapeTextField(
-                value = input,
-                onValueChange = { input = it },
-                label = "Сообщение",
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(Modifier.width(9.dp))
-            Box(
-                Modifier
-                    .size(52.dp)
-                    .clip(RectangleShape)
-                    .background(if (busy) TileBrush.Ink else TileBrush.Green)
-                    .border(1.dp, ChipBorder, RectangleShape)
-                    .clickable { send() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_bolt),
-                    contentDescription = "Отправить",
-                    tint = if (busy) TextDim else GrapeGreenSoft,
-                    modifier = Modifier.size(22.dp)
-                )
+        GrapeTextField(
+            value = input,
+            onValueChange = { input = it },
+            label = "Напишите команду",
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(8.dp))
+        PrimaryButton(
+            text = "Выполнить · ${input.ifBlank { "…" }}",
+            onClick = { send() },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(14.dp))
+        SurfaceCard(borderColor = CardBorder) {
+            Text("Что понимает бот", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+            Spacer(Modifier.height(6.dp))
+            CommandBot.examples.forEach { example ->
+                Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .width(6.dp)
+                            .height(6.dp)
+                            .background(GrapeCyan)
+                    ) { }
+                    Spacer(Modifier.width(9.dp))
+                    Text(
+                        text = example,
+                        color = TextDim,
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.clip(RectangleShape).clickable {
+                            input = example
+                            send()
+                        }
+                    )
+                }
             }
         }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "Всё считается на устройстве: ни один запрос не уходит в интернет",
-            color = TextDim,
-            style = MaterialTheme.typography.labelSmall
-        )
+        Spacer(Modifier.height(12.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(66.dp)
+                .clip(RectangleShape)
+                .background(TileBrush.Violet)
+                .clickable { onBack() },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Никаких загрузок моделей — всё считается на телефоне сразу",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge
+            )
+        }
+        Spacer(Modifier.height(20.dp))
     }
 }

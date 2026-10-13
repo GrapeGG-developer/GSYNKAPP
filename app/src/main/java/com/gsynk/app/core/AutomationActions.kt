@@ -5,6 +5,7 @@ import android.content.Intent
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
 import android.media.ToneGenerator
+import kotlinx.coroutines.launch
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -119,6 +120,76 @@ object AutomationActions {
                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri())
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
+        }
+    }
+
+    // ————— тоны для лаборатории: динамик телефона как катушка —————
+
+    private var sweepJob: kotlinx.coroutines.Job? = null
+    private var toneTrack: android.media.AudioTrack? = null
+    private val sweepScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()
+    )
+    private val scope = sweepScope
+
+    /** Чистый тон на заданной частоте: длительность в миллисекундах. */
+    fun playTone(hz: Int, durationMs: Int = 2_000) {
+        stopTone()
+        runCatching {
+            // ToneGenerator умеет только готовые тоны, поэтому для произвольной частоты
+            // строим короткую синусоиду и отдаём её динамику через трек.
+            val sampleRate = 44_100
+            val samples = sampleRate * (durationMs / 1000f).toInt().coerceAtLeast(1)
+            val buffer = ShortArray(samples)
+            for (index in 0 until samples) {
+                val angle = 2.0 * Math.PI * hz * index / sampleRate
+                buffer[index] = (kotlin.math.sin(angle) * 12_000).toInt().toShort()
+            }
+            val track = android.media.AudioTrack.Builder()
+                .setAudioFormat(
+                    android.media.AudioFormat.Builder()
+                        .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(sampleRate)
+                        .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                        .build()
+                )
+                .setTransferMode(android.media.AudioTrack.MODE_STATIC)
+                .setBufferSizeInBytes(buffer.size * 2)
+                .build()
+            track.write(buffer, 0, buffer.size)
+            track.setVolume(0.6f)
+            track.play()
+            toneTrack = track
+            scope.launch {
+                kotlinx.coroutines.delay(durationMs.toLong())
+                runCatching { track.stop() }
+                runCatching { track.release() }
+                if (toneTrack === track) toneTrack = null
+            }
+        }
+    }
+
+    fun stopTone() {
+        runCatching { toneTrack?.stop() }
+        runCatching { toneTrack?.release() }
+        toneTrack = null
+    }
+
+    /** Развёртка 20 Гц → 20 кГц: слышно, как динамик проходит всю полосу. */
+    fun playSweep() {
+        runCatching {
+            sweepJob?.cancel()
+            stopTone()
+            sweepJob = scope.launch {
+                val total = 4_000
+                val steps = 40
+                for (step in 0 until steps) {
+                    val hz = (20 * Math.pow(1000.0, step.toDouble() / steps)).toInt().coerceIn(20, 20_000)
+                    playTone(hz, total / steps)
+                    kotlinx.coroutines.delay((total / steps).toLong())
+                }
+                stopTone()
+            }
         }
     }
 }

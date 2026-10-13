@@ -1,4 +1,4 @@
-# GSYNK 2.2.1 — мультитул для телефона
+# GSYNK 2.3.0 — мультитул для телефона
 
 **GSYNK** — приложение-мультитул для Android: расписание яркости и громкости, компактный
 «остров» рядом с фронтальной камерой, Grape Link (NFC для данных и знакомства, Wi-Fi для
@@ -19,7 +19,8 @@
 
 | Версия | Ссылка |
 |---|---|
-| **2.2.1** (текущая, versionCode 11) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.2.1/GSYNK-v2.2.1-debug.apk |
+| **2.3.0** (текущая, versionCode 12) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.3.0/GSYNK-v2.3.0-debug.apk |
+| 2.2.1 (остров, фон, Wi-Fi-мультиплеер) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.2.1/GSYNK-v2.2.1-debug.apk |
 | 2.2.0 (подземелье, нагрузка CPU/GPU+ИИ, плитки Metro) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.2.0/GSYNK-v2.2.0-debug.apk |
 | 2.1.1 (исправлен вылет «% •») | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.1.1/GSYNK-v2.1.1-debug.apk |
 | 2.0.2 (первый релиз с OTA-проверкой изнутри) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v2.0.2/GSYNK-v2.0.2-debug.apk |
@@ -210,6 +211,10 @@ bash gradlew testDebugUnitTest lintDebug assembleDebug   # полная пров
 - `DeviceProfile` — профиль устройства и набор доступных функций; `RegionSupport` —
   проверки оверлея и доступа к «Не беспокоить».
 - `NfcLink` + `NdefHceService` — обмен по NFC (чтение и эмуляция метки).
+- `DeviceLab` — лаборатория железа (скрытые экраны, ИК-коды NEC, катушки, датчики);
+  `ScreenDimmer` — затемнение ниже системного минимума; `NfcShow` — показ по касанию;
+  `FileLink` — передача файлов по касанию с докачкой по Wi-Fi; `NfcTagWriter` — запись меток;
+  `CommandBot` — помощник на командах вместо языковой модели.
 - `WifiCoop` — подземелье на два телефона: TCP-сокеты, комната, код сопряжения и обмен
   кадрами; `CoopCodec` — текстовый кодек кадра и ввода (дроби целыми, кириллица в base64).
 - `TaskScheduler`/`TaskRepository`/`TaskReceiver` — отложенные задачи; `AutomationActions` —
@@ -224,9 +229,9 @@ bash gradlew testDebugUnitTest lintDebug assembleDebug   # полная пров
 
 | Проверка | Результат |
 |---|---|
-| Юнит-тесты (`testDebugUnitTest`) | **74 / 74** (22 — правила, 40 — движки и сервисы, 8 — сеть подземелья, 2 — сторож острова, 2 — сторож формата строк) |
+| Юнит-тесты (`testDebugUnitTest`) | **89 / 89** (22 — правила, 40 — движки и сервисы, 8 — сеть подземелья, 2 — сторож острова, 2 — сторож формата строк) |
 | Android Lint (`lintDebug`) | **0 ошибок**, 25 предупреждений — только про версии библиотек |
-| Сборка (`assembleDebug`) | успешно, APK ~80 МБ (локальная ИИ-модель MediaPipe внутри) |
+| Сборка (`assembleDebug`) | успешно, APK ~35 МБ (модель ИИ и MediaPipe удалены в 2.3.0) |
 | Компиляция | без ошибок; предупреждения только про доступные обновления зависимостей |
 
 Юнит-тесты покрывают: перевод процентов яркости и громкости, интервалы, конкретные

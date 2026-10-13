@@ -18,6 +18,7 @@ object NfcLink {
     const val MIME_CONTACT = "text/vcard"
     const val MIME_GAME = "application/vnd.gsynk.game"
     const val MIME_PROFILE = "application/vnd.gsynk.profile"
+    const val MIME_FILE = "application/vnd.gsynk.file"
 
     const val KIND_TEXT = "text"
     const val KIND_URL = "url"
@@ -26,6 +27,12 @@ object NfcLink {
     const val KIND_GEO = "geo"
     const val KIND_PROFILE = "profile"
     const val KIND_GAME = "game"
+
+    /** Файл: касание — визитка, сам файл едет по Wi-Fi (или целиком, если он крошечный). */
+    const val KIND_FILE = "file"
+
+    /** Показ по касанию: салют, сердечки, вспышка, надпись или команда второму телефону. */
+    const val KIND_SHOW = "show"
 
     /** Пользовательские типы: кодируем как текст с префиксом вида gsynk:password|… */
     private const val PREFIX = "gsynk"
@@ -54,6 +61,48 @@ object NfcLink {
     ) {
         val isWifi: Boolean get() = host.isNotBlank() && port > 0
     }
+
+    /**
+     * Приглашение на файл: адрес, порт, одноразовый код и имя файла.
+     * Если [inline] не пуст — файл маленький и уже лежит в самой метке.
+     */
+    data class FileInvite(
+        val host: String,
+        val port: Int,
+        val token: String,
+        val name: String,
+        val size: Long,
+        val inline: String = ""
+    ) {
+        val isInline: Boolean get() = inline.isNotBlank()
+    }
+
+    private fun clean(value: String): String = value.replace(';', '_').replace('|', '_')
+
+    fun fileInviteBody(invite: FileInvite): String = listOf(
+        clean(invite.host),
+        invite.port.toString(),
+        clean(invite.token),
+        clean(invite.name),
+        invite.size.toString(),
+        invite.inline
+    ).joinToString(";")
+
+    fun parseFileInvite(body: String): FileInvite? = runCatching {
+        val parts = body.split(";")
+        val host = parts.getOrNull(0).orEmpty()
+        val inline = parts.getOrNull(5).orEmpty()
+        // без адреса приглашение бессмысленно, но крошечный файл может жить прямо в метке
+        if (host.isBlank() && inline.isBlank()) return null
+        FileInvite(
+            host = host,
+            port = parts.getOrNull(1)?.toIntOrNull() ?: FileLink.PORT,
+            token = parts.getOrNull(2).orEmpty(),
+            name = parts.getOrNull(3).orEmpty().ifBlank { "файл-gsynk" },
+            size = parts.getOrNull(4)?.toLongOrNull() ?: 0L,
+            inline = parts.getOrNull(5).orEmpty()
+        )
+    }.getOrNull()
 
     /** Доступные типы для экрана передачи. */
     val TRANSFER_KINDS = listOf(
@@ -140,6 +189,9 @@ object NfcLink {
             record.tnf == NdefRecord.TNF_MIME_MEDIA && type == MIME_PROFILE ->
                 Payload(KIND_PROFILE, "Профиль GSYNK", String(record.payload, StandardCharsets.UTF_8))
 
+            record.tnf == NdefRecord.TNF_MIME_MEDIA && type == MIME_FILE ->
+                Payload(KIND_FILE, "Файл", String(record.payload, StandardCharsets.UTF_8))
+
             record.tnf == NdefRecord.TNF_WELL_KNOWN && record.type.contentEquals(NdefRecord.RTD_TEXT) -> {
                 val statusByte = record.payload.firstOrNull()?.toInt() ?: 0
                 val langLen = statusByte and 0x3F
@@ -186,8 +238,25 @@ object NfcLink {
         KIND_GEO -> "Координаты: откроются на карте"
         KIND_PROFILE -> "Профиль GSYNK: импортируйте правила расписания"
         KIND_GAME -> if (parseGameInvite(payload.body)?.isWifi == true)
-            "Вызов в подземелье на два телефона — подключение по Wi-Fi"
+            "Вызов в GTBOI на два телефона — игра пойдёт по Wi-Fi"
         else "Вызов в игру"
+
+        KIND_FILE -> {
+            val invite = parseFileInvite(payload.body)
+            when {
+                invite?.isInline == true -> "Файл «" + invite.name + "» лежит прямо в метке"
+                invite != null -> "Файл «" + invite.name + "» приедет по Wi-Fi, размер " + invite.size + " Б"
+                else -> "Приглашение на файл"
+            }
+        }
+
+        KIND_SHOW -> NfcShow.decode(payload.body)
+            ?.let { (kind, text) ->
+                if (kind.isCommand) "Команда: " + kind.label.lowercase() + " на втором телефоне"
+                else "Показ на втором телефоне: " + kind.label.lowercase() +
+                    if (text.isBlank()) "" else " — «$text»"
+            }
+            ?: "Показ по касанию"
         else -> "Текстовое сообщение"
     }
 }

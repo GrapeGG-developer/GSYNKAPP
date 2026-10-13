@@ -86,6 +86,7 @@ fun ToolsScreen(
         "sysinfo" -> SysDashboardScreen(onBack = { openExtra = null })
         "coder" -> EncoderScreen(onBack = { openExtra = null })
         "subnet" -> SubnetScreen(onBack = { openExtra = null })
+        "lab" -> LabScreen(onBack = { openExtra = null })
     }
 
     if (openExtra != null) return
@@ -210,6 +211,28 @@ fun ToolsScreen(
                 }
             )
         }
+
+        // ————— лаборатория: низкоуровневые опыты с железом —————
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Лаборатория железа")
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "Мигание экраном, AMOLED и ШИМ, все датчики, катушки вибромотора, " +
+                "индукция, ИК-пульт, скрытые экраны Android и HyperOS — без root и без риска.",
+            color = TextDim,
+            style = MaterialTheme.typography.labelSmall
+        )
+        Spacer(Modifier.height(9.dp))
+        LiveTile(
+            title = "Лаборатория",
+            subtitle = "то, чего нет в магазинах приложений",
+            brush = TileBrush.Violet,
+            iconRes = R.drawable.ic_tune,
+            liveText = "строб · экран · датчики · катушки · HyperOS",
+            height = 108.dp,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { openExtra = "lab" }
+        )
 
         // ————— хакерский набор —————
         Spacer(Modifier.height(18.dp))

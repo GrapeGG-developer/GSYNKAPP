@@ -83,7 +83,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
             InfoRow("Версия", com.gsynk.app.BuildConfig.VERSION_NAME)
             InfoRow("Отчётов на телефоне", reports.size.toString())
             InfoRow("Сбоев за всё время", AppLog.crashTotal(context).toString())
-            InfoRow("Модель ИИ", com.gsynk.app.core.LocalLlm.modelFile(context)?.name ?: "не импортирована")
+            InfoRow("Помощник", "GrapeBot на командах, без файла модели")
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 PrimaryButton(

@@ -2,6 +2,7 @@ package com.gsynk.app.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -61,6 +62,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -94,6 +99,7 @@ import com.gsynk.app.core.TurboState
 import com.gsynk.app.ui.theme.BgTopA
 import com.gsynk.app.ui.theme.BgTopB
 import com.gsynk.app.ui.theme.CardBg
+import com.gsynk.app.ui.theme.GrapeCyan
 import com.gsynk.app.ui.theme.CardBgAlt
 import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBg
@@ -129,11 +135,13 @@ fun AnimatedGrapeBackground(
     val turboPhase by TurboState.progress.collectAsState()
     val aiMode by TurboState.aiMode.collectAsState()
     val transition = rememberInfiniteTransition(label = "bg")
+    // Дыхание палитры: 24 секунды туда-обратно, с мягкой кривой. Раньше было 16 секунд
+    // с резким разворотом — на глаз это читалось как «рваный» градиент.
     val breath by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 16_000, easing = LinearEasing),
+            animation = tween(durationMillis = 24_000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "breath"
@@ -161,7 +169,7 @@ fun AnimatedGrapeBackground(
         initialValue = -1f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 28_000, easing = LinearEasing),
+            animation = tween(durationMillis = 34_000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "tilt"
@@ -184,11 +192,23 @@ fun AnimatedGrapeBackground(
                     )
                 )
 
+                // Единый оттенок кадра: и круги, и волна берут один и тот же цвет,
+                // поэтому переходы между слоями больше не выглядят ступеньками.
+                val accent = if (turboActive) {
+                    when (aiMode) {
+                        RealtimeAi.MODE_ACTIVE -> Color(0xFF7C3AED)
+                        RealtimeAi.MODE_NIGHT -> Color(0xFF1E3A8A)
+                        else -> Color(0xFF22C55E)
+                    }
+                } else {
+                    lerp(Color(0xFF7C3AED), Color(0xFF22D3EE), breath)
+                }
+
                 // виноградная засветка сверху
                 val radius = size.minDimension * (0.95f + 0.12f * drift)
                 drawCircle(
                     brush = Brush.radialGradient(
-                        colors = listOf(GlowViolet.copy(alpha = 0.50f), Color.Transparent),
+                        colors = listOf(accent.copy(alpha = 0.42f), Color.Transparent),
                         center = Offset(
                             size.width * (0.16f + 0.06f * drift),
                             size.height * (0.10f + 0.03f * tilt)
@@ -206,13 +226,8 @@ fun AnimatedGrapeBackground(
                 // Нейросеть лишь ускоряет и подкрашивает поток, когда идёт нагрузка.
                 run {
                     val phase = if (turboActive) turboPhase else shimmer
-                    val accent = when {
-                        !turboActive -> Color(0xFF7C3AED)
-                        aiMode == RealtimeAi.MODE_ACTIVE -> Color(0xFF7C3AED)
-                        aiMode == RealtimeAi.MODE_NIGHT -> Color(0xFF1E3A8A)
-                        else -> Color(0xFF22C55E)
-                    }
-                    val travel = phase * size.height * 1.6f - size.height * 0.3f
+                    // край волны мягкий с обеих сторон — резкого «шва» по краю экрана нет
+                    val travel = phase * size.height * 1.8f - size.height * 0.4f
                     drawRect(
                         brush = Brush.linearGradient(
                             colors = listOf(
@@ -243,7 +258,7 @@ fun AnimatedGrapeBackground(
                 val radius2 = size.minDimension * (0.85f + 0.15f * (1f - drift))
                 drawCircle(
                     brush = Brush.radialGradient(
-                        colors = listOf(GlowGreen.copy(alpha = 0.40f), Color.Transparent),
+                        colors = listOf(lerp(accent, Color(0xFF22C55E), 0.55f).copy(alpha = 0.34f), Color.Transparent),
                         center = Offset(
                             size.width * (0.88f - 0.06f * drift),
                             size.height * (0.88f + 0.04f * tilt)
@@ -834,6 +849,83 @@ fun GrapeScreen(
                 content()
                 Spacer(Modifier.height(28.dp))
             }
+        }
+    }
+}
+
+
+/**
+ * Анимация при нажатии на логотип GSYNK.
+ *
+ * Из логотипа разлетаются виноградные ягоды: кольца, ягоды и вспышка в цветах
+ * приложения. Живёт ровно полторы секунды и сама убирает себя — на экране ничего
+ * не остаётся, лишних слоёв нет.
+ */
+@Composable
+fun GrapeLogoBurst(
+    trigger: Int,
+    modifier: Modifier = Modifier,
+    color: Color = GrapeViolet
+) {
+    if (trigger == 0) return
+    var elapsed by remember(trigger) { mutableFloatStateOf(0f) }
+    LaunchedEffect(trigger) {
+        val start = withFrameNanos { it }
+        while (true) {
+            withFrameNanos { now -> elapsed = (now - start) / 1_000_000_000f }
+            if (elapsed > 1.6f) break
+        }
+    }
+    Canvas(modifier) {
+        val progress = (elapsed / 1.5f).coerceIn(0f, 1f)
+        if (progress >= 1f) return@Canvas
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val maxRadius = size.minDimension * 0.9f
+
+        // острые расходящиеся кольца — в духе прямоугольного интерфейса
+        repeat(3) { ring ->
+            val local = (progress - ring * 0.12f).coerceIn(0f, 1f)
+            if (local > 0f) {
+                val radius = maxRadius * local
+                val alpha = (1f - local) * 0.35f
+                drawRect(
+                    color = color.copy(alpha = alpha),
+                    topLeft = Offset(center.x - radius, center.y - radius * 0.35f),
+                    size = Size(radius * 2f, radius * 0.7f),
+                    style = Stroke(width = 3f + 4f * (1f - local))
+                )
+            }
+        }
+
+        // ягоды разлетаются по кругу
+        val berries = 14
+        for (index in 0 until berries) {
+            val angle = (index.toFloat() / berries) * 6.2831855f + progress * 1.2f
+            val distance = maxRadius * (0.35f + 0.65f * progress) * (0.7f + 0.3f * (index % 3))
+            val position = Offset(
+                center.x + kotlin.math.cos(angle) * distance,
+                center.y + kotlin.math.sin(angle) * distance * 0.75f
+            )
+            val alpha = (1f - progress).coerceIn(0f, 1f)
+            drawCircle(
+                color = GrapeCyan.copy(alpha = alpha * 0.85f),
+                radius = 4f + 6f * (1f - progress),
+                center = position
+            )
+            drawCircle(
+                color = color.copy(alpha = alpha * 0.6f),
+                radius = 2f + 4f * (1f - progress),
+                center = position
+            )
+        }
+
+        if (progress < 0.35f) {
+            val alpha = (1f - progress / 0.35f) * 0.5f
+            drawCircle(
+                color = Color.White.copy(alpha = alpha),
+                radius = size.minDimension * (0.15f + 0.5f * progress),
+                center = center
+            )
         }
     }
 }
