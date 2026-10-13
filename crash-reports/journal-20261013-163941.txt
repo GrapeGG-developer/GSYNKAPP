@@ -1,0 +1,6 @@
+13.10.2026 16:37:36 СБОЙ UnknownFormatConversionException: Conversion = '•'
+13.10.2026 16:37:40 СБОЙ UnknownFormatConversionException: Conversion = '•'
+13.10.2026 16:37:47 отчёт: Отчёт по кнопке из раздела «Диагностика»
+13.10.2026 16:37:47 отчёт: Отчёт по кнопке из раздела «Диагностика»
+13.10.2026 16:37:48 отчёт: Отчёт по кнопке из раздела «Диагностика»
+13.10.2026 16:39:35 СБОЙ UnknownFormatConversionException: Conversion = '•'
