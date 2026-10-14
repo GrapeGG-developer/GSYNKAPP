@@ -109,7 +109,7 @@ fun ChatScreen(onBack: () -> Unit) {
                         Text(
                             text = item.first,
                             color = if (item.second) TextPrimary else GrapeGreen,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -136,7 +136,7 @@ fun ChatScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(14.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Что понимает бот", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Что понимает бот", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             CommandBot.examples.forEach { example ->
                 Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -150,7 +150,7 @@ fun ChatScreen(onBack: () -> Unit) {
                     Text(
                         text = example,
                         color = TextDim,
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
                         modifier = Modifier.clip(RectangleShape).clickable {
                             input = example
                             send()
@@ -172,7 +172,7 @@ fun ChatScreen(onBack: () -> Unit) {
             Text(
                 "Никаких загрузок моделей — всё считается на телефоне сразу",
                 color = Color.White,
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(20.dp))

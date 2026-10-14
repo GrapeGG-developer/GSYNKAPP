@@ -116,7 +116,7 @@ fun ScenesScreen(onBack: () -> Unit) {
             text = "Сцена — это набор настроек, который применяется мгновенно. " +
                 "Отличается от правил тем, что не ждёт времени: нажали и получили.",
             color = TextDim,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(14.dp))
 
@@ -161,8 +161,8 @@ fun ScenesScreen(onBack: () -> Unit) {
             SurfaceCard {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Выполнено", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
-                        Text(status, color = com.gsynk.app.ui.theme.TextPrimary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                        Text("Выполнено", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                        Text(status, color = com.gsynk.app.ui.theme.TextPrimary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                     }
                 }
             }

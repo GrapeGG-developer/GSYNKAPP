@@ -1,5 +1,6 @@
 package com.gsynk.app.ui
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -135,7 +136,7 @@ fun AiScreen(onBack: () -> Unit) {
                     masked = true
                 )
                 Spacer(Modifier.height(10.dp))
-                Text("Насколько смело отвечать:", color = TextDim, style = MaterialTheme.typography.labelSmall)
+                Text("Насколько смело отвечать:", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     listOf(20 to "аккуратно", 60 to "обычно", 90 to "смело").forEach { (value, title) ->
@@ -161,14 +162,14 @@ fun AiScreen(onBack: () -> Unit) {
             }
         } else {
             SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.4f)) {
-                Text("Офлайн-помощник", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+                Text("Офлайн-помощник", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "Работает без интернета: понимает команды телефону — яркость, громкость, " +
                         "фонарик, тишина, открытие настроек, звонки, поиск. Например: " +
                         CommandBot.examples.take(4).joinToString(", ") + ".",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -188,7 +189,7 @@ fun AiScreen(onBack: () -> Unit) {
                             text = "Скажи что-нибудь. Если включена сеть — отвечает модель, " +
                                 "если нет — помощник GSYNK.",
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -205,7 +206,7 @@ fun AiScreen(onBack: () -> Unit) {
                         Text(
                             text = text,
                             color = TextPrimary,
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                 }

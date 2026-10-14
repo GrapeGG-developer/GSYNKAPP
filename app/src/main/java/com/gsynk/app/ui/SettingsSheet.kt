@@ -170,7 +170,7 @@ fun SettingsSheet(
             }
 
             Spacer(Modifier.height(12.dp))
-            Text("Расположение", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Расположение", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 IslandPosition.ALL.forEach { position ->
@@ -182,7 +182,7 @@ fun SettingsSheet(
             }
 
             Spacer(Modifier.height(12.dp))
-            Text("Что показывать", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Что показывать", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 IslandWidget.ALL.forEach { widget ->
@@ -235,7 +235,7 @@ fun SettingsSheet(
             SectionTitle("Кастомизация")
             Spacer(Modifier.height(8.dp))
             SurfaceCard(borderColor = CardBorder) {
-                Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     UiTweaks.ACCENTS.forEachIndexed { index, (name, _) ->
@@ -245,7 +245,7 @@ fun SettingsSheet(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Переливание фона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Переливание фона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     listOf("спокойно", "обычно", "быстро").forEachIndexed { index, name ->
@@ -255,7 +255,7 @@ fun SettingsSheet(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Плитки", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Плитки", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     listOf("мелкие", "обычные", "крупные").forEachIndexed { index, name ->

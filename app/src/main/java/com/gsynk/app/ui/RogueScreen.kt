@@ -254,7 +254,7 @@ fun RogueScreen(
                 Text(
                     text = current.banner,
                     color = TextPrimary,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
                     fontWeight = FontWeight.Light,
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -320,12 +320,12 @@ fun RogueScreen(
                         Text(
                             text = if (coop != null) "стик ведёт вашего героя" else "стик ведёт героя",
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                         Text(
                             text = "ключ $seed · этаж ${current.floor}",
                             color = TextSecondary,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -416,7 +416,7 @@ private fun TinyChip(label: String, onClick: () -> Unit) {
             .clickable { onClick() }
             .padding(horizontal = 10.dp, vertical = 7.dp)
     ) {
-        Text(label, color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+        Text(label, color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
     }
 }
 
@@ -431,14 +431,14 @@ private fun WaitingPanel(
         Text(
             text = "ждём хозяина",
             color = TextPrimary,
-            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
             fontWeight = FontWeight.Light
         )
         Text(
             text = "Как только на телефоне-хозяине нажмут «в бой», комната прилетит сюда " +
                 "целиком: камни, враги, слёзы. Ваш стик уже работает — он уходит хозяину.",
             color = TextDim,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
         )
         SurfaceCard(borderColor = ChipBorder) {
             InfoRow("Состояние", when (status) {
@@ -473,7 +473,7 @@ private fun StartPanel(
         Text(
             text = "подземелье gsynk",
             color = TextPrimary,
-            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
             fontWeight = FontWeight.Light
         )
         Text(
@@ -485,7 +485,7 @@ private fun StartPanel(
                     "Поле живёт в полосе фронтальной камеры у обоих."
             },
             color = TextDim,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
         )
         if (coop == null) {
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -502,14 +502,14 @@ private fun StartPanel(
             Text(
                 text = "оба телефона с одним ключом получают одинаковое подземелье",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         } else {
             SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.5f)) {
                 Text(
                     text = if (coop == WifiCoop.Role.HOST) "Вы хозяин мира" else "Вы гость",
                     color = GrapeGreen,
-                    style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -520,7 +520,7 @@ private fun StartPanel(
                         "Мир считает хозяйский телефон. Ваш стик уходит ему, а сюда приходит готовая комната."
                     },
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -544,20 +544,20 @@ private fun FinishPanel(
         Text(
             text = if (winner != null) "победил игрок ${winner.id + 1}" else "подземелье окончено",
             color = GrapeAmber,
-            style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+            style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
             fontWeight = FontWeight.Light
         )
         Text(
             text = "счёт ${world.score} · этаж ${world.floor} · время ${world.time.toInt()} с" +
                 if (best > 0) " · рекорд $best" else "",
             color = TextPrimary,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
         )
         world.players.forEach { player ->
             Text(
                 text = "игрок ${player.id + 1}: убито ${player.kills}, осталось жизней ${player.hp}",
                 color = TextSecondary,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -631,7 +631,7 @@ private fun Joystick(
         Text(
             text = label,
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(6.dp)
@@ -648,7 +648,7 @@ private fun HudBar(world: RogueGame.World, best: Int, modifier: Modifier = Modif
                     Text(
                         text = "и${player.id + 1}",
                         color = if (player.id == 0) GrapeBlue else GrapePink,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.width(5.dp))
                     repeat(player.maxHp.coerceAtMost(12)) { index ->
@@ -669,13 +669,13 @@ private fun HudBar(world: RogueGame.World, best: Int, modifier: Modifier = Modif
             Text(
                 text = "счёт ${world.score}",
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
             )
             Text(
                 text = "этаж ${world.floor} · комната ${world.room} / ${RogueGame.ROOMS_PER_FLOOR} " +
                     if (best > 0) "· рекорд $best" else "",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }

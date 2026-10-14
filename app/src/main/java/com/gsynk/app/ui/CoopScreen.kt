@@ -244,7 +244,7 @@ fun CoopScreen(
                         text = "Оба телефона — в одной сети Wi-Fi. Гость прикладывает телефон " +
                             "к задней панели: адрес и код уедут сами, игра пойдёт по локальной сети.",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.height(10.dp))
                     PrimaryButton(
@@ -284,7 +284,7 @@ fun CoopScreen(
                         Text(
                             text = "ждём ответа: хозяин должен держать комнату открытой",
                             color = TextSecondary,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -302,7 +302,7 @@ fun CoopScreen(
                         text = "Каждый ведёт своего героя на своём телефоне. Мир считает хозяин, " +
                             "гость видит ту же комнату.",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.height(10.dp))
                     PrimaryButton(
@@ -313,7 +313,7 @@ fun CoopScreen(
                 }
 
                 is WifiCoop.Status.Failed -> CoopCard("Не получилось", GrapeRed) {
-                    Text(current.reason, color = TextPrimary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                    Text(current.reason, color = TextPrimary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                     Spacer(Modifier.height(10.dp))
                     SecondaryButton(
                         text = "Попробовать снова",
@@ -331,7 +331,7 @@ fun CoopScreen(
                         text = "Телефон хозяина считает подземелье: врагов, слёзы, счёт. " +
                             "Второй телефон рисует ту же комнату и шлёт только свой стик.",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.height(10.dp))
                     InfoRow("Мой адрес", WifiCoop.localAddress(), GrapeCyan)
@@ -360,7 +360,7 @@ fun CoopScreen(
                             Text(
                                 text = "ждём подключения второго телефона",
                                 color = TextSecondary,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                             )
                         }
                     }
@@ -371,7 +371,7 @@ fun CoopScreen(
                         text = "Проще всего — коснуться телефоном панели хозяина: адрес, порт и код " +
                             "придут сами. Если NFC не сработал, впишите адрес вручную.",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.height(10.dp))
                     GrapeTextField(
@@ -413,13 +413,13 @@ fun CoopScreen(
                             "Держите этот экран открытым и приложите телефон к панели хозяина."
                         },
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
             }
 
             if (note.isNotBlank()) {
-                Text(note, color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text(note, color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
 
             Spacer(Modifier.height(6.dp))
@@ -427,7 +427,7 @@ fun CoopScreen(
                 text = "Игра вдвоём за одним телефоном осталась на месте: на экране старта " +
                     "выберите «вдвоём за телефоном».",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(20.dp))
         }
@@ -450,7 +450,7 @@ private fun CoopCard(
                     .background(accent)
             ) { }
             Spacer(Modifier.width(8.dp))
-            Text(title, color = accent, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text(title, color = accent, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
         }
         Spacer(Modifier.height(8.dp))
         content()

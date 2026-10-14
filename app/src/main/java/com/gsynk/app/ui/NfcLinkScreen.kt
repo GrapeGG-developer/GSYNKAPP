@@ -365,7 +365,7 @@ fun NfcLinkScreen(
                 "Держите этот экран открытым и приложите телефон к чужому или к метке."
             },
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
 
         Spacer(Modifier.height(14.dp))
@@ -456,12 +456,12 @@ fun NfcLinkScreen(
                     .clickable { panel = if (panel == "data") "" else "data" },
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Данные по касанию", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Данные по касанию", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = if (panel == "data") "свернуть" else "текст, ссылка, визитка, профиль",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
             if (panel == "data") {
@@ -556,7 +556,7 @@ fun NfcLinkScreen(
                             .background(GrapeGreen)
                     ) { }
                     Spacer(Modifier.width(10.dp))
-                    Text(status, color = TextSecondary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                    Text(status, color = TextSecondary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                 }
             }
         }
@@ -602,8 +602,8 @@ private fun BigTile(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, color = Color.White, style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
-            Text(subtitle, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text(title, color = Color.White, style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
+            Text(subtitle, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
     }
 }
@@ -627,8 +627,8 @@ private fun androidx.compose.foundation.layout.RowScope.SmallTile(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
-            Text(subtitle, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text(subtitle, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
     }
 }
@@ -645,21 +645,21 @@ private fun androidx.compose.foundation.layout.RowScope.SmallButton(text: String
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = TextSecondary, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+        Text(text, color = TextSecondary, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
     }
 }
 
 @Composable
 private fun GamePanel(giving: Boolean, onHost: () -> Unit) {
     SurfaceCard(borderColor = GrapeRed.copy(alpha = 0.5f)) {
-        Text("GTBOI · подземелье", color = GrapeRed, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+        Text("GTBOI · подземелье", color = GrapeRed, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Один режим: игра с другом на двух телефонах. Один телефон открывает комнату, " +
                 "второй касается его — и оба сразу проваливаются в подземелье на весь экран. " +
                 "Каждый ведёт своего героя на своём телефоне.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(10.dp))
         if (giving) {
@@ -668,7 +668,7 @@ private fun GamePanel(giving: Boolean, onHost: () -> Unit) {
             Text(
                 text = "Приложите телефон к тому, кто открыл комнату, — подключусь сам и запущу игру.",
                 color = GrapeGreenSoft,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -681,14 +681,14 @@ private fun FilePanel(
     onPick: () -> Unit
 ) {
     SurfaceCard(borderColor = GrapeCyan.copy(alpha = 0.5f)) {
-        Text("Передача файла", color = GrapeCyan, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+        Text("Передача файла", color = GrapeCyan, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Касание — только знакомство: второй телефон получает адрес, и файл едет по Wi-Fi. " +
                 "Крошечные файлы (до 600 байт) уезжают прямо в метке, без сети. Принятое падает " +
                 "в «Загрузки/GSYNK».",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(10.dp))
         if (giving) {
@@ -701,7 +701,7 @@ private fun FilePanel(
             Text(
                 text = "Приложите телефон к тому, кто отправляет файл.",
                 color = GrapeGreenSoft,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         when (val current = state) {
@@ -744,13 +744,13 @@ private fun ScenePanel(
     onSend: () -> Unit
 ) {
     SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.5f)) {
-        Text("Сценарий по касанию", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+        Text("Сценарий по касанию", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Второй телефон сразу покажет салют, сердечки, вспышку или надпись во весь экран — " +
                 "либо выполнит команду: фонарик, вибрация, сирена.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(10.dp))
         ChipFlow {
@@ -759,7 +759,7 @@ private fun ScenePanel(
             }
         }
         Spacer(Modifier.height(10.dp))
-        Text(NfcShow.Kind.entries.first { it == kind }.hint, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+        Text(NfcShow.Kind.entries.first { it == kind }.hint, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         if (kind == NfcShow.Kind.TEXT) {
             Spacer(Modifier.height(10.dp))
             GrapeTextField(value = text, onValueChange = onText, label = "Что написать во весь экран")
@@ -771,7 +771,7 @@ private fun ScenePanel(
             Text(
                 text = "Приложите телефон к тому, кто отдаёт, — показ сработает здесь же.",
                 color = GrapeGreenSoft,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -784,14 +784,14 @@ private fun TagPanel(
     onAction: (Boolean) -> Unit
 ) {
     SurfaceCard(borderColor = GrapeAmber.copy(alpha = 0.5f)) {
-        Text("Обычная NFC-метка", color = GrapeAmber, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+        Text("Обычная NFC-метка", color = GrapeAmber, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Новое: GSYNK умеет писать на пустые наклейки и брелоки. Запишите на метку текст, " +
                 "ссылку, приглашение в GTBOI или сценарий — её прочитает любой телефон, а GSYNK " +
                 "выполнит сценарий сразу.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
@@ -804,7 +804,7 @@ private fun TagPanel(
                 text = "На метку уйдёт то, что выбрано в «Сценарии» (если это надпись — её текст), " +
                     "иначе данные из блока «Данные по касанию».",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         if (info.isNotBlank()) {
@@ -837,7 +837,7 @@ private fun DataPanel(
         }
     }
     Spacer(Modifier.height(10.dp))
-    Text(NfcLink.option(kind).hint, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+    Text(NfcLink.option(kind).hint, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
     if (kind != NfcLink.KIND_PROFILE) {
         Spacer(Modifier.height(10.dp))
         GrapeTextField(value = title, onValueChange = onTitle, label = "Заголовок (необязательно)")
@@ -848,7 +848,7 @@ private fun DataPanel(
         Text(
             text = "Правила расписания уедут целиком — второй телефон импортирует их одним касанием.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
     }
     Spacer(Modifier.height(12.dp))
@@ -877,8 +877,8 @@ private fun ReceivedCard(
     val scope = rememberCoroutineScope()
 
     SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.5f)) {
-        Text(payload.title.ifBlank { "Без названия" }, color = TextPrimary, style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
-        Text(NfcLink.describe(payload), color = GrapeGreenSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+        Text(payload.title.ifBlank { "Без названия" }, color = TextPrimary, style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
+        Text(NfcLink.describe(payload), color = GrapeGreenSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         Spacer(Modifier.height(10.dp))
         Box(
             Modifier
@@ -888,7 +888,7 @@ private fun ReceivedCard(
                 .border(1.dp, ChipBorder, RectangleShape)
                 .padding(12.dp)
         ) {
-            Text(payload.body.ifBlank { "—" }, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text(payload.body.ifBlank { "—" }, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(12.dp))
 
@@ -900,10 +900,10 @@ private fun ReceivedCard(
                         text = "Версия ${share.version}" +
                             if (share.sha256.isNotBlank()) " • сумма ${share.shortSha}" else "",
                         color = TextPrimary,
-                        style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                        style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                     )
                     Spacer(Modifier.height(4.dp))
-                    Text(share.url, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                    Text(share.url, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                     Spacer(Modifier.height(10.dp))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -916,7 +916,7 @@ private fun ReceivedCard(
                             .border(1.dp, ChipBorder, RectangleShape)
                             .clickable { onCheckUpdate() },
                         contentAlignment = Alignment.Center
-                    ) { Text("Проверить обновление", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                    ) { Text("Проверить обновление", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
                     Box(
                         Modifier
                             .weight(1f)
@@ -939,7 +939,7 @@ private fun ReceivedCard(
                                 }
                             },
                         contentAlignment = Alignment.Center
-                    ) { Text("Скачать APK", color = GrapeCyan, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                    ) { Text("Скачать APK", color = GrapeCyan, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
                 }
             }
 

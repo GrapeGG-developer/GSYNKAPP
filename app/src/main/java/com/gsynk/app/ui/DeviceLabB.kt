@@ -138,12 +138,12 @@ fun LabOscilloscopeScreen(onBack: () -> Unit) {
     GrapeScreen(title = "Осциллограф", subtitle = "звук на графике", onBack = onBack) {
         if (!granted) {
             SurfaceCard(borderColor = CardBorder) {
-                Text("Нужен микрофон", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Нужен микрофон", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = "Разрешение нужно только для замера: звук никуда не отправляется и не пишется в файл.",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
                 Spacer(Modifier.height(8.dp))
                 PrimaryButton(
@@ -180,20 +180,20 @@ fun LabOscilloscopeScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         Row {
             Column(Modifier.weight(1f)) {
-                Text(decibels.roundToInt().toString() + " дБ", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
-                Text("сейчас", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text(decibels.roundToInt().toString() + " дБ", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("сейчас", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
             Column(Modifier.weight(1f)) {
-                Text(peakDb.roundToInt().toString() + " дБ", color = GrapeGreen, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
-                Text("пик", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text(peakDb.roundToInt().toString() + " дБ", color = GrapeGreen, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("пик", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
             Column(Modifier.weight(1f)) {
                 Text(
                     text = if (hertz > 20f) hertz.roundToInt().toString() + " Гц" else "—",
                     color = GrapeCyan,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                 )
-                Text("главный тон", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text("главный тон", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -202,12 +202,12 @@ fun LabOscilloscopeScreen(onBack: () -> Unit) {
                 text = "Свистни, спой ноту или постучи по столу — форма волны изменится сразу. " +
                     "Главный тон считается по числу переходов волны через ноль.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         error?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, color = Metro.Palette.Red, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text(it, color = Metro.Palette.Red, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
     }
 }
@@ -269,7 +269,7 @@ fun LabSpectrumScreen(onBack: () -> Unit) {
     GrapeScreen(title = "Спектр звука", subtitle = "полосы частот", onBack = onBack) {
         if (!granted) {
             SurfaceCard(borderColor = CardBorder) {
-                Text("Нужен микрофон", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Нужен микрофон", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(8.dp))
                 PrimaryButton(
                     text = "Разрешить микрофон",
@@ -312,7 +312,7 @@ fun LabSpectrumScreen(onBack: () -> Unit) {
                 text = "Это настоящий спектр: каждая полоса считается алгоритмом Гёрцеля по своему " +
                     "диапазону частот. Свистни — увидишь, как вспыхнет правая часть, спой низко — левая.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -384,7 +384,7 @@ fun LabSweepScreen(onBack: () -> Unit) {
             Text(
                 text = "плавный переход за " + seconds + " секунд",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -424,7 +424,7 @@ fun LabSweepScreen(onBack: () -> Unit) {
                     "Если ты слышишь 18 000 Гц — у тебя молодой слух, серьёзно: с возрастом этот " +
                     "порог падает до 12–14 кГц.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -448,7 +448,7 @@ fun LabHapticScreen(onBack: () -> Unit) {
                 color = TextPrimary,
                 fontSize = Metro.Type.pageSubtitle
             )
-            Text("пауза между точками " + pause + " мс", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text("пауза между точками " + pause + " мс", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(10.dp))
         SectionTitle("Длина одного сигнала")
@@ -490,7 +490,7 @@ fun LabHapticScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Что уже изучено", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Что уже изучено", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             InfoRow("Точек в SOS", "3 · 3 · 3 с паузами 120 мс")
             InfoRow("Сила вибрации", if (Haptics.available(context)) "мотор есть" else "мотор недоступен")
@@ -561,7 +561,7 @@ fun LabBleRadarScreen(onBack: () -> Unit) {
         }
         note?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text(it, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(10.dp))
         devices.sortedByDescending { it.rssi }.forEach { device ->
@@ -571,18 +571,18 @@ fun LabBleRadarScreen(onBack: () -> Unit) {
                         Text(
                             text = device.name.ifBlank { "без имени" },
                             color = TextPrimary,
-                            style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                         )
-                        Text(device.address, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                        Text(device.address, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
                             text = if (device.meters < 10.0) Deep.round1(device.meters.toFloat()).toString() + " м"
                             else "далеко",
                             color = GrapeCyan,
-                            style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                         )
-                        Text(device.rssi.toString() + " дБм", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                        Text(device.rssi.toString() + " дБм", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                     }
                 }
                 Spacer(Modifier.height(6.dp))
@@ -601,7 +601,7 @@ fun LabBleRadarScreen(onBack: () -> Unit) {
                 text = "Расстояние считается по силе сигнала (примерная формула «дБм на метр»), " +
                     "поэтому оно приблизительное: стены и тело сильно ослабляют Bluetooth.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -651,7 +651,7 @@ fun LabWifiChannelsScreen(onBack: () -> Unit) {
         )
         note?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text(it, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(10.dp))
 
@@ -688,7 +688,7 @@ fun LabWifiChannelsScreen(onBack: () -> Unit) {
             Text(
                 text = perChannel.joinToString("  ·  ") { (channel, count) -> channel.toString() + ": " + count },
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
         }
@@ -700,11 +700,11 @@ fun LabWifiChannelsScreen(onBack: () -> Unit) {
                         Text(
                             text = ssid.ifBlank { "скрытая сеть" },
                             color = TextPrimary,
-                            style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                         )
-                        Text("канал " + channel, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                        Text("канал " + channel, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                     }
-                    Text(rssi.toString() + " дБм", color = GrapeCyan, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                    Text(rssi.toString() + " дБм", color = GrapeCyan, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
             }
             Spacer(Modifier.height(7.dp))
@@ -714,7 +714,7 @@ fun LabWifiChannelsScreen(onBack: () -> Unit) {
                 text = "Если твой роутер стоит на канале, где ещё пять соседей — эфир забит, и Wi-Fi " +
                     "тормозит. Свободный канал обычно 1, 6 или 11 — они не перекрывают друг друга.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -799,7 +799,7 @@ fun LabWifiSignalScreen(onBack: () -> Unit) {
                     else -> "почти не тянет"
                 },
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -833,7 +833,7 @@ fun LabWifiSignalScreen(onBack: () -> Unit) {
                 text = "Гуляй по квартире и смотри график: −70 дБм — это примерно «через две стены», " +
                     "−85 дБм — предел, дальше сеть отваливается.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -856,7 +856,7 @@ fun LabUsbScreen(onBack: () -> Unit) {
             Text(
                 text = if (host) "Режим хоста есть" else "Режим хоста недоступен",
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
             )
             Text(
                 text = if (host) {
@@ -865,13 +865,13 @@ fun LabUsbScreen(onBack: () -> Unit) {
                     "Прошивка не заявляет USB-хост: внешние устройства через OTG работать не будут."
                 },
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
         devices.forEach { device ->
             SurfaceCard(borderColor = CardBorder) {
-                Text(device.name, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text(device.name, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 InfoRow("Производитель", "0x" + device.vendor.toString(16))
                 InfoRow("Модель", "0x" + device.product.toString(16))
@@ -886,7 +886,7 @@ fun LabUsbScreen(onBack: () -> Unit) {
                     text = "Подключи что-нибудь через OTG-переходник — устройство появится здесь сразу, " +
                         "без root и без сторонних приложений.",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -905,7 +905,7 @@ fun LabNfcCardScreen(onBack: () -> Unit) {
 
     GrapeScreen(title = "Метка-визитка", subtitle = "записать себя на метку", onBack = onBack) {
         SurfaceCard(borderColor = CardBorder) {
-            Text("Что попадёт на метку", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Что попадёт на метку", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             InfoRow("Модель", profile.model)
             InfoRow("Android", profile.androidLabel)
@@ -925,19 +925,19 @@ fun LabNfcCardScreen(onBack: () -> Unit) {
                     "записалась ли метка. Одно касание — и метка отдаёт визитку любому телефону, " +
                     "даже без GSYNK.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             if (written > 0) Spacer(Modifier.height(6.dp))
         }
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Проверка меток", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Проверка меток", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Приложи любую метку к задней части телефона в Grape Link: приложение " +
                     "покажет её тип, размер и что на ней записано.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
             SecondaryButton(

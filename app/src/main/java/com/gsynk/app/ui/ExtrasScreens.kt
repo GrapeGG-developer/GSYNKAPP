@@ -125,11 +125,11 @@ fun ScreensaverScreen(onBack: () -> Unit) {
                 Text(
                     "Скринсейвер",
                     color = TextPrimary,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.weight(1f))
-                Text("отскоков: $hits", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text("отскоков: $hits", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -213,7 +213,7 @@ private fun DvdLogo(hue: Int) {
     Text(
         text = "G S Y N K",
         color = Color(0xFF0B0616),
-        style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+        style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
         fontWeight = FontWeight.Bold,
         modifier = Modifier.align(Alignment.Center)
     )
@@ -231,6 +231,6 @@ private fun SmallAction(label: String, onClick: () -> Unit) {
             .clickable { onClick() }
             .padding(horizontal = 13.dp, vertical = 8.dp)
     ) {
-        Text(label, color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+        Text(label, color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
     }
 }

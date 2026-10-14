@@ -136,7 +136,7 @@ fun NearbyScreen(
                     .border(1.dp, ChipBorder, RectangleShape)
                     .clickable { onOpenNfc() },
                 contentAlignment = Alignment.Center
-            ) { Text("NFC", color = GrapeCyan, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)) }
+            ) { Text("NFC", color = GrapeCyan, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)) }
         }
     ) {
         // ————— состояние связи —————
@@ -154,18 +154,18 @@ fun NearbyScreen(
                     is Nearby.Status.Failed -> GrapePink
                     else -> TextPrimary
                 },
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
             )
             if (partner.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
-                Text("На связи: $partner", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text("На связи: $partner", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
             if (hostAddress.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "Хозяин сети: $hostAddress — можно заходить в GTBOI",
                     color = GrapeVioletSoft,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
             Spacer(Modifier.height(10.dp))
@@ -188,7 +188,7 @@ fun NearbyScreen(
                         .border(1.dp, ChipBorder, RectangleShape)
                         .clickable { guardedStart() },
                     contentAlignment = Alignment.Center
-                ) { Text("Найти рядом", color = GrapeCyan, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                ) { Text("Найти рядом", color = GrapeCyan, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
 
                 Box(
                     Modifier
@@ -212,7 +212,7 @@ fun NearbyScreen(
                             }
                         },
                     contentAlignment = Alignment.Center
-                ) { Text(if (waiting) "Жду гостя…" else "Ждать гостя", color = GrapeAmber, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                ) { Text(if (waiting) "Жду гостя…" else "Ждать гостя", color = GrapeAmber, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
             }
             if (Nearby.isConnected()) {
                 Spacer(Modifier.height(8.dp))
@@ -228,11 +228,11 @@ fun NearbyScreen(
                             waiting = false
                         },
                     contentAlignment = Alignment.Center
-                ) { Text("Отключить", color = GrapePink, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                ) { Text("Отключить", color = GrapePink, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
             }
             if (note.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
-                Text(note, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text(note, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
         }
 
@@ -245,22 +245,22 @@ fun NearbyScreen(
                 text = "Пока никого. Включите Bluetooth или Wi-Fi и нажмите «Найти рядом» — " +
                     "второй телефон при этом может просто ждать на этом же экране.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         } else {
             peers.forEach { peer ->
                 SurfaceCard(borderColor = CardBorder, onClick = { Nearby.connect(context, peer) }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(peer.label, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                            Text(peer.label, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                             Text(
                                 text = peer.channel.title + " • " + peer.address +
                                     if (peer.isPaired) " • уже сопряжён" else "",
                                 color = TextDim,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                             )
                         }
-                        Text("связать", color = GrapeCyan, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                        Text("связать", color = GrapeCyan, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -273,13 +273,13 @@ fun NearbyScreen(
         Spacer(Modifier.height(8.dp))
 
         SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.4f)) {
-            Text("Передать обновление GSYNK", color = GrapeGreen, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Передать обновление GSYNK", color = GrapeGreen, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Друг получает версию и прямую ссылку на APK. Сам файл он скачает сам — " +
                     "по этой же связи или из интернета.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             val share = UpdateShare.Share(
@@ -307,7 +307,7 @@ fun NearbyScreen(
                             }
                         },
                     contentAlignment = Alignment.Center
-                ) { Text("Передать обновление", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                ) { Text("Передать обновление", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
 
                 Box(
                     Modifier
@@ -324,13 +324,13 @@ fun NearbyScreen(
                             }
                         },
                     contentAlignment = Alignment.Center
-                ) { Text("Просить проверить", color = GrapeAmber, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                ) { Text("Просить проверить", color = GrapeAmber, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
             }
         }
 
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = GrapeCyan.copy(alpha = 0.4f)) {
-            Text("Показ сцен", color = GrapeCyan, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Показ сцен", color = GrapeCyan, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 NfcShow.Kind.entries.take(4).forEach { option ->
@@ -364,18 +364,18 @@ fun NearbyScreen(
                 text = "Команды (фонарик, вибрация, сирена) можно отправить с экрана Grape Link — " +
                     "там тот же список сцен.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
 
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.4f)) {
-            Text("Сценарии и сообщения", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Сценарии и сообщения", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Правил у вас: " + rules.size + ". Отправка передаёт весь список расписания.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             PrimaryButton(
@@ -392,12 +392,12 @@ fun NearbyScreen(
             if (incoming != null) {
                 Spacer(Modifier.height(8.dp))
                 SurfaceCard(borderColor = GrapeAmber.copy(alpha = 0.5f)) {
-                    Text("Пришёл сценарий", color = GrapeAmber, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                    Text("Пришёл сценарий", color = GrapeAmber, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "Можно применить: правила заменятся присланными.",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.height(8.dp))
                     PrimaryButton(
@@ -438,13 +438,13 @@ fun NearbyScreen(
 
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = GrapePink.copy(alpha = 0.4f)) {
-            Text("Играть вдвоём по этой связи", color = GrapePink, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Играть вдвоём по этой связи", color = GrapePink, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Быстрый канал Wi-Fi Direct держит игру: телефоны создают свою сеть. " +
                     "Хозяин нажимает «Я хозяин», гость — «Играть у друга».",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -461,7 +461,7 @@ fun NearbyScreen(
                             onHostGame()
                         },
                     contentAlignment = Alignment.Center
-                ) { Text("Я хозяин", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                ) { Text("Я хозяин", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
 
                 Box(
                     Modifier
@@ -489,7 +489,7 @@ fun NearbyScreen(
                             }
                         },
                     contentAlignment = Alignment.Center
-                ) { Text("Играть у друга", color = GrapeCyan, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                ) { Text("Играть у друга", color = GrapeCyan, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
             }
         }
 
@@ -498,10 +498,10 @@ fun NearbyScreen(
         Spacer(Modifier.height(8.dp))
         SurfaceCard(borderColor = CardBorder) {
             if (log.isEmpty()) {
-                Text("Пока пусто.", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text("Пока пусто.", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             } else {
                 log.takeLast(14).forEach { line ->
-                    Text("• " + line, color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                    Text("• " + line, color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                     Spacer(Modifier.height(2.dp))
                 }
             }
@@ -509,7 +509,7 @@ fun NearbyScreen(
 
         Spacer(Modifier.height(14.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Что нужно от телефона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Что нужно от телефона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Bluetooth: включить в шторке и разрешить «Рядом с устройствами». " +
@@ -517,7 +517,7 @@ fun NearbyScreen(
                     "NFC: приложить телефоны — это самый быстрый способ, и он работает без интернета. " +
                     "Все действия видны в журнале приложения (раздел «Диагностика»).",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(20.dp))

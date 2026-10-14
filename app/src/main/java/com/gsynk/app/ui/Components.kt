@@ -586,7 +586,7 @@ fun DayChip(
         Text(
             text = label,
             color = if (selected) TextPrimary else TextSecondary,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
         )
     }
@@ -610,7 +610,7 @@ fun TagChip(
         Text(
             text = text,
             color = if (selected) TextPrimary else TextSecondary,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
             fontWeight = FontWeight.Medium
         )
     }
@@ -681,7 +681,7 @@ fun MetricPill(
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(6.dp))
-        Text(text, color = TextPrimary, style = MaterialTheme.typography.labelMedium)
+        Text(text, color = TextPrimary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
     }
 }
 
@@ -829,6 +829,11 @@ fun GrapeScreen(
     content: @Composable ColumnScope.() -> Unit
 ) {
     AnimatedGrapeBackground {
+        // GSUI V4p1: живое сияние поверх общего фона — на КАЖДОМ экране, а не только на главном.
+        // На слабом железе слой не рисуется: там эффекты выключаются целиком.
+        if (LocalMetroEffects.current != Metro.Effects.PLAIN) {
+            Box(Modifier.fillMaxSize()) { AuroraField(intensity = 0.5f, speedMillis = 26_000) }
+        }
         Column(
             Modifier
                 .fillMaxSize()
@@ -861,7 +866,7 @@ fun GrapeScreen(
                     // Тонкий крупный заголовок страницы: 42 pt в исходнике Metro.
                     GradientText(
                         text = title,
-                        style = MaterialTheme.typography.headlineMedium.copy(
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(
                             fontSize = Metro.Type.pageTitle,
                             fontWeight = FontWeight.Light,
                             letterSpacing = (-0.6).sp

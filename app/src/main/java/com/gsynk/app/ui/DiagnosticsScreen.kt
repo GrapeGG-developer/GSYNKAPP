@@ -81,7 +81,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
     ) {
         // ————— состояние приложения —————
         SurfaceCard(borderColor = CardBorder) {
-            Text("Состояние", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Состояние", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(8.dp))
             InfoRow("Версия", com.gsynk.app.BuildConfig.VERSION_NAME)
             InfoRow("Отчётов на телефоне", reports.size.toString())
@@ -110,7 +110,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                 text = "Вибрация на HyperOS молчит, если у неё не задано назначение — GSYNK " +
                     "играет её как «сигнал». Нажмите и проверьте: должно тряхнуть ощутимо.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             Text(
@@ -120,7 +120,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                     "Мотор не отвечает — вибрации на этом телефоне нет"
                 },
                 color = if (com.gsynk.app.core.Haptics.available(context)) GrapeGreen else GrapeRed,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
@@ -139,7 +139,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                             )
                         },
                     contentAlignment = Alignment.Center
-                ) { Text("Проверить вибрацию", color = GrapePink, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                ) { Text("Проверить вибрацию", color = GrapePink, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
                 Box(
                     Modifier
                         .weight(1f)
@@ -149,7 +149,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                         .border(1.dp, ChipBorder, androidx.compose.ui.graphics.RectangleShape)
                         .clickable { com.gsynk.app.core.AutomationActions.playTone(440, 700) },
                     contentAlignment = Alignment.Center
-                ) { Text("Проверить звук", color = GrapeCyan, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
+                ) { Text("Проверить звук", color = GrapeCyan, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
             }
         }
 
@@ -161,7 +161,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
             Text(
                 text = com.gsynk.app.core.CrashAnalyzer.verdict(analysis),
                 color = if (analysis.isEmpty()) TextPrimary else GrapeRed,
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
             )
             if (analysis.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
@@ -175,13 +175,13 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                                 .border(1.dp, GrapeRed.copy(alpha = 0.45f), RectangleShape)
                                 .padding(horizontal = 7.dp, vertical = 3.dp)
                         ) {
-                            Text(group.label, color = GrapeRed, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                            Text(group.label, color = GrapeRed, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                         }
                         Spacer(Modifier.width(9.dp))
                         Column {
-                            Text(group.signature, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                            Text(group.signature, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                             if (group.lastStamp.isNotEmpty()) {
-                                Text("последний: ${group.lastStamp}", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                                Text("последний: ${group.lastStamp}", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                             }
                         }
                     }
@@ -190,14 +190,14 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                 Text(
                     text = "Одинаковые падения считаются вместе — чинить нужно верхнее.",
                     color = TextDim,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                 )
             } else {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "Приложение ещё ни разу не падало. Если это случится, отчёт и разбор появятся здесь сами.",
                     color = TextDim,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -205,7 +205,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
         if (showJournal) {
             Spacer(Modifier.height(12.dp))
             SurfaceCard {
-                Text("Журнал событий", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Журнал событий", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(8.dp))
                 MonoBlock(text = journal.ifBlank { "пока пусто" })
             }
@@ -247,7 +247,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                     "в папку crash-reports/. Перед отправкой из текста вырезаются токены, адреса " +
                     "и длинные числа.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -266,7 +266,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                 Text(
                     text = settings.reportToken,
                     color = GrapeVioletSoft,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
                     fontFamily = FontFamily.Monospace
                 )
             }
@@ -276,7 +276,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                     text = "Последняя отправка: " + java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.US)
                         .format(java.util.Date(settings.reportLastUpload)),
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -287,7 +287,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
             Text(
                 text = "Отчёты",
                 color = TextPrimary,
-                style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
                 modifier = Modifier.weight(1f)
             )
             if (reports.isNotEmpty()) {
@@ -303,7 +303,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                         "нажмите «Собрать отчёт»: в него попадут устройство, настройки, доступы " +
                         "и последние события.",
                     color = TextDim,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -315,13 +315,13 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                         Text(
                             text = if (item.isCrash) "Сбой · ${item.title}" else "Отчёт · ${item.title}",
                             color = if (item.isCrash) GrapeRed else TextPrimary,
-                            style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                         )
                         Text(
                             text = "${item.time} • ${item.sizeKb} КБ" +
                                 if (com.gsynk.app.core.ReportUploader.isUploaded(item.file)) " • отправлен" else "",
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                     SortChip(
@@ -368,7 +368,7 @@ fun DiagnosticsScreen(vm: MainViewModel, onBack: () -> Unit) {
                     "доступы, настройки (без паролей), счётчик правил и последние 400 событий " +
                     "приложения. Что не попадает: содержимое ваших сообщений, пароли и файлы модели.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -394,7 +394,7 @@ private fun MonoBlock(text: String) {
             Text(
                 text = text,
                 color = TextPrimary,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
                 fontFamily = FontFamily.Monospace
             )
         }

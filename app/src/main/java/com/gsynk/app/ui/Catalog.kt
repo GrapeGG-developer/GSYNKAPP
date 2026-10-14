@@ -144,6 +144,17 @@ object Catalog {
         Entry("pwm", "шим-микроскоп", "замер мерцания камерой", Group.SCREEN, Metro.Size.SMALL, 17, BRIGHT, "lab:pwm", 44, fresh = true, words = listOf("мерцание", "истощение")),
         Entry("latency", "латентность экрана", "касание → свет", Group.SCREEN, Metro.Size.SMALL, 18, TIME, "lab:latency", 30, fresh = true, words = listOf("отклик", "задержка")),
 
+        // ——— управление железом (V4p1: фазы чипа) ———
+        Entry("folders", "папки", "все функции по категориям", Group.SYSTEM, Metro.Size.WIDE, 1, TUNE, "page:folders", 99, fresh = true, words = listOf("категории", "сортировка", "каталог")),
+        Entry("cpu", "частоты ядер", "режимы и ступени", Group.HARDWARE, Metro.Size.MEDIUM, 2, TUNE, "page:cpu", 86, fresh = true, words = listOf("governor", "мгц", "процессор")),
+        Entry("battery", "питание изнутри", "ток, ватты, ресурс", Group.HARDWARE, Metro.Size.MEDIUM, 3, BOLT, "page:battery", 84, fresh = true, words = listOf("батарея", "ток", "износ")),
+        Entry("panel", "панель и наклон", "экран и уровень", Group.SCREEN, Metro.Size.MEDIUM, 4, BRIGHT, "page:display", 74, fresh = true, words = listOf("герцы", "наклон", "экран")),
+        Entry("radio", "радио-тракт", "модем, сеть, wi-fi", Group.CONNECT, Metro.Size.MEDIUM, 5, BOLT, "page:radio", 76, fresh = true, words = listOf("сигнал", "оператор", "канал")),
+        Entry("flash", "светодиод вспышки", "уровни и накал", Group.HARDWARE, Metro.Size.MEDIUM, 6, BRIGHT, "page:camera", 80, fresh = true, words = listOf("вспышка", "фонарь", "светодиод")),
+        Entry("motor", "мотор и резонанс", "частота и поле", Group.HARDWARE, Metro.Size.MEDIUM, 7, VOLUME, "page:motor", 78, fresh = true, words = listOf("вибрация", "резонанс", "катушка")),
+        Entry("deepmem", "память и планировщик", "давление и накопитель", Group.LOAD, Metro.Size.MEDIUM, 8, TUNE, "page:memory", 70, fresh = true, words = listOf("озу", "диск", "очередь")),
+        Entry("sensorsdeep", "датчики изнутри", "что есть и что закрыто", Group.HARDWARE, Metro.Size.MEDIUM, 9, TIME, "page:sensors", 72, fresh = true, words = listOf("сенсоры", "always-on", "закрытые")),
+
         // ——— железо ———
         Entry("lab", "лаборатория", "всё железо телефона", Group.HARDWARE, Metro.Size.WIDE, 2, TUNE, "tool:lab", 90, words = listOf("железо", "опыты")),
         Entry("sensors", "датчики", "все, что есть живьём", Group.HARDWARE, Metro.Size.MEDIUM, 5, TIME, "lab:sensors", 80, words = listOf("сенсоры", "гироскоп")),

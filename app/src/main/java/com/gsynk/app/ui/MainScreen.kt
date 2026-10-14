@@ -65,12 +65,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -306,63 +308,84 @@ fun MainScreen(vm: MainViewModel) {
                     }
                 }
 
+                // ————— вау-слой: живое сияние и параллакс от наклона —————
                 item {
-                    SectionTitle("Все функции")
-                    Spacer(Modifier.height(6.dp))
-                    GrapeTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        label = "поиск по всему приложению"
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    ChipFlow {
-                        SortChip("все", group == null) { group = null; Catalog.saveGroup(context, null) }
-                        Catalog.Group.entries.forEach { entry ->
-                            SortChip(entry.title, group == entry) {
-                                group = entry
-                                Catalog.saveGroup(context, entry)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(128.dp)
+                            .clip(skinShape("card"))
+                    ) {
+                        AuroraField(intensity = 1f)
+                        ParallaxBox(Modifier.fillMaxSize(), strength = 9f) {
+                            Column(
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.Bottom
+                            ) {
+                                Text(
+                                    text = "gsynk " + Metro.UI_VERSION.lowercase(),
+                                    color = TextPrimary,
+                                    fontSize = Metro.Type.pageSubtitle,
+                                    fontWeight = FontWeight.Light,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Text(
+                                    text = "фон дышит, плитки живые, наклон чувствуется",
+                                    color = TextSecondary,
+                                    fontSize = Metro.Type.caption
+                                )
                             }
                         }
+                        // Блик по герою: маленькая деталь, из-за которой экран кажется живым.
+                        Box(Modifier.fillMaxSize().then(shimmerModifier(active = true)))
                     }
-                    Spacer(Modifier.height(6.dp))
-                    ChipFlow {
-                        Catalog.Sort.entries.forEach { mode ->
-                            SortChip(mode.title, sort == mode) {
-                                sort = mode
-                                Catalog.saveSort(context, mode)
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(10.dp))
                 }
 
+                // ————— папки: каждая функция в своей категории, без плутания —————
+                item {
+                    FolderStrip(
+                        onOpen = { entry ->
+                            group = entry
+                            Catalog.saveGroup(context, entry)
+                            panel = "page:folders"
+                        },
+                        onAll = { panel = "page:folders" }
+                    )
+                }
+
+                // ————— фазы чипа: прямое управление железом, по одной плитке на фазу —————
                 item {
                     val visible = remember(query, group, sort, favorites) {
                         Catalog.view(query, group, sort, favorites, recent)
                     }
-                    MetroGrid(Modifier.fillMaxWidth()) {
-                        visible.forEach { entry ->
-                            Tile8(
-                                title = entry.title,
-                                subtitle = entry.subtitle,
-                                size = entry.size,
-                                color = entry.color,
-                                live = if (entry.id == "bench") null else null,
-                                badge = if (entry.fresh) "новое" else null,
-                                onClick = { Catalog.open(context, entry) },
-                                onLongClick = {
-                                    favorites = if (entry.id in favorites) favorites - entry.id else favorites + entry.id
-                                    Catalog.saveFavorites(context, favorites)
-                                }
-                            )
-                        }
-                    }
+                    SectionTitle("фазы чипа — управление, а не датчики")
                     Spacer(Modifier.height(6.dp))
+                    Phases.ALL.chunked(2).forEach { row ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Metro.gutter)
+                        ) {
+                            row.forEach { phase ->
+                                Tile8(
+                                    title = phase.title,
+                                    subtitle = phase.subtitle,
+                                    size = Metro.Size.MEDIUM,
+                                    color = Metro.Palette.tiles[phase.tone % Metro.Palette.tiles.size],
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { panel = "page:" + phase.id }
+                                )
+                            }
+                            repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                        Spacer(Modifier.height(Metro.gutter))
+                    }
                     Text(
-                        text = "Плитки: " + visible.size + " из " + Catalog.ALL.size +
-                            " · долгое нажатие — добавить в «мои»",
+                        text = "Функций в папках: " + visible.size + " из " + Catalog.ALL.size +
+                            " · долгое нажатие внутри папки — в «мои»",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall
+                        fontSize = Metro.Type.caption
                     )
                 }
 
@@ -487,13 +510,13 @@ fun MainScreen(vm: MainViewModel) {
                         Text(
                             text = "Расписание",
                             color = TextPrimary,
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
                             modifier = Modifier.weight(1f)
                         )
                         Text(
                             text = "${rules.count { it.enabled }} из ${rules.size} активны",
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -609,7 +632,9 @@ fun MainScreen(vm: MainViewModel) {
 
     // Страницы GSUI V4: остров, эффекты, скругления, каждый день, пасхалки, рулетка, ИИ, бенчмарк.
     panel?.takeIf { it.startsWith("page:") }?.let { name ->
-        if (Gsui4Page(name.removePrefix("page:"), vm, onBack = { panel = null })) return@let
+        val page = name.removePrefix("page:")
+        if (Gsui4Page(page, vm, onBack = { panel = null })) return@let
+        if (V4P1Page(page, vm, onBack = { panel = null })) return@let
         panel = null
     }
 
@@ -749,7 +774,7 @@ private fun HomeHeader(model: String, onSettings: () -> Unit, vm: MainViewModel?
                 Box {
                     GradientText(
                         text = "GSYNK",
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.displaySmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
                         brush = GrapeGradient,
                         modifier = Modifier.clickable {
                             logoBurst++
@@ -774,7 +799,7 @@ private fun HomeHeader(model: String, onSettings: () -> Unit, vm: MainViewModel?
                 Text(
                     text = model.ifBlank { "мультитул для телефона" },
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
             Box(
@@ -813,15 +838,15 @@ private fun CrashBanner(onClick: () -> Unit) {
             Text(
                 text = "Был сбой",
                 color = Color.White,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
             )
             Text(
                 text = "Отчёт собран — нажмите, чтобы посмотреть и отправить",
                 color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
-        Text("→", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+        Text("→", color = Color.White, style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
     }
 }
 
@@ -841,15 +866,15 @@ private fun UpdateBanner(onClick: () -> Unit) {
             Text(
                 text = "Доступно обновление",
                 color = Color(0xFF052E1F),
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
             )
             Text(
                 text = "Нажмите, чтобы обновить приложение",
                 color = Color(0xFF052E1F).copy(alpha = 0.75f),
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
-        Text("→", color = Color(0xFF052E1F), style = MaterialTheme.typography.headlineSmall)
+        Text("→", color = Color(0xFF052E1F), style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
     }
 }
 
@@ -865,20 +890,20 @@ private fun PermissionsCard(
             Text(
                 text = "Нужны доступы",
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
                 modifier = Modifier.weight(1f)
             )
             Text(
                 text = snapshot.items.count { !it.granted }.toString(),
                 color = GrapeVioletSoft,
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
             )
         }
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Откройте и выдайте — иначе часть функций не работает",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(8.dp))
         snapshot.items.filter { !it.granted }.take(6).forEach { item ->
@@ -900,10 +925,10 @@ private fun PermissionRow(item: Permissions.Item, onClick: () -> Unit) {
         Text(
             text = item.title,
             color = TextSecondary,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
             modifier = Modifier.weight(1f)
         )
-        Text("выдать →", color = GrapeVioletSoft, style = MaterialTheme.typography.labelMedium)
+        Text("выдать →", color = GrapeVioletSoft, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
     }
 }
 
@@ -936,7 +961,7 @@ private fun RuleCard(
                     Text(
                         text = rule.timeLabel,
                         color = if (rule.enabled) TextPrimary else TextDim,
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
                     )
                     if (isNext) {
                         Spacer(Modifier.width(10.dp))
@@ -948,13 +973,13 @@ private fun RuleCard(
                     }
                 }
                 Spacer(Modifier.height(2.dp))
-                Text(rule.name, color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+                Text(rule.name, color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 val scheduleText = buildString {
                     append(rule.daysLabel())
                     if (rule.hasDates) append(" • разово: ${rule.datesLabel(2)}")
                     if (rule.useInterval) append(" • ${rule.intervalLabel} с ${rule.intervalStartLabel}")
                 }
-                Text(scheduleText, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                Text(scheduleText, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (rule.useBrightness) {
@@ -1056,12 +1081,12 @@ private fun RuleCard(
 @Composable
 private fun EmptyState(onAdd: () -> Unit) {
     SurfaceCard {
-        Text("Правил пока нет", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+        Text("Правил пока нет", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(4.dp))
         Text(
             text = "Правило меняет яркость и громкость по расписанию — например «вечером тише»",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(14.dp))
         PrimaryButton(

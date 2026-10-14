@@ -428,8 +428,10 @@ class Gsui4Test {
             .map { it.removePrefix("page:") }
             .distinct()
         assertTrue(pages.isNotEmpty())
-        val screen = java.io.File("src/main/java/com/gsynk/app/ui/Gsui4Screens.kt").readText()
-        val unknown = pages.filterNot { screen.contains("\"" + it + "\" ->") }
+        val screens = listOf("Gsui4Screens.kt", "V4P1Screens.kt")
+            .map { java.io.File("src/main/java/com/gsynk/app/ui/" + it).readText() }
+            .joinToString("\n")
+        val unknown = pages.filterNot { screens.contains("\"" + it + "\" ->") }
         assertEquals("страницы без экрана: " + unknown, emptyList<String>(), unknown)
     }
 

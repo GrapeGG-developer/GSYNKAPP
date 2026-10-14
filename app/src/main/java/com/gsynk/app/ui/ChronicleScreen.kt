@@ -61,7 +61,7 @@ fun ChronicleScreen(onBack: () -> Unit) {
             Text(
                 text = "итог дня",
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
                 fontWeight = FontWeight.Light
             )
             Spacer(Modifier.height(10.dp))
@@ -96,7 +96,7 @@ fun ChronicleScreen(onBack: () -> Unit) {
                 Text(
                     text = "сбоев за это время: ${summary.crashes} — разбор в «Диагностике»",
                     color = GrapeRed,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -111,7 +111,7 @@ fun ChronicleScreen(onBack: () -> Unit) {
                     text = "Пока пусто. Хроника заполняется сама: как только сработает правило " +
                         "или вы откроете инструмент, запись появится здесь.",
                     color = TextDim,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                 )
             }
         } else {
@@ -123,7 +123,7 @@ fun ChronicleScreen(onBack: () -> Unit) {
                         Text(
                             text = entry.time,
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
                             modifier = Modifier.width(52.dp)
                         )
                         // цветная метка раздела
@@ -138,12 +138,12 @@ fun ChronicleScreen(onBack: () -> Unit) {
                             Text(
                                 text = entry.tag,
                                 color = colorFor(entry.tag),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                             )
                             Text(
                                 text = entry.message,
                                 color = if (entry.isProblem) GrapeRed else TextSecondary,
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                             )
                         }
                     }
@@ -157,7 +157,7 @@ fun ChronicleScreen(onBack: () -> Unit) {
                 text = "Хроника строится из журнала приложения. Он же уходит в отчёт, когда " +
                     "что-то ломается, — поэтому по дням видно, что происходило перед сбоем.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(24.dp))
@@ -174,8 +174,8 @@ private fun SummaryCell(value: String, label: String, color: androidx.compose.ui
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, color = color, style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light), fontWeight = FontWeight.Light)
-            Text(label, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text(value, color = color, style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light), fontWeight = FontWeight.Light)
+            Text(label, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
     }
 }

@@ -280,7 +280,7 @@ fun ToolsScreen(
             text = "Мигание экраном, AMOLED и ШИМ, все датчики, катушки вибромотора, " +
                 "индукция, ИК-пульт, скрытые экраны Android и HyperOS — без root и без риска.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(9.dp))
         LiveTile(
@@ -301,7 +301,7 @@ fun ToolsScreen(
         Text(
             text = "Измерения, кодирование, радиочастоты — всё офлайн, без интернета",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(9.dp))
         TileRow {
@@ -410,13 +410,13 @@ fun ToolsScreen(
                     Text(
                         text = if (settings.islandPersistent) "Постоянный остров включён" else "Только вспышки",
                         color = TextPrimary,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                     )
                     Text(
                         text = "Позиция: " + com.gsynk.app.core.IslandPosition.label(settings.islandPosition) +
                             if (settings.islandCompact) " • компактный" else " • обычный",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
                 PrimaryButton(
@@ -425,7 +425,7 @@ fun ToolsScreen(
                 )
             }
             Spacer(Modifier.height(12.dp))
-            Text("Показывать:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Показывать:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 IslandWidget.ALL.forEach { widget ->
@@ -436,7 +436,7 @@ fun ToolsScreen(
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text("Расположение:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Расположение:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 com.gsynk.app.core.IslandPosition.ALL.forEach { position ->
@@ -457,7 +457,7 @@ fun ToolsScreen(
             Text(
                 text = "Сдвиг по вертикали: ${settings.islandOffsetY} точек",
                 color = TextSecondary,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(7.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -533,9 +533,9 @@ fun ToolsScreen(
             Text(
                 text = profile.model,
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
             )
-            Text(profile.summary, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text(profile.summary, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(12.dp))
             InfoRow("Набор функций", if (profile.isFull) "полный" else "базовый")
             InfoRow("Android", profile.androidLabel)
@@ -544,7 +544,7 @@ fun ToolsScreen(
             Text(
                 text = "Определяется автоматически по модели и системе — переключать вручную не нужно.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
 
@@ -555,7 +555,7 @@ fun ToolsScreen(
         SurfaceCard {
             val snapshot = stats
             if (snapshot == null) {
-                Text("Считываю показатели…", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                Text("Считываю показатели…", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             } else {
                 InfoRow("Память", "${snapshot.ramUsedMb} / ${snapshot.ramTotalMb} МБ")
                 BarIndicator(percent = snapshot.ramPercent, brush = TileBrush.Violet)

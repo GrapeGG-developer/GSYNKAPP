@@ -227,7 +227,7 @@ private fun ShowTextCard(text: String, from: String, elapsed: Float) {
             Text(
                 text = text.ifBlank { "ПРИВЕТ ОТ GSYNK" },
                 color = TextPrimary,
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displaySmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
                 fontWeight = FontWeight.Light,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
@@ -236,7 +236,7 @@ private fun ShowTextCard(text: String, from: String, elapsed: Float) {
                 Text(
                     text = "от «$from»",
                     color = GrapeVioletSoft,
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -272,11 +272,11 @@ private fun CommandBanner(kind: NfcShow.Kind, from: String) {
             ) { }
             Spacer(Modifier.width(10.dp))
             Column {
-                Text("Коснулись: " + kind.label.lowercase(), color = color, style = MaterialTheme.typography.titleSmall)
+                Text("Коснулись: " + kind.label.lowercase(), color = color, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Text(
                     text = if (from.isBlank()) "выполнено на этом телефоне" else "выполнено · от «$from»",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
