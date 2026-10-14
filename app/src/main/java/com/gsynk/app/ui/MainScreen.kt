@@ -165,7 +165,11 @@ fun MainScreen(vm: MainViewModel) {
     }
 
     // Настройки внешнего вида живут в одном месте: акцент, скорость фона, отклик.
-    LaunchedEffect(settings) { UiTweaks.apply(settings) }
+    LaunchedEffect(settings) {
+        UiTweaks.apply(settings)
+        // Пасхалка «десять меток»: счётчик касаний растёт только от настоящих меток.
+        if (settings.nfcTouches >= 10) com.gsynk.app.core.Eggs.unlock(context, "nfc10")
+    }
 
     // пришли по касанию метки — открываем Grape Link сразу.
     // Исключение: касание принесло обновление или просьбу «проверь версию» — тогда

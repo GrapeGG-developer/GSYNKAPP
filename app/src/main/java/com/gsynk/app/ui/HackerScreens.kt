@@ -211,9 +211,14 @@ fun MorseToolScreen(onBack: () -> Unit) {
     var text by remember { mutableStateOf("SOS") }
     var isSending by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf(Morse.encode("SOS").size.toString()) }
+    val morse = remember(text) { Morse.toText(text) }
 
     LaunchedEffect(isSending, text) {
         if (!isSending) return@LaunchedEffect
+        // Пасхалка «три тире»: отправка кода с тремя тире подряд (например, SOS — ... --- ...).
+        if (morse.trim(' ', '.').startsWith("---") || morse.trim(' ', '.').endsWith("---")) {
+            com.gsynk.app.core.Eggs.unlock(context, "morse3")
+        }
         val steps = Morse.encode(text)
         for (step in steps) {
             com.gsynk.app.core.AutomationActions.setTorch(context, step.light)

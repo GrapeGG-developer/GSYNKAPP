@@ -340,17 +340,59 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (result.updateAvailable && result.latestTag != repository.currentSettings().seenVersion) {
             val previous = repository.currentSettings().lastUpdateCheck
             _updateAnnounce.value = result.latestTag
+            announceIsland(
+                title = "GSYNK " + result.latestTag,
+                subtitle = "обновление готово",
+                persistent = false,
+                progress = -1
+            )
+            if (previous == 0L) AppLog.event("Обновление", "найден " + result.latestTag)
+        }
+    }
+
+    /**
+     * Остров говорит «GSYNK»: одна капсула на все случаи обновления — нашлась версия,
+     * качается APK, готово к установке. Progress меньше нуля — без полосы.
+     */
+    private fun announceIsland(title: String, subtitle: String, persistent: Boolean, progress: Int = -1) {
+        // Настройки уже лежат в потоке состояния — читать хранилище из UI-потока не нужно.
+        val current = settings.value
+        if (persistent) {
+            val text = if (progress in 0..100) progress.toString() + "%" else title
+            // Если капсула уже висит — только обновляем подписи: окно не пересоздаётся
+            // на каждый процент, иначе система мигает при загрузке.
+            if (IslandOverlay.isShownPersistent()) {
+                IslandOverlay.updatePersistent(
+                    context = app(),
+                    title = title,
+                    subtitle = subtitle,
+                    expandedText = text,
+                    position = islandPosition(),
+                    compact = current.islandCompact,
+                    offsetY = current.islandOffsetY
+                )
+            } else {
+                IslandOverlay.showPersistent(
+                    context = app(),
+                    title = title,
+                    subtitle = subtitle,
+                    expandedText = text,
+                    position = islandPosition(),
+                    compact = current.islandCompact,
+                    offsetY = current.islandOffsetY
+                )
+            }
+        } else {
             IslandOverlay.show(
                 context = app(),
                 iconRes = com.gsynk.app.R.drawable.ic_bolt,
-                title = "GSYNK " + result.latestTag,
-                subtitle = "обновление готово",
+                title = title,
+                subtitle = subtitle,
                 position = islandPosition(),
-                durationMs = 6_000L,
-                compact = repository.currentSettings().islandCompact,
-                offsetY = repository.currentSettings().islandOffsetY
+                durationMs = 5_000L,
+                compact = current.islandCompact,
+                offsetY = current.islandOffsetY
             )
-            if (previous == 0L) AppLog.event("Обновление", "найдена версия " + result.latestTag)
         }
     }
 
@@ -383,14 +425,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         _updateDownloading.value = true
         _updateProgress.value = 0
+        val tag = _update.value?.latestTag.orEmpty()
+        announceIsland("GSYNK " + tag, "качаю 0%", persistent = true, progress = 0)
         val file = withContext(Dispatchers.IO) {
-            UpdateChecker.download(app(), url) { percent -> _updateProgress.value = percent }
+            UpdateChecker.download(app(), url) { percent ->
+                _updateProgress.value = percent
+                // Полоса и подпись в островке идут за настоящей загрузкой.
+                announceIsland("GSYNK " + tag, "качаю " + percent.toString() + "%", persistent = true, progress = percent)
+            }
         }
         _updateDownloading.value = false
         if (file == null) {
             _message.value = "Не удалось скачать обновление"
+            announceIsland("GSYNK " + tag, "не скачалось", persistent = false)
             return@launch
         }
+        announceIsland("GSYNK " + tag, "скачано, ставлю", persistent = false)
         if (!UpdateChecker.canInstall(app())) {
             _message.value = "Разрешите установку из GSYNK и повторите"
             UpdateChecker.openInstallSettings(app())

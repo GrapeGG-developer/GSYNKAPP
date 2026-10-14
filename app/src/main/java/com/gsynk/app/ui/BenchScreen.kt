@@ -185,6 +185,8 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
         result = done
         Bench.save(context, done)
         history = Bench.load(context)
+        // Пасхалка «три прогона»: класс устройства уточняется по серии замеров, а не по одному.
+        if (history.size >= 3) com.gsynk.app.core.Eggs.unlock(context, "antutu")
         stage = null
         note = "Готово за " + ((System.currentTimeMillis() - startedAt) / 1000) + " с"
         AppLog.event("Стенд", "прогон завершён: " + done.score + " баллов, " + done.tier)

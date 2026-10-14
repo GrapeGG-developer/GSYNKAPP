@@ -301,6 +301,7 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
 
 @Composable
 private fun StrobeScreen(onBack: () -> Unit) {
+    val strobeContext = LocalContext.current
     var strobe by remember { mutableStateOf(DeviceLab.strobes[1]) }
     var palette by remember { mutableIntStateOf(0) }
     var running by remember { mutableStateOf(false) }

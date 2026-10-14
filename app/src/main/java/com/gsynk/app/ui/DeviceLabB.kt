@@ -117,7 +117,11 @@ fun LabOscilloscopeScreen(onBack: () -> Unit) {
                         val amplitude = copy.maxOf { abs(it.toInt()) } / 32_768f
                         val db = DeviceLab.decibelsFromAmplitude(amplitude)
                         decibels = db
-                        if (db > peakDb) peakDb = db
+                        if (db > peakDb) {
+                            peakDb = db
+                            // Свист выше 90 дБ открывает пасхалку «девяносто».
+                            if (db > 90f) Eggs.unlock(context, "whistle90")
+                        }
                         hertz = estimateHz(copy, rate)
                     }
                 }
@@ -841,6 +845,10 @@ fun LabUsbScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val devices = remember { Deep.usb(context) }
     val host = remember { Deep.hasUsbHost(context) }
+    // Пасхалка «переходник»: подключил что-нибудь через OTG — секрет открыт.
+    LaunchedEffect(devices.size) {
+        if (devices.isNotEmpty()) Eggs.unlock(context, "usbplug")
+    }
 
     GrapeScreen(title = "USB и OTG", subtitle = devices.size.toString() + " устройств", onBack = onBack) {
         SurfaceCard(borderColor = if (host) GrapeGreen.copy(alpha = 0.4f) else CardBorder) {

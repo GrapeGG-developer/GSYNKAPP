@@ -664,6 +664,8 @@ fun LabBarometerScreen(onBack: () -> Unit) {
         series.push(pressure, 120)
         if (pressure < minim) minim = pressure
         if (pressure > maxim) maxim = pressure
+        // За замер разница в 5 гПа — это уже смена погоды.
+        if (maxim - minim >= 5f) Eggs.unlock(context, "storm")
     }
 
     if (values == null) {
@@ -781,6 +783,8 @@ fun LabLuxScreen(onBack: () -> Unit) {
         series.push(lux, 120)
         if (lux < minim) minim = lux
         if (lux > maxim) maxim = lux
+        // Полная темнота — тоже пасхалка: такое место надо ещё поискать.
+        if (lux < 0.5f) Eggs.unlock(context, "dark0")
     }
 
     if (values == null) {
@@ -829,7 +833,10 @@ fun LabStepsScreen(onBack: () -> Unit) {
         if (base == null) base = total
     }
     LaunchedEffect(detector) {
-        if (detector != null) live++
+        if (detector != null) {
+            live++
+            if (live >= 100) Eggs.unlock(context, "steps100")
+        }
     }
 
     val totalNow = counter?.firstOrNull()
@@ -950,6 +957,8 @@ fun LabLatencyScreen(onBack: () -> Unit) {
             if (total > 0f) {
                 totalMs = total
                 frameHistory.push(total, 90)
+                // Пасхалка «восемь и три»: кадр ровно в 8,3 мс — это честные 120 Гц.
+                if (total in 7.6f..9.0f) Eggs.unlock(context, "latency8")
             }
         }
         // Метрики кадров доступны без прав: система сама отдаёт длительности шагов кадра.
@@ -1083,6 +1092,8 @@ fun LabFlickerScreen(onBack: () -> Unit) {
 
     LaunchedEffect(running, hz) {
         if (!running) return@LaunchedEffect
+        // Пасхалка «предел мерцания»: 960 Гц — самая высокая частота в списке.
+        if (hz >= 960) Eggs.unlock(context, "flick960")
         var last = System.nanoTime()
         while (true) {
             val now = System.nanoTime()

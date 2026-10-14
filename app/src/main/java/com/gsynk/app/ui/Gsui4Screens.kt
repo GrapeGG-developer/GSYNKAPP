@@ -157,6 +157,7 @@ fun Island2Screen(vm: MainViewModel, onBack: () -> Unit) {
 fun EffectsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val skin by Skin.values.collectAsStateWithLifecycle()
+    var glassSwitches by remember { mutableIntStateOf(0) }
     val profile = remember { DeviceProfile.detect(context) }
 
     GrapeScreen(title = "Эффекты", subtitle = Skin.label(skin.level), onBack = onBack) {
@@ -212,6 +213,9 @@ fun EffectsScreen(onBack: () -> Unit) {
             Skin.GLASSES.forEach { (id, title) ->
                 SortChip(title, skin.glass == id) {
                     Skin.save(context, skin.copy(glass = id))
+                    glassSwitches++
+                    // Пасхалка «три стекла»: переключил три раза подряд — открылась.
+                    if (glassSwitches >= 3) Eggs.unlock(context, "glass3")
                 }
             }
         }
@@ -375,7 +379,11 @@ fun RadiusScreen(onBack: () -> Unit) {
             )
             SecondaryButton(
                 text = "Всё скруглённое",
-                onClick = { Skin.save(context, skin.copy(tile = 6, card = 18, sheet = 28, button = 12, toggle = 16)) },
+                onClick = {
+                    Skin.save(context, skin.copy(tile = 6, card = 18, sheet = 28, button = 12, toggle = 16))
+                    // Пасхалка «клавиатура из плиток»: всё скруглено до предела.
+                    Eggs.unlock(context, "keyboard")
+                },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -404,6 +412,12 @@ fun EverydayScreen(onBack: () -> Unit) {
     var opened by remember { mutableIntStateOf(0) }
     var taken by remember { mutableStateOf(false) }
     var eggFound by remember { mutableStateOf<String?>(null) }
+
+    // Пасхалка «переворот»: экраном вниз, пока открыт «Каждый день».
+    val faceDown = remember { com.gsynk.app.core.EverydayFaceDown.watch(context) { flipped ->
+        if (flipped) eggFound = "Пасхалка: " + (Eggs.byId("flip")?.title ?: "переворот")
+    } }
+    DisposableEffect(Unit) { onDispose { faceDown() } }
 
     LaunchedEffect(Unit) {
         streak = Everyday.markVisit(context)
@@ -559,6 +573,32 @@ fun EasterScreen(onBack: () -> Unit) {
         message?.let {
             Spacer(Modifier.height(8.dp))
             Text(it, color = GrapeGreen, style = MaterialTheme.typography.labelSmall)
+        }
+        // Все секреты найдены: набор кожи, которого нет в обычном списке эффектов.
+        if (found.size >= Eggs.ALL.size - 1) {
+            Spacer(Modifier.height(12.dp))
+            Eggs.unlock(context, "all")
+            SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.5f)) {
+                Text("Секретный набор кожи", color = GrapeGreen, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "«Виноградовая ночь»: аква-стекло, размытие 18, лучи 9 и почти капсульные " +
+                        "скругления у всего. Такого набора нет в списке эффектов — он только за пасхалки.",
+                    color = TextDim,
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Spacer(Modifier.height(8.dp))
+                PrimaryButton(
+                    text = "Применить секретный набор",
+                    onClick = {
+                        val profile = DeviceProfile.detect(context)
+                        Skin.save(context, Skin.effectiveValues(profile, Eggs.secretSkin()))
+                        Haptics.tick(context, 40L)
+                        message = "Секретный набор кожи применён"
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
         Spacer(Modifier.height(16.dp))
         SectionTitle("Подсказки, которые уже открыты")

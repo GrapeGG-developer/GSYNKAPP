@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.Layout
@@ -41,7 +43,9 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.core.DeviceProfile
+import com.gsynk.app.core.Skin
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import kotlin.math.max
@@ -259,6 +263,38 @@ object Metro {
 
 /** Уровень эффектов, доступный всему интерфейсу без лишних вызовов. */
 val LocalMetroEffects = compositionLocalOf { Metro.Effects.LIGHT }
+
+/** Текущая кожа (скругления и стекло) для всех компонентов: один подписчик на всё дерево. */
+val LocalSkinValues = compositionLocalOf { Skin.Values() }
+
+/** Скругление по назначению — «везде своё», из настроек кожи. */
+@Composable
+fun skinRadius(kind: String): Dp {
+    val skin = LocalSkinValues.current
+    return when (kind) {
+        "tile" -> skin.tile.dp
+        "card" -> skin.card.dp
+        "sheet" -> skin.sheet.dp
+        "button" -> skin.button.dp
+        "toggle" -> skin.toggle.dp
+        "island" -> skin.island.dp
+        "panel" -> skin.sheet.dp
+        else -> skin.card.dp
+    }
+}
+
+/** Форма по назначению — из той же кожи. */
+@Composable
+fun skinShape(kind: String): Shape = RoundedCornerShape(skinRadius(kind))
+
+/** Стекло из настроек: имя вида → рецепт. */
+@Composable
+fun skinGlass(): Glass.Kind = when (LocalSkinValues.current.glass) {
+    "matte" -> Glass.Kind.MATTE
+    "frost" -> Glass.Kind.FROST
+    "aqua" -> Glass.Kind.AQUA
+    else -> Glass.Kind.LIQUID
+}
 
 /** Ширина сетки: на большом экране плитки не растягиваются в блин. */
 val LocalMetroColumns = compositionLocalOf { Metro.COLUMNS }
@@ -511,11 +547,22 @@ fun ProvideMetro(
     context: android.content.Context,
     content: @Composable () -> Unit
 ) {
-    val effects = remember(context) { Metro.effectsFor(context) }
-    val columns = remember(context) { if (DeviceProfile.detect(context).width >= 1440) 4 else 4 }
+    val profile = remember(context) { DeviceProfile.detect(context) }
+    val skin by Skin.values.collectAsStateWithLifecycle()
+    // Уровень эффектов берём по худшему из двух: что просит кожа и что тянет железо.
+    val effects = remember(profile, skin.level) {
+        when (minOf(skin.level, Skin.effectiveLevel(profile, skin.level))) {
+            0 -> Metro.Effects.PLAIN
+            1 -> Metro.Effects.LIGHT
+            else -> Metro.Effects.FULL
+        }
+    }
+    // На большом экране плиток в строке больше: так задумано в Metro для широких экранов.
+    val columns = remember(profile) { if (profile.width >= 1440) 6 else Metro.COLUMNS }
     CompositionLocalProvider(
         LocalMetroEffects provides effects,
         LocalMetroColumns provides columns,
+        LocalSkinValues provides skin,
         content = content
     )
 }

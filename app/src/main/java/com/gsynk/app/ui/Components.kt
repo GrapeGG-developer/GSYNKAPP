@@ -90,6 +90,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.ui.theme.BgBottomA
 import com.gsynk.app.ui.theme.BgBottomB
@@ -294,11 +295,21 @@ fun SurfaceCard(
     contentPadding: PaddingValues = PaddingValues(18.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val shape: androidx.compose.ui.graphics.Shape = RectangleShape
+    // Скругление карточки берём из кожи: у каждого элемента своё, как в GSUI V4.
+    val shape: androidx.compose.ui.graphics.Shape =
+        if (corner > 0.dp) androidx.compose.foundation.shape.RoundedCornerShape(corner) else skinShape("card")
+    val effectsLevel = LocalMetroEffects.current
     Column(
         modifier
             .fillMaxWidth()
-            .shadow(10.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+            .let { base ->
+                // Тень дорога на слабом железе: там её нет, границу держит рамка.
+                if (effectsLevel == Metro.Effects.FULL) {
+                    base.shadow(6.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
+                } else {
+                    base
+                }
+            }
             .clip(shape)
             .background(CardBg)
             .border(1.dp, borderColor, shape)
@@ -360,7 +371,8 @@ fun PrimaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
-    val shape = RectangleShape
+    // Кнопка Metro: плотная заливка, своё скругление, отклик масштабом.
+    val shape = skinShape("button")
     val scale by animateFloatAsState(
         targetValue = if (enabled) 1f else 0.99f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -373,7 +385,7 @@ fun PrimaryButton(
             .background(if (enabled) GrapeGradient else Brush.linearGradient(listOf(ChipBg, ChipBg)))
             .border(1.dp, if (enabled) Color.Transparent else ChipBorder, shape)
             .clickable(enabled = enabled) { onClick() }
-            .padding(horizontal = 22.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 13.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -389,8 +401,9 @@ fun PrimaryButton(
             Text(
                 text = text,
                 color = if (enabled) Color(0xFF120720) else TextDim,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
+                fontSize = Metro.Type.body,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.6.sp
             )
         }
     }
@@ -405,14 +418,14 @@ fun SecondaryButton(
     tint: Color = TextPrimary,
     enabled: Boolean = true
 ) {
-    val shape = RectangleShape
+    val shape = skinShape("button")
     Row(
         modifier
             .clip(shape)
             .background(CardBgAlt)
             .border(1.dp, ChipBorder, shape)
             .clickable(enabled = enabled) { onClick() }
-            .padding(horizontal = 18.dp, vertical = 13.dp),
+            .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -420,7 +433,7 @@ fun SecondaryButton(
             Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
         }
-        Text(text, color = tint, style = MaterialTheme.typography.titleSmall)
+        Text(text, color = tint, fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -544,7 +557,7 @@ fun DayChip(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    val shape = RectangleShape
+    val shape = skinShape("toggle")
     val bg by animateColorAsState(
         targetValue = if (selected) GrapeVioletDeep else ChipBg,
         animationSpec = tween(220),
@@ -705,12 +718,14 @@ fun PulseDot(color: Color, modifier: Modifier = Modifier) {
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+    // Metro: заголовок группы — строчными буквами, с разрядкой, без капса.
     Text(
-        text = text.uppercase(),
-        modifier = modifier,
-        color = TextDim,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.SemiBold
+        text = text.lowercase(),
+        modifier = modifier.padding(top = Metro.unit, bottom = Metro.unit / 2f),
+        color = TextPrimary.copy(alpha = 0.88f),
+        fontSize = Metro.Type.groupHeader,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 1.6.sp
     )
 }
 
@@ -819,7 +834,7 @@ fun GrapeScreen(
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 20.dp)
         ) {
             Row(
                 Modifier
@@ -827,29 +842,39 @@ fun GrapeScreen(
                     .padding(top = 12.dp, bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Кнопка возврата — как значок на панели приложения Metro: 44×44, без заливки.
                 Box(
                     Modifier
-                        .size(38.dp)
-                        .clip(RectangleShape)
-                        .background(CardBg)
-                        .border(1.dp, ChipBorder, RectangleShape)
+                        .size(44.dp)
+                        .clip(skinShape("toggle"))
+                        .border(1.dp, ChipBorder, skinShape("toggle"))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) { onBack() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("←", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+                    Text("←", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Light)
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(Metro.unit * 1.5f))
                 Column(Modifier.weight(1f)) {
+                    // Тонкий крупный заголовок страницы: 42 pt в исходнике Metro.
                     GradientText(
                         text = title,
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontSize = Metro.Type.pageTitle,
+                            fontWeight = FontWeight.Light,
+                            letterSpacing = (-0.6).sp
+                        ),
                         brush = GrapeGradient
                     )
                     if (subtitle != null) {
-                        Text(subtitle, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            text = subtitle,
+                            color = TextDim,
+                            fontSize = Metro.Type.pageSubtitle,
+                            fontWeight = FontWeight.Light
+                        )
                     }
                 }
                 actions()
@@ -956,7 +981,7 @@ fun SortChip(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val shape = RectangleShape
+    val shape = skinShape("toggle")
     val bg by animateColorAsState(
         targetValue = if (selected) GrapeVioletDeep else ChipBg,
         animationSpec = tween(180),
@@ -973,7 +998,9 @@ fun SortChip(
         Text(
             text = label,
             color = if (selected) TextPrimary else TextSecondary,
-            style = MaterialTheme.typography.labelMedium
+            fontSize = Metro.Type.caption,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            letterSpacing = 0.4.sp
         )
     }
 }
@@ -990,10 +1017,15 @@ fun InfoRow(label: String, value: String, accent: Color = TextPrimary) {
         Text(
             text = label,
             color = TextDim,
-            style = MaterialTheme.typography.bodySmall,
+            fontSize = Metro.Type.caption,
             modifier = Modifier.weight(1f)
         )
-        Text(value, color = accent, style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = value,
+            color = accent,
+            fontSize = Metro.Type.body,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
