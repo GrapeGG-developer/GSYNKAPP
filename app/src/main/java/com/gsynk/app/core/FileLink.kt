@@ -97,7 +97,7 @@ object FileLink {
                 val client = srv.accept()
                 client.tcpNoDelay = true
                 val reader = BufferedReader(InputStreamReader(client.getInputStream(), StandardCharsets.UTF_8))
-                val request = reader.readLine().orEmpty()
+                val request = runCatching { reader.readLine() }.getOrNull().orEmpty()
                 val parts = request.trim().split(' ')
                 if (parts.getOrNull(0) != "GSYNK-FILE" || parts.getOrNull(1) != token) {
                     _state.value = State.Failed("Чужой запрос на файл — передача отменена")

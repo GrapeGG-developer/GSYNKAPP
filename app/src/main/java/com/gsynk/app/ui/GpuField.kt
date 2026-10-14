@@ -55,6 +55,15 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawShaderField(
     drawRect(brush = brush, size = size)
 }
 
+/**
+ * Доступен ли настоящий шейдерный стенд: платформа Android 13+ (нужны
+ * RuntimeShader и рендер-эффекты) и разрешённая функция ускорителя в профиле.
+ */
+fun gpuFieldAvailable(context: android.content.Context): Boolean =
+    android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+        com.gsynk.app.core.DeviceProfile
+            .feature(com.gsynk.app.core.DeviceProfile.detect(context), com.gsynk.app.core.DeviceProfile.Feature.GPU)
+
 @Composable
 fun GpuField(
     modifier: Modifier = Modifier,

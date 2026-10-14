@@ -62,6 +62,11 @@ class NdefHceService : HostApduService() {
         }
         if (offset >= file.size) return sw(SW_WRONG_PARAMS)
         val end = minOf(offset + want, file.size)
+        // Кто-то реально читает нашу метку: второй телефон рядом. Только теперь
+        // показываем анимацию и пишем «прочитано» — раньше это происходило само собой.
+        if (selected == FILE_NDEF && offset == 0) {
+            NfcPulse.readerCame(this)
+        }
         return file.copyOfRange(offset, end) + sw(SW_OK)
     }
 

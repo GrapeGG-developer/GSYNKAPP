@@ -21,6 +21,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // Если приложение открыли касанием метки — сразу показываем Grape Link
         PendingNfcPayload.capture(intent)
+        // «Каждый день»: серия визитов и связанные с ней пасхалки считаются один раз при запуске.
+        com.gsynk.app.ui.checkDailyAchievements(this)
         setContent {
             GSYNKTheme {
                 Surface(
@@ -28,7 +30,10 @@ class MainActivity : ComponentActivity() {
                     color = Color.Transparent
                 ) {
                     val vm: MainViewModel = viewModel()
-                    MainScreen(vm)
+                    // GSUI V4: сетка, уровень эффектов и скругления приходят из одного места.
+                    ProvideMetro(this) {
+                        MainScreen(vm)
+                    }
                 }
             }
         }

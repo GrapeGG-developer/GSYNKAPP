@@ -44,7 +44,11 @@ fun ToolsScreen(
     onBack: () -> Unit,
     onOpenNfc: () -> Unit,
     onHostGame: () -> Unit = {},
-    onJoinGame: (com.gsynk.app.core.NfcLink.GameInvite) -> Unit = {}
+    onJoinGame: (com.gsynk.app.core.NfcLink.GameInvite) -> Unit = {},
+    openTool: String? = null,
+    openFlag: String? = null,
+    openLab: String? = null,
+    onOpened: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val tools: ToolsViewModel = viewModel()
@@ -66,6 +70,31 @@ fun ToolsScreen(
     var showScreensaver by remember { mutableStateOf(false) }
     var showTurbo by remember { mutableStateOf(false) }
     var showChronicle by remember { mutableStateOf(false) }
+    var showBench by remember { mutableStateOf(false) }
+    var labStart by remember { mutableStateOf<String?>(null) }
+
+    // Заявка от роутера: любому экрану приложения разрешено открыть любой инструмент.
+    LaunchedEffect(openTool, openFlag, openLab) {
+        if (openTool == null && openFlag == null && openLab == null) return@LaunchedEffect
+        when {
+            openLab != null -> {
+                labStart = openLab
+                openExtra = "lab"
+            }
+
+            openTool != null -> openExtra = openTool
+            openFlag != null -> when (openFlag) {
+                "turbo" -> showTurbo = true
+                "chronicle" -> showChronicle = true
+                "chat" -> showChat = true
+                "screensaver" -> showScreensaver = true
+                "diagnostics" -> showDiagnostics = true
+                "update" -> showUpdate = true
+                "bench" -> showBench = true
+            }
+        }
+        onOpened()
+    }
 
     DisposableEffect(Unit) {
         tools.startStats()
@@ -88,7 +117,7 @@ fun ToolsScreen(
         "sysinfo" -> SysDashboardScreen(onBack = { openExtra = null })
         "coder" -> EncoderScreen(onBack = { openExtra = null })
         "subnet" -> SubnetScreen(onBack = { openExtra = null })
-        "lab" -> LabScreen(onBack = { openExtra = null })
+        "lab" -> LabScreen(onBack = { openExtra = null; labStart = null }, initial = labStart)
         "nearby" -> NearbyScreen(
             vm = vm,
             onBack = { openExtra = null },
@@ -114,6 +143,11 @@ fun ToolsScreen(
 
     if (showChronicle) {
         ChronicleScreen(onBack = { showChronicle = false })
+        return
+    }
+
+    if (showBench) {
+        BenchScreen(vm = vm, onBack = { showBench = false })
         return
     }
 

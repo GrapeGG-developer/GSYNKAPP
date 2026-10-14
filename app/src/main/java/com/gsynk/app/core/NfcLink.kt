@@ -135,19 +135,61 @@ object NfcLink {
 
     // ————— сборка —————
 
+    /**
+     * Собирает NDEF-сообщение.
+     *
+     * Первой записью всегда идёт **понятная любому телефону**: обычный текст или ссылка.
+     * Так метка читается даже там, где GSYNK не установлен — вместо «нет поддерживаемых
+     * приложений для метки» человек видит, что именно ему передали. Второй записью идёт
+     * полная запись для GSYNK, третьей — ссылка на приложение (AAR).
+     */
     fun buildMessage(payload: Payload, appPackage: String): NdefMessage {
-        val record = when (payload.kind) {
+        val records = ArrayList<NdefRecord>(3)
+        humanRecord(payload)?.let { records += it }
+        records += richRecord(payload)
+        records += NdefRecord.createApplicationRecord(appPackage)
+        return NdefMessage(records.toTypedArray())
+    }
+
+    /** Запись, которую покажет даже телефон без GSYNK. */
+    private fun humanRecord(payload: Payload): NdefRecord? = runCatching {
+        when (payload.kind) {
             KIND_URL -> NdefRecord.createUri(payload.body)
-            KIND_CONTACT -> mime(MIME_CONTACT, payload.body)
-            KIND_GAME -> mime(MIME_GAME, payload.body)
-            KIND_UPDATE, KIND_UPDATE_PING -> mime(MIME_UPDATE, payload.body)
-            KIND_PROFILE -> mime(MIME_PROFILE, payload.body)
-            else -> NdefRecord.createTextRecord(
-                "ru",
-                "$PREFIX:${payload.kind}|${payload.title}|${payload.body}".take(900)
-            )
+            KIND_UPDATE -> {
+                val share = com.gsynk.app.core.UpdateShare.parse(payload.body)
+                NdefRecord.createTextRecord(
+                    "ru",
+                    "GSYNK " + (share?.version ?: "") + " — обновление\n" + (share?.url ?: payload.body)
+                )
+            }
+            KIND_UPDATE_PING -> NdefRecord.createTextRecord("ru", "GSYNK: проверь обновление")
+            KIND_CONTACT -> NdefRecord.createTextRecord("ru", "GSYNK: визитка\n" + payload.body)
+            KIND_GAME -> NdefRecord.createTextRecord("ru", "GSYNK: приглашение в GTBOI")
+            else -> NdefRecord.createTextRecord("ru", humanText(payload).take(220))
         }
-        return NdefMessage(arrayOf(record, NdefRecord.createApplicationRecord(appPackage)))
+    }.getOrNull()
+
+    /** Короткий человеческий текст для служебных типов. */
+    fun humanText(payload: Payload): String = when (payload.kind) {
+        KIND_GAME -> "Приглашение в GTBOI — вдвоём на двух телефонах"
+        KIND_FILE -> "Файл: " + payload.body.substringBefore(';').ifBlank { "из GSYNK" }
+        KIND_PROFILE -> "Сценарий GSYNK: правила расписания"
+        KIND_SHOW -> "Показ GSYNK: " + payload.body.substringBefore('|')
+        else -> payload.body.ifBlank { payload.title }
+    }
+
+    /** Полная запись для GSYNK: свои типы плюс текст как запасной вариант. */
+    private fun richRecord(payload: Payload): NdefRecord = when (payload.kind) {
+        KIND_URL -> mime(MIME_TEXT, payload.body)
+        KIND_CONTACT -> mime(MIME_CONTACT, payload.body)
+        KIND_GAME -> mime(MIME_GAME, payload.body)
+        KIND_PROFILE -> mime(MIME_PROFILE, payload.body)
+        KIND_FILE -> mime(MIME_FILE, payload.body)
+        KIND_UPDATE, KIND_UPDATE_PING -> mime(MIME_UPDATE, payload.body)
+        else -> NdefRecord.createTextRecord(
+            "ru",
+            "$PREFIX:${payload.kind}|${payload.title}|${payload.body}".take(900)
+        )
     }
 
     fun buildGameInvite(invite: GameInvite, appPackage: String): NdefMessage =
@@ -182,12 +224,18 @@ object NfcLink {
 
     // ————— разбор —————
 
+    /**
+     * Разбор сообщения.
+     *
+     * Записей теперь несколько (понятная + полная + ссылка на приложение), поэтому
+     * сначала ищем «свои» записи — иначе короткий человеческий текст перебил бы
+     * полные данные, и касание выглядело бы как обычное сообщение.
+     */
     fun parse(message: NdefMessage?): Payload? {
         if (message == null) return null
-        for (record in message.records) {
-            parseRecord(record)?.let { return it }
-        }
-        return null
+        val parsed = message.records.mapNotNull { parseRecord(it) }
+        if (parsed.isEmpty()) return null
+        return parsed.firstOrNull { it.kind != KIND_TEXT && it.kind != KIND_URL } ?: parsed.first()
     }
 
     private fun parseRecord(record: NdefRecord): Payload? = runCatching {

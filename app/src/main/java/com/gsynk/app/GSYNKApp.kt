@@ -18,6 +18,10 @@ class GSYNKApp : Application() {
         createChannels()
         // приём сбоев и журнал: включаются раньше всего остального
         AppLog.install(this)
+        // глубокое чтение железа (память, тепловые зоны) работает без Compose —
+        // поэтому держим ссылку на приложение в одном месте
+        com.gsynk.app.core.AppContextHolder.install(this)
+        com.gsynk.app.core.Skin.load(this)
     }
 
     private fun createChannels() {

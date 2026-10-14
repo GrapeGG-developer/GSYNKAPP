@@ -150,7 +150,7 @@ object WifiCoop {
                 )
                 writer = out
 
-                val hello = reader.readLine()
+                val hello = runCatching { reader.readLine() }.getOrNull()
                 val greet = hello?.let { CoopCodec.decodeHello(it) }
                 if (greet == null || greet.code != code) {
                     out.write("NO|код комнаты не совпал\n")
@@ -175,11 +175,14 @@ object WifiCoop {
 
                 receiveJob = launch {
                     while (isActive) {
-                        val line = reader.readLine() ?: break
+                        // Сокет закрывается и по нашей воле (выход из игры), и когда друг
+                        // ушёл. «Socket closed» — это конец сеанса, а не поломка:
+                        // раньше такой вылет уходил в отчёты как ошибка.
+                        val line = runCatching { reader.readLine() }.getOrNull() ?: break
                         if (line.startsWith("BYE")) break
                         CoopCodec.decodeInput(line)?.let { _peerInput.value = it }
                     }
-                    if (_status.value is Status.Live) {
+                    if (isActive && _status.value is Status.Live) {
                         _status.value = Status.Failed("Второй телефон отключился")
                     }
                 }
@@ -225,7 +228,7 @@ object WifiCoop {
                 out.newLine()
                 out.flush()
 
-                val answer = reader.readLine()
+                val answer = runCatching { reader.readLine() }.getOrNull()
                 val welcome = answer?.let { CoopCodec.decodeWelcome(it) }
                 if (welcome == null) {
                     _status.value = Status.Failed(
@@ -247,7 +250,7 @@ object WifiCoop {
 
                 receiveJob = launch {
                     while (isActive) {
-                        val line = reader.readLine() ?: break
+                        val line = runCatching { reader.readLine() }.getOrNull() ?: break
                         CoopCodec.decode(line)?.let { _remoteWorld.value = it }
                     }
                     if (_status.value is Status.Live) {

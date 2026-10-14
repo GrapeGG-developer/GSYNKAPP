@@ -98,9 +98,21 @@ object Nearby {
     private val _log = MutableStateFlow<List<String>>(emptyList())
     val log: StateFlow<List<String>> = _log.asStateFlow()
 
+    /** Заряд телефона собеседника в процентах (-1 — неизвестно). */
+    private val _partnerBattery = MutableStateFlow(-1)
+    val partnerBattery: StateFlow<Int> = _partnerBattery.asStateFlow()
+
+    /** Текст, который собеседник просит показать на нашем острове. */
+    private val _incomingIsland = MutableStateFlow<String?>(null)
+    val incomingIsland: StateFlow<String?> = _incomingIsland.asStateFlow()
+
     /** Тело сценария, пришедшее по связи, — интерфейс предложит его применить. */
     private val _incomingProfile = MutableStateFlow<String?>(null)
     val incomingProfile: StateFlow<String?> = _incomingProfile.asStateFlow()
+
+    /** Задержка связи в миллисекундах: измеряется пингом, а не выдумывается. */
+    private val _latency = MutableStateFlow(0L)
+    val latency: StateFlow<Long> = _latency.asStateFlow()
 
     /** Кто на другом конце: «имя|модель». */
     private val _partner = MutableStateFlow("")
@@ -122,6 +134,8 @@ object Nearby {
     /** Приложение-контекст: нужен, чтобы принимать короткие файлы, когда связь уже есть. */
     @Volatile private var appContext: Context? = null
     private var counter = 0
+    private var lastPingSent = 0L
+    private var lastPingId = -1
 
     // ————————————— права —————————————
 
@@ -496,7 +510,7 @@ object Nearby {
         runCatching {
             val reader = BufferedReader(InputStreamReader(streams.input(), Charsets.UTF_8))
             while (true) {
-                val line = reader.readLine() ?: break
+                val line = runCatching { reader.readLine() }.getOrNull() ?: break
                 if (line.isBlank()) continue
                 handle(line.trim())
             }
@@ -575,6 +589,30 @@ object Nearby {
                 log("Хозяин сети: " + _hostAddress.value)
             }
 
+            PING -> {
+                // отвечаем мгновенно: по этому ответу собеседник посчитает задержку
+                send(line(PONG, parts.getOrNull(1).orEmpty()))
+            }
+
+            PONG -> {
+                val id = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                if (id == lastPingId) {
+                    val spent = System.currentTimeMillis() - lastPingSent
+                    _latency.value = spent.coerceAtLeast(1L)
+                    log("Задержка связи: " + _latency.value + " мс")
+                }
+            }
+
+            BATTERY -> {
+                _partnerBattery.value = parts.getOrNull(1)?.toIntOrNull() ?: -1
+                log("Заряд собеседника: " + _partnerBattery.value + " проц.")
+            }
+
+            ISLAND -> {
+                _incomingIsland.value = decodeText(parts.drop(1).joinToString("|"))
+                log("На остров: " + _incomingIsland.value)
+            }
+
             FILE -> {
                 val body = decodeText(parts.drop(1).joinToString("|"))
                 val bits = body.split(";")
@@ -606,11 +644,32 @@ object Nearby {
 
     fun sendSay(text: String): Boolean = send(line(SAY, text.replace("|", " ")))
 
+    /** Отправляет пинг: второй телефон ответит, и мы узнаем задержку. */
+    fun ping(): Boolean {
+        counter++
+        lastPingSent = System.currentTimeMillis()
+        lastPingId = counter
+        return send(line(PING, counter.toString()))
+    }
+
     /** «Я хозяин»: гость запоминает адрес и потом заходит в игру одним нажатием. */
     fun sendHost(address: String = WifiCoop.localAddress()): Boolean {
         _hostAddress.value = address
         return send(line(HOST, address))
     }
+
+    /** Отправляет свой заряд, чтобы собеседник видел его на экране связи. */
+    fun sendBattery(percent: Int): Boolean = send(line(BATTERY, percent.toString()))
+
+    /** Пишет текст на острове собеседника (если у него включён остров). */
+    fun sendIslandText(text: String): Boolean = send(line(ISLAND, encodeText(text)))
+
+    /** Отправляет визитку: имя и телефон. */
+    fun sendContact(name: String, phone: String): Boolean = send(line(SAY, "визитка: " + name + " • " + phone))
+
+    /** Отправляет точку на карте. */
+    fun sendGeo(lat: Double, lon: Double): Boolean =
+        send(line(SAY, "точка: " + "%.5f".format(lat) + ", " + "%.5f".format(lon)))
 
     /** Короткий файл (до ~600 байт) уходит прямо в строке — метка не нужна. */
     fun sendInlineFile(name: String, size: Long, base64: String): Boolean =
@@ -654,6 +713,9 @@ object Nearby {
     }
 
     fun reset() {
+        _latency.value = 0L
+        _partnerBattery.value = -1
+        _incomingIsland.value = null
         _hostAddress.value = ""
         _peers.value = emptyList()
         _log.value = emptyList()
@@ -727,5 +789,9 @@ object Nearby {
     const val PROFILE = "PROFILE"
     const val SAY = "SAY"
     const val HOST = "HOST"
+    const val PING = "PING"
+    const val PONG = "PONG"
+    const val BATTERY = "BATT"
+    const val ISLAND = "ISLE"
     const val FILE = "FILE"
 }

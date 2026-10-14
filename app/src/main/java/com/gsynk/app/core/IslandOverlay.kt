@@ -38,6 +38,8 @@ object IslandOverlay {
     private const val TAG_ICON = "gsynk_island_icon"
 
     private const val COLOR_BG = 0xF20E0B1A.toInt()
+    private const val COLOR_BG_WARM = 0xF21B1030.toInt()
+    private const val COLOR_BG_COOL = 0xF2081430.toInt()
     private const val COLOR_BORDER = 0x4DA855F7.toInt()
     private const val COLOR_TEXT = 0xFFF3F0FF.toInt()
     private const val COLOR_TEXT_DIM = 0xFF9C8FB5.toInt()
@@ -48,6 +50,10 @@ object IslandOverlay {
     private var windowManager: WindowManager? = null
     private var hideTask: Runnable? = null
     private var persistent = false
+    /** Анимация живого стекла капсулы: гасим её вместе с окном. */
+    private var glassAnimator: android.animation.ValueAnimator? = null
+    /** Остров 2.0: капсула садится вплотную под фронтальную камеру. */
+    var hugCamera: Boolean = true
     /**
      * Ссылка на оконный менеджер — единственный «контекстный» объект в этом
      * синглтоне. Он берётся от application-контекста и переживает активности.
@@ -237,10 +243,50 @@ object IslandOverlay {
         }
     }
 
+    /**
+     * Живое стекло: два оттенка медленно перетекают друг в друга. Это не картинка
+     * и не фейк — оттенок меняется по-настоящему, кадр за кадром.
+     */
+    private fun startLiveGlass(context: Context, drawable: GradientDrawable) {
+        stopLiveGlass()
+        val animator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 7_400L
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            repeatMode = android.animation.ValueAnimator.REVERSE
+            addUpdateListener { animation ->
+                val t = animation.animatedValue as Float
+                runCatching {
+                    drawable.colors = intArrayOf(
+                        blend(COLOR_BG, COLOR_BG_COOL, t),
+                        blend(COLOR_BG_WARM, COLOR_BG, t)
+                    )
+                    drawable.alpha = (226 + (24 * t).toInt()).coerceAtMost(255)
+                }
+            }
+            start()
+        }
+        glassAnimator = animator
+    }
+
+    private fun stopLiveGlass() {
+        runCatching { glassAnimator?.cancel() }
+        glassAnimator = null
+    }
+
+    /** Смешивание двух цветов — для живого стекла и мягких переходов. */
+    private fun blend(from: Int, to: Int, t: Float): Int {
+        val a = (android.graphics.Color.alpha(from) * (1 - t) + android.graphics.Color.alpha(to) * t).toInt()
+        val r = (android.graphics.Color.red(from) * (1 - t) + android.graphics.Color.red(to) * t).toInt()
+        val g = (android.graphics.Color.green(from) * (1 - t) + android.graphics.Color.green(to) * t).toInt()
+        val b = (android.graphics.Color.blue(from) * (1 - t) + android.graphics.Color.blue(to) * t).toInt()
+        return android.graphics.Color.argb(a, r, g, b)
+    }
+
     /** Убрать окно немедленно (без анимации) — при смене режима. */
     private fun removeNow(view: View) {
         hideTask?.let { handler.removeCallbacks(it) }
         hideTask = null
+        stopLiveGlass()
         root = null
         runCatching { windowManager?.removeView(view) }
     }
@@ -300,7 +346,12 @@ object IslandOverlay {
         }
         params.gravity = gravity
         val density = view.context.resources.displayMetrics.density
-        val base = (statusBarPx(view.context) + 2 * density).toInt()
+        val cutout = cutoutPx(view.context)
+        val base = if (hugCamera && cutout > 0) {
+            cutout + (1 * density).toInt()
+        } else {
+            (statusBarPx(view.context) + 2 * density).toInt()
+        }
         params.y = (if (gravity and Gravity.TOP != 0) base else 0) + (offsetY * density).toInt()
         params.x = when {
             gravity and Gravity.START != 0 -> (6 * density).toInt()
@@ -313,6 +364,20 @@ object IslandOverlay {
         }
         runCatching { windowManager?.updateViewLayout(view, params) }
     }
+
+    /**
+     * Низ выреза под фронтальную камеру. Именно к нему садится остров 2.0:
+     * раньше база считалась от строки состояния, и капсула висела на 100 px ниже.
+     */
+    private fun cutoutPx(context: Context): Int = runCatching {
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val insets = windowManager.currentWindowMetrics.windowInsets
+            .getInsetsIgnoringVisibility(android.view.WindowInsets.Type.displayCutout())
+        insets.top
+    }.getOrDefault(0)
+
+    /** Сколько пикселей занимает вырез камеры. Публично: это показывает экран острова. */
+    fun cutoutHeight(context: Context): Int = cutoutPx(context)
 
     /** Высота строки состояния из системных инсетов (без чтения скрытых ресурсов). */
     private fun statusBarPx(context: Context): Int = runCatching {
@@ -344,16 +409,22 @@ object IslandOverlay {
         val valueSp = if (compact) 10.5f else 12f
         val expandedSp = if (compact) 9f else 10f
 
+        // Остров — самый скруглённый элемент приложения: капсула целиком скруглена.
+        val radius = dp(context, if (persistent) 26f else 22f)
+        val glass = GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            intArrayOf(COLOR_BG, COLOR_BG_WARM)
+        ).apply {
+            cornerRadius = radius
+            setStroke(dp(context, 1f).toInt().coerceAtLeast(1), COLOR_BORDER)
+        }
         val outer = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                cornerRadius = 0f
-                setColor(COLOR_BG)
-                setStroke(dp(context, 1f).toInt().coerceAtLeast(1), COLOR_BORDER)
-            }
+            background = glass
             setPadding(padH, padV, padH, padV)
             elevation = dp(context, 8f)
         }
+        if (persistent) startLiveGlass(context, glass)
 
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL

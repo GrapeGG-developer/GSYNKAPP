@@ -90,15 +90,18 @@ import kotlin.math.roundToInt
  * так, чтобы телефон нельзя было испортить: загрузчик, прошивка и разделы не трогаются.
  */
 @Composable
-fun LabScreen(onBack: () -> Unit) {
+fun LabScreen(onBack: () -> Unit, initial: String? = null) {
     val context = LocalContext.current
     val profile = remember { DeviceProfile.detect(context) }
-    var tool by remember { mutableStateOf<String?>(null) }
+    var tool by remember { mutableStateOf(initial) }
     var dimmerPercent by remember { mutableIntStateOf(0) }
 
     DisposableEffect(Unit) {
         onDispose { ScreenDimmer.hide() }
     }
+
+    // Расширенные экраны GSUI V4 живут в отдельных файлах: сначала спрашиваем у них.
+    if (tool != null && LabExtraScreen(tool!!, onBack = { tool = null })) return
 
     when (tool) {
         "strobe" -> StrobeScreen(onBack = { tool = null })
@@ -238,6 +241,12 @@ fun LabScreen(onBack: () -> Unit) {
                 onClick = { tool = "codes" }
             )
         }
+
+        // ————— расширенная лаборатория GSUI V4 —————
+        Spacer(Modifier.height(18.dp))
+        SectionTitle("Ещё опыты с железом")
+        Spacer(Modifier.height(6.dp))
+        LabExtrasGrid(onOpen = { tool = it })
 
         // ————— затемнение ниже системного минимума: настоящая AMOLED-регулировка —————
         Spacer(Modifier.height(16.dp))
@@ -1755,5 +1764,69 @@ private fun ComposerScreen(onBack: () -> Unit) {
             }
         }
         Spacer(Modifier.height(20.dp))
+    }
+}
+
+
+/** Опыты GSUI V4: короткий список для плиток — имя маршрута, подпись и цвет. */
+private val extrasLab: List<Triple<String, String, Int>> = listOf(
+    Triple("cores", "ядра и частоты", 0),
+    Triple("thermal", "термощуп", 1),
+    Triple("charge", "заряд и ток", 2),
+    Triple("gpu", "ускоритель", 3),
+    Triple("memory", "память и диск", 4),
+    Triple("sensors", "все датчики", 5),
+    Triple("shake", "акселерограф", 6),
+    Triple("compass", "компас", 7),
+    Triple("baro", "барометр", 8),
+    Triple("prox", "приближение", 9),
+    Triple("light", "люксметр", 10),
+    Triple("steps", "шаги", 11),
+    Triple("latency", "латентность экрана", 12),
+    Triple("multitouch", "мультитач", 13),
+    Triple("pwm", "мерцание (ШИМ)", 14),
+    Triple("oscope", "осциллограф", 15),
+    Triple("spectrum", "спектр звука", 16),
+    Triple("sweep", "свип-тон", 17),
+    Triple("haptic", "вибро-орган", 18),
+    Triple("ble", "ble-радар", 19),
+    Triple("wifi", "каналы wi-fi", 0),
+    Triple("wifisig", "сигнал wi-fi", 1),
+    Triple("usb", "usb и otg", 2),
+    Triple("nfcwrite", "метка-визитка", 3)
+)
+
+/** Плитки расширенной лаборатории: тот же экран, без углубления в подменю. */
+@androidx.compose.runtime.Composable
+fun LabExtrasGrid(onOpen: (String) -> Unit, modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier) {
+    androidx.compose.foundation.layout.Column(modifier) {
+        androidx.compose.material3.Text(
+            text = "24 опыта с железом: от частот ядер до мерцания экрана. Всё только читает " +
+                "датчики и ничего не пишет в систему.",
+            color = com.gsynk.app.ui.theme.TextDim,
+            style = androidx.compose.material3.MaterialTheme.typography.labelSmall
+        )
+        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(10.dp))
+        extrasLab.chunked(4).forEach { row ->
+            androidx.compose.foundation.layout.Row(
+                androidx.compose.ui.Modifier.fillMaxWidth(),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Metro.gutter)
+            ) {
+                row.forEach { (id, title, tone) ->
+                    Tile8(
+                        title = title,
+                        subtitle = "опыт",
+                        size = Metro.Size.SMALL,
+                        color = Metro.Palette.tiles[tone % Metro.Palette.tiles.size],
+                        modifier = androidx.compose.ui.Modifier.weight(1f),
+                        onClick = { onOpen(id) }
+                    )
+                }
+                repeat(4 - row.size) {
+                    androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.weight(1f))
+                }
+            }
+            androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(Metro.gutter))
+        }
     }
 }

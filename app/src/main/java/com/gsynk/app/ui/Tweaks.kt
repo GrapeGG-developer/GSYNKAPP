@@ -81,8 +81,8 @@ object UiTweaks {
     val tileHeight: Int get() = when (tileScale) { 1 -> 92; 3 -> 132; else -> 112 }
 
     /** Отклик на касание плитки: вибрация и/или короткий щелчок. */
-    fun tap(context: Context) {
-        if (haptics) Haptics.tick(context, 18L, Haptics.Use.TOUCH)
-        if (clickSound) AutomationActions.playTone(1_180, 55)
+    fun tap(context: Context, long: Boolean = false) {
+        if (haptics) Haptics.tick(context, if (long) 34L else 18L, Haptics.Use.TOUCH)
+        if (clickSound) AutomationActions.playTone(if (long) 880 else 1_180, 55)
     }
 }

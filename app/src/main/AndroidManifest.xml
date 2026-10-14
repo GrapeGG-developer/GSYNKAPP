@@ -53,6 +53,18 @@
     <uses-permission android:name="android.permission.FLASHLIGHT" />
     <!-- OTA-обновление и ИИ-чат: сеть нужна только этим модулям -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Мерцание экрана (ШИМ) считаем камерой: нужна ручная выдержка, поэтому доступ к камере. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.manual_sensor"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.usb.host"
+        android:required="false" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Просьба исключить из оптимизации батареи (Xiaomi/HyperOS агрессивно усыпляет) -->
     <uses-permission
@@ -96,12 +108,38 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Приём NDEF-касаний: приложение может открыться по метке/касанию -->
+            <!--
+              Приём касаний. Раньше здесь был ровно один тип (игра) — из-за этого
+              телефон, у которого стоит GSYNK, на любую другую нашу метку отвечал
+              «нет поддерживаемых приложений для метки»: система не знала, что метку
+              есть чем открыть. Теперь зарегистрированы все наши типы, обычный текст,
+              наша ссылка и вообще любые метки (общий список технологий).
+            -->
             <intent-filter>
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/vnd.gsynk.game" />
+                <data android:mimeType="application/vnd.gsynk.profile" />
+                <data android:mimeType="application/vnd.gsynk.file" />
+                <data android:mimeType="application/vnd.gsynk.update" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="gsynk" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_filter" />
         </activity>
 
         <!-- Служба, которая применяет правило (работает из фона + переживает Android 17+) -->

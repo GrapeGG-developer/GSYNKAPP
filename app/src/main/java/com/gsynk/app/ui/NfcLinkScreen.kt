@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.BuildConfig
 import com.gsynk.app.core.AppLog
 import com.gsynk.app.core.AutomationActions
@@ -46,6 +47,7 @@ import com.gsynk.app.core.NdefHceService
 import com.gsynk.app.core.NfcBurstOverlay
 import com.gsynk.app.core.NfcLink
 import com.gsynk.app.core.NfcReader
+import com.gsynk.app.core.NfcPulse
 import com.gsynk.app.core.NfcShow
 import com.gsynk.app.core.NfcTagWriter
 import com.gsynk.app.core.PayloadCodec
@@ -162,6 +164,13 @@ fun NfcLinkScreen(
     /** Касание: либо записываем метку, либо читаем то, что нам дали. */
     val tagWriteRequest = rememberUpdatedState(writing)
 
+    // Пульс настоящих касаний: экран привязывается к нему, пока открыт.
+    DisposableEffect(Unit) {
+        NfcPulse.attach(context)
+        onDispose { NfcPulse.detach() }
+    }
+    val pulse by NfcPulse.event.collectAsStateWithLifecycle()
+
     DisposableEffect(activity, adapter, giving) {
         val nfc = adapter
         val callback = NfcAdapter.ReaderCallback { tag: Tag ->
@@ -172,7 +181,7 @@ fun NfcLinkScreen(
                     when (result) {
                         is NfcTagWriter.Result.Ok -> {
                             status = "Записано на метку: " + result.bytes + " байт. Приложите её к любому телефону."
-                            AppLog.event("Grape Link", "метка записана, ${result.bytes} байт")
+                            NfcPulse.written(result.bytes.toString() + " байт")
                         }
 
                         is NfcTagWriter.Result.Failed -> status = "Метка не записалась: " + result.reason
@@ -195,6 +204,7 @@ fun NfcLinkScreen(
                 burst.show(3_200L)
                 AutomationActions.vibrate(context, 110L)
                 bumpTouches()
+                NfcPulse.tagFound("прочитано: " + payload.kind)
                 when (payload.kind) {
                     // 1) игра: касание = сразу подключаемся и запускаем GTBOI
                     NfcLink.KIND_GAME -> {
@@ -262,11 +272,13 @@ fun NfcLinkScreen(
                 }
             }
         }
+        // FLAG_READER_SKIP_NDEF_CHECK — не ждём системного разбора: отвечаем быстрее.
         val flags = NfcAdapter.FLAG_READER_NFC_A or
             NfcAdapter.FLAG_READER_NFC_B or
             NfcAdapter.FLAG_READER_NFC_F or
             NfcAdapter.FLAG_READER_NFC_V or
-            NfcAdapter.FLAG_READER_NFC_BARCODE
+            NfcAdapter.FLAG_READER_NFC_BARCODE or
+            NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK
         if (activity != null && nfc != null && giving == 1) {
             // приём и эмуляция карты друг другу мешают — в режиме чтения передачу гасим
             NdefHceService.setEnabled(context, false)
@@ -312,6 +324,21 @@ fun NfcLinkScreen(
             "«" + picked.name + "» целиком лежит в метке — коснитесь вторым телефоном"
         } else {
             "«" + picked.name + "» поедет по Wi-Fi — коснитесь вторым телефоном"
+        }
+    }
+
+    // Событие железа: анимация и надпись появляются ТОЛЬКО по нему.
+    LaunchedEffect(pulse) {
+        val event = pulse ?: return@LaunchedEffect
+        when (event.kind) {
+            NfcPulse.Kind.READER_CAME -> {
+                burst.show(2_600L)
+                status = "Второй телефон прочитал данные — отпускайте телефоны"
+            }
+
+            NfcPulse.Kind.TAG_FOUND -> status = "Метка прочитана: " + event.detail
+            NfcPulse.Kind.WRITTEN -> status = "Записано на метку: " + event.detail
+            NfcPulse.Kind.WAITING -> Unit
         }
     }
 
@@ -535,7 +562,7 @@ fun NfcLinkScreen(
 
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            SmallButton("Показать анимацию") { burst.show(3_400L) }
+            SmallButton("Пример анимации") { burst.show(3_400L) }
             SmallButton("Забыть касания") {
                 received = null
                 FileLink.clear()

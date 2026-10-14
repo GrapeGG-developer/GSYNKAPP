@@ -117,12 +117,14 @@ data class AppSettings(
     val islandCompact: Boolean = true,
     /** Смещение острова по вертикали, dp (можно поднять/опустить под свой вырез). */
     val islandOffsetY: Int = 0,
+    /** Остров 2.0 садится вплотную под фронтальную камеру (по вырезу экрана). */
+    val islandHugCamera: Boolean = true,
     /** После перезагрузки применить правило, чьё время было последним по графику. */
     val syncAfterBoot: Boolean = true,
     /** Порядок правил на главном экране (см. RuleSort). */
     val ruleSort: Int = RuleSort.BY_TIME,
-    /** Репозиторий для OTA-обновлений («владелец/репозиторий»). */
-    val updateRepo: String = "GrapeGG-developer/GSYNKAPP",
+    /** Репозиторий для OTA-обновлений («владелец/репозиторий») — вшит в приложение. */
+    val updateRepo: String = Keys.REPO,
     /** Проверять обновления автоматически при запуске. */
     val updateAuto: Boolean = true,
     /** Когда последний раз проверяли обновления (ms). */
@@ -155,10 +157,13 @@ data class AppSettings(
     // ————— отчёты и диагностика —————
     /** Собирать отчёты о сбоях на телефоне. */
     val reportEnabled: Boolean = true,
-    /** Отправлять отчёты в GitHub сразу после сбоя (нужны токен и репозиторий). */
-    val reportAutoUpload: Boolean = false,
-    /** Репозиторий для отчётов — по умолчанию тот же, где лежат релизы. */
-    val reportRepo: String = "GrapeGG-developer/GSYNKAPP",
+    /**
+     * Отправлять отчёты в GitHub сразу после сбоя. Токен и репозиторий вшиты
+     * в приложение ([Keys]), поэтому по умолчанию отправка включена.
+     */
+    val reportAutoUpload: Boolean = true,
+    /** Репозиторий для отчётов. Пусто = взять вшитый ([Keys.REPO]). */
+    val reportRepo: String = "",
     /** Токен пользователя: нужен только для загрузки отчётов, хранится на устройстве. */
     val reportToken: String = "",
     val reportLastUpload: Long = 0L

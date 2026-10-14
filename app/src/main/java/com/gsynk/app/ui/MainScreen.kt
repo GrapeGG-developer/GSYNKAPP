@@ -127,6 +127,16 @@ fun MainScreen(vm: MainViewModel) {
     // и они накладывались друг на друга. null — главный экран.
     var panel by remember { mutableStateOf<String?>(null) }
     var panelBeforeUpdate by remember { mutableStateOf<String?>(null) }
+    // Каталог: заявки роутера и состояние плиток главного экрана.
+    var pendingTool by remember { mutableStateOf<String?>(null) }
+    var pendingFlag by remember { mutableStateOf<String?>(null) }
+    var pendingLab by remember { mutableStateOf<String?>(null) }
+    var query by remember { mutableStateOf("") }
+    var group by remember { mutableStateOf<Catalog.Group?>(null) }
+    var sort by remember { mutableStateOf(Catalog.loadSort(context)) }
+    var favorites by remember { mutableStateOf(Catalog.loadFavorites(context)) }
+    val recent = remember { Catalog.loadRecent(context) }
+    val toolsVm: ToolsViewModel = viewModel()
 
     // подземелье на два телефона: сопряжение NFC + игра по Wi-Fi
     var coopInvite by remember { mutableStateOf<com.gsynk.app.core.NfcLink.GameInvite?>(null) }
@@ -185,6 +195,48 @@ fun MainScreen(vm: MainViewModel) {
         }
     }
 
+    // Единый роутер: любому экрану разрешено открыть что угодно одной строкой.
+    val route by Router.request.collectAsStateWithLifecycle()
+    LaunchedEffect(route) {
+        val request = route ?: return@LaunchedEffect
+        val (kind, name) = Router.split(request)
+        when (kind) {
+            "panel" -> {
+                panel = name
+                Router.consume()
+            }
+
+            "page" -> {
+                panel = "page:" + name
+                Router.consume()
+            }
+
+            "sys" -> {
+                toolsVm.openSettings(name)
+                Router.consume()
+            }
+
+            "tool" -> {
+                pendingTool = name
+                panel = "tools"
+                Router.consume()
+            }
+
+            "flag" -> {
+                pendingFlag = name
+                panel = "tools"
+                Router.consume()
+            }
+
+            "lab" -> {
+                pendingLab = name
+                pendingTool = "lab"
+                panel = "tools"
+                Router.consume()
+            }
+        }
+    }
+
     // Новая версия сама вылезает на экран и закрывает все лишние панели.
     // Единственное исключение — живая игра: там перебивать нельзя, баннер подождёт.
     LaunchedEffect(hasUpdate) {
@@ -223,7 +275,7 @@ fun MainScreen(vm: MainViewModel) {
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                item { HomeHeader(model = profile.model, onSettings = { panel = "settings" }) }
+                item { HomeHeader(model = profile.model, onSettings = { panel = "settings" }, vm = vm) }
 
                 item {
                     AnimatedVisibility(
@@ -243,6 +295,66 @@ fun MainScreen(vm: MainViewModel) {
                     ) {
                         UpdateBanner(onClick = { panel = "update" })
                     }
+                }
+
+                item {
+                    SectionTitle("Все функции")
+                    Spacer(Modifier.height(6.dp))
+                    GrapeTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = "поиск по всему приложению"
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    ChipFlow {
+                        SortChip("все", group == null) { group = null; Catalog.saveGroup(context, null) }
+                        Catalog.Group.entries.forEach { entry ->
+                            SortChip(entry.title, group == entry) {
+                                group = entry
+                                Catalog.saveGroup(context, entry)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    ChipFlow {
+                        Catalog.Sort.entries.forEach { mode ->
+                            SortChip(mode.title, sort == mode) {
+                                sort = mode
+                                Catalog.saveSort(context, mode)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                }
+
+                item {
+                    val visible = remember(query, group, sort, favorites) {
+                        Catalog.view(query, group, sort, favorites, recent)
+                    }
+                    MetroGrid(Modifier.fillMaxWidth()) {
+                        visible.forEach { entry ->
+                            Tile8(
+                                title = entry.title,
+                                subtitle = entry.subtitle,
+                                size = entry.size,
+                                color = entry.color,
+                                live = if (entry.id == "bench") null else null,
+                                badge = if (entry.fresh) "новое" else null,
+                                onClick = { Catalog.open(context, entry) },
+                                onLongClick = {
+                                    favorites = if (entry.id in favorites) favorites - entry.id else favorites + entry.id
+                                    Catalog.saveFavorites(context, favorites)
+                                }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Плитки: " + visible.size + " из " + Catalog.ALL.size +
+                            " · долгое нажатие — добавить в «мои»",
+                        color = TextDim,
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
 
                 item {
@@ -460,6 +572,14 @@ fun MainScreen(vm: MainViewModel) {
         ToolsScreen(
             vm = vm,
             onBack = { panel = null },
+            openTool = pendingTool,
+            openFlag = pendingFlag,
+            openLab = pendingLab,
+            onOpened = {
+                pendingTool = null
+                pendingFlag = null
+                pendingLab = null
+            },
             onOpenNfc = { panel = "nfc" },
             // «GSYNK рядом» умеет передать игру в те же экраны, что и NFC
             onHostGame = {
@@ -476,6 +596,12 @@ fun MainScreen(vm: MainViewModel) {
                 panel = "rogue"
             }
         )
+    }
+
+    // Страницы GSUI V4: остров, эффекты, скругления, каждый день, пасхалки, рулетка, ИИ, бенчмарк.
+    panel?.takeIf { it.startsWith("page:") }?.let { name ->
+        if (Gsui4Page(name.removePrefix("page:"), vm, onBack = { panel = null })) return@let
+        panel = null
     }
 
     if (panel == "diagnostics") {
@@ -604,7 +730,7 @@ fun MainScreen(vm: MainViewModel) {
 // ————————————————————————————————————————————————
 
 @Composable
-private fun HomeHeader(model: String, onSettings: () -> Unit) {
+private fun HomeHeader(model: String, onSettings: () -> Unit, vm: MainViewModel? = null) {
     // нажатие на логотип рассыпает виноградную гроздь — простая радость, ничего лишнего
     var logoBurst by remember { mutableIntStateOf(0) }
     val logoContext = LocalContext.current
@@ -619,6 +745,14 @@ private fun HomeHeader(model: String, onSettings: () -> Unit) {
                         modifier = Modifier.clickable {
                             logoBurst++
                             com.gsynk.app.core.AutomationActions.vibrate(logoContext, 28L)
+                            // Пасхалка «семь касаний»: счётчик живёт в настройках,
+                            // поэтому её можно найти и потерять только по своей воле.
+                            val (taps, opened) = com.gsynk.app.core.Eggs.tapLogo(logoContext)
+                            if (opened) {
+                                vm?.showMessage("Пасхалка: " + (com.gsynk.app.core.Eggs.byId("logo7")?.title ?: ""))
+                            } else if (taps % 7 == 3) {
+                                vm?.showMessage("Уже " + taps + " касаний…")
+                            }
                         }
                     )
                     GrapeLogoBurst(

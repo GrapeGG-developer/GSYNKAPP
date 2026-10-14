@@ -11,6 +11,7 @@ import com.gsynk.app.core.IslandService
 import com.gsynk.app.core.Permissions
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleEngine
+import com.gsynk.app.core.Keys
 import com.gsynk.app.core.RuleRepository
 import com.gsynk.app.core.ReportUploader
 import com.gsynk.app.core.RuleScheduler
@@ -46,6 +47,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         viewModelScope.launch { rescheduleAll() }
+        // Остров 2.0: сразу применяем посадку из настроек, иначе капсула встанет ниже камеры.
+        syncIslandHug()
     }
 
     private fun app(): Application = getApplication()
@@ -74,6 +77,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun islandPosition() = settings.value.islandPosition
+
+    /** Посадка острова приходит из настроек — держим оверлей в курсе. */
+    private fun syncIslandHug() {
+        IslandOverlay.hugCamera = settings.value.islandHugCamera
+    }
 
     // ————— действия с правилами —————
 
@@ -328,7 +336,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (!silent) {
             _message.value = result.message
         }
+        // Фирменная анимация: обновление приходит в островок, а не «где-то в настройках».
+        if (result.updateAvailable && result.latestTag != repository.currentSettings().seenVersion) {
+            val previous = repository.currentSettings().lastUpdateCheck
+            _updateAnnounce.value = result.latestTag
+            IslandOverlay.show(
+                context = app(),
+                iconRes = com.gsynk.app.R.drawable.ic_bolt,
+                title = "GSYNK " + result.latestTag,
+                subtitle = "обновление готово",
+                position = islandPosition(),
+                durationMs = 6_000L,
+                compact = repository.currentSettings().islandCompact,
+                offsetY = repository.currentSettings().islandOffsetY
+            )
+            if (previous == 0L) AppLog.event("Обновление", "найдена версия " + result.latestTag)
+        }
     }
+
+    /** Метка версии, о которой уже рассказали в островке: чтобы не повторяться. */
+    private val _updateAnnounce = MutableStateFlow<String?>(null)
+    val updateAnnounce: StateFlow<String?> = _updateAnnounce.asStateFlow()
 
     /** Пользователь закрыл панель: больше не показываем баннер для этой версии. */
     fun dismissUpdate() = viewModelScope.launch {
@@ -450,6 +478,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _lastCrash.value = false
     }
 
+    /**
+     * Репозиторий для отчётов: вшитый в приложение, а если человек вписал свой — его.
+     * Так отчёты уходят без настройки, но своя настройка всё ещё уважается.
+     */
+    fun reportRepo(): String = Keys.REPO
+
+    /** Токен для отчётов: вшитый в приложение или вписанный вручную. */
+    fun reportToken(current: AppSettings): String =
+        current.reportToken.ifBlank { Keys.REPORT_TOKEN }
+
     fun setReportEnabled(enabled: Boolean) = viewModelScope.launch {
         guarded {
             repository.saveSettings(repository.currentSettings().copy(reportEnabled = enabled))
@@ -474,13 +512,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Отправить все отчёты в GitHub (токен и репозиторий берём из настроек). */
     fun uploadReports() = viewModelScope.launch {
         val current = repository.currentSettings()
-        if (current.reportRepo.isBlank() || current.reportToken.isBlank()) {
+        if (reportRepo().isBlank() || reportToken(current).isBlank()) {
             _message.value = "Укажите репозиторий и токен для отправки"
             return@launch
         }
         _uploading.value = true
         val result = withContext(Dispatchers.IO) {
-            ReportUploader.upload(app(), current.reportRepo, current.reportToken)
+            ReportUploader.upload(app(), reportRepo(), reportToken(current))
         }
         _uploading.value = false
         repository.saveSettings(repository.currentSettings().copy(reportLastUpload = System.currentTimeMillis()))
@@ -491,13 +529,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** Отправить один отчёт. */
     fun uploadReport(item: AppLog.ReportItem) = viewModelScope.launch {
         val current = repository.currentSettings()
-        if (current.reportRepo.isBlank() || current.reportToken.isBlank()) {
+        if (reportRepo().isBlank() || reportToken(current).isBlank()) {
             _message.value = "Укажите репозиторий и токен для отправки"
             return@launch
         }
         _uploading.value = true
         val result = withContext(Dispatchers.IO) {
-            ReportUploader.uploadOne(app(), current.reportRepo, current.reportToken, item.file)
+            ReportUploader.uploadOne(app(), reportRepo(), reportToken(current), item.file)
         }
         _uploading.value = false
         _message.value = result.message
@@ -507,13 +545,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     /** После сбоя: если пользователь разрешил — отправляем отчёт сами. */
     private fun maybeAutoUpload() = viewModelScope.launch {
         val current = repository.currentSettings()
-        if (!current.reportAutoUpload || current.reportToken.isBlank()) return@launch
+        if (!current.reportAutoUpload || reportToken(current).isBlank()) return@launch
         val hasCrash = withContext(Dispatchers.IO) {
             AppLog.reports(app()).any { it.isCrash && !ReportUploader.isUploaded(it.file) }
         }
         if (!hasCrash) return@launch
         val result = withContext(Dispatchers.IO) {
-            ReportUploader.upload(app(), current.reportRepo, current.reportToken)
+            ReportUploader.upload(app(), reportRepo(), reportToken(current))
         }
         AppLog.event("Reports", "автоотправка: ${result.message}")
     }
@@ -592,6 +630,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setIslandOffset(offset: Int) = viewModelScope.launch {
         guarded {
             repository.saveSettings(repository.currentSettings().copy(islandOffsetY = offset))
+            if (settings.value.islandPersistent) IslandService.start(app()) else fullIslandPreview()
+        }
+    }
+
+    /** Остров 2.0: прижаться к камере или встать ниже неё. */
+    fun setIslandHugCamera(hug: Boolean) = viewModelScope.launch {
+        guarded {
+            repository.saveSettings(repository.currentSettings().copy(islandHugCamera = hug))
+            IslandOverlay.hugCamera = hug
             if (settings.value.islandPersistent) IslandService.start(app()) else fullIslandPreview()
         }
     }
