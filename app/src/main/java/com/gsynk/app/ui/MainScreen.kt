@@ -260,7 +260,11 @@ fun MainScreen(vm: MainViewModel) {
     // Автопроверка почаще: при возвращении в приложение, если прошло больше 15 минут.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) vm.checkUpdateIfStale()
+            if (event == Lifecycle.Event.ON_RESUME) {
+                vm.checkUpdateIfStale()
+                // Заодно смотрим, не ответил ли агент: ответ показывается капсулой.
+                vm.checkAgentMail(silent = true)
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -295,6 +299,17 @@ fun MainScreen(vm: MainViewModel) {
                         exit = shrinkVertically() + fadeOut()
                     ) {
                         CrashBanner(onClick = { panel = "diagnostics" })
+                    }
+                }
+
+                item {
+                    val unseen by vm.agentUnseen.collectAsStateWithLifecycle()
+                    AnimatedVisibility(
+                        visible = unseen > 0,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        AgentMailBanner(unseen = unseen, onClick = { panel = "page:agent" })
                     }
                 }
 

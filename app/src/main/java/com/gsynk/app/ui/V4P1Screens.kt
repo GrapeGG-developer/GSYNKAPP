@@ -241,6 +241,7 @@ val PhaseIds: List<String> = Phases.ALL.map { it.id }
 fun V4P1Page(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
     when (id) {
         "folders" -> { FolderHubScreen(onBack); return true }
+        "agent" -> { AgentMailScreen(onBack); return true }
         "cpu" -> { PhaseCpuScreen(onBack); return true }
         "battery" -> { PhaseBatteryScreen(onBack); return true }
         "display" -> { PhaseDisplayScreen(onBack); return true }

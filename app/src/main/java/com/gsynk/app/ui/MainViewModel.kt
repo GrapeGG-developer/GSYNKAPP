@@ -11,6 +11,7 @@ import com.gsynk.app.core.IslandService
 import com.gsynk.app.core.Permissions
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleEngine
+import com.gsynk.app.core.AgentMail
 import com.gsynk.app.core.Keys
 import com.gsynk.app.core.RuleRepository
 import com.gsynk.app.core.ReportUploader
@@ -43,6 +44,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.settings.stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
 
     private val _message = MutableStateFlow<String?>(null)
+    /** Непрочитанные ответы агента: показываются капсулой на главном экране. */
+    private val _agentUnseen = MutableStateFlow(0)
+    val agentUnseen: kotlinx.coroutines.flow.StateFlow<Int> = _agentUnseen.asStateFlow()
     val message: StateFlow<String?> = _message.asStateFlow()
 
     init {
@@ -307,11 +311,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (!stale) checkUpdate(silent = true)
             }
             // дальше — ровным кругом, пока приложение живёт
+            var circles = 0
             while (true) {
                 kotlinx.coroutines.delay(REFRESH_INTERVAL_MS)
                 if (repository.currentSettings().updateAuto) checkUpdate(silent = true)
+                // Переписку проверяем через круг (раз в четыре минуты): два обращения
+                // в две минуты вместе с обновлениями упёрлись бы в лимит GitHub в 60 в час.
+                circles++
+                if (circles % 2 == 0) checkAgentMail(silent = true)
             }
         }
+    }
+
+    /**
+     * Проверка ответов агента. Отдельного таймера не заводим: идём тем же кругом,
+     * что и обновления, — 30 обращений в час против лимита GitHub в 60.
+     */
+    fun checkAgentMail(silent: Boolean = false) = viewModelScope.launch {
+        if (!Keys.ready()) return@launch
+        val result = withContext(Dispatchers.IO) { AgentMail.pull(app()) }
+        val fresh = AgentMail.unseen(result.messages, AgentMail.lastSeen(app()))
+        val before = _agentUnseen.value
+        _agentUnseen.value = fresh
+        if (fresh > before && fresh > 0) {
+            // Новая весть от агента — в островок, как и обновление версии.
+            announceIsland(
+                title = "агент ответил",
+                subtitle = "новых сообщений: " + fresh,
+                persistent = false
+            )
+        }
+        if (!silent) _message.value = result.message
+    }
+
+    /** Сколько ответов агента ждёт прочтения. */
+    fun markAgentSeen() = viewModelScope.launch {
+        AgentMail.markSeen(app(), AgentMail.lastId(AgentMail.cached(app())))
+        _agentUnseen.value = 0
     }
 
     /** Возвращение в приложение: если с последней проверки прошло больше 15 минут — проверяем. */

@@ -195,6 +195,7 @@ object Catalog {
         Entry("permissions", "разрешения", "всё, что нужно приложению", Group.SYSTEM, Metro.Size.SMALL, 9, SHIELD, "panel:settings", 70, words = listOf("права", "доступ")),
         Entry("update", "обновление", "приходит само", Group.SYSTEM, Metro.Size.SMALL, 10, BOLT, "flag:update", 72, words = listOf("новая версия", "апдейт")),
         Entry("diag", "диагностика", "отчёты и журнал", Group.SYSTEM, Metro.Size.SMALL, 11, TUNE, "flag:diagnostics", 50, words = listOf("сбои", "логи")),
+        Entry("agent", "связь с агентом", "переписка через GitHub", Group.SYSTEM, Metro.Size.WIDE, 0, COPY, "page:agent", 95, fresh = true, words = listOf("агент", "чат", "связь", "вопрос")),
         Entry("report", "собрать отчёт", "состояние телефона", Group.SYSTEM, Metro.Size.SMALL, 12, COPY, "sys:report", 46, words = listOf("лог", "жалоба")),
         Entry("syssound", "звук", "системный экран", Group.SYSTEM, Metro.Size.SMALL, 13, VOLUME, "sys:sound", 30),
         Entry("sysbattery", "батарея", "системный экран", Group.SYSTEM, Metro.Size.SMALL, 14, BOLT, "sys:battery", 30),
