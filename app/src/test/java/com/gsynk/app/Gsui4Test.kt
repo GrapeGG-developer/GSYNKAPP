@@ -401,6 +401,38 @@ class Gsui4Test {
         assertFalse(CatalogGuards.everyIdIsUnique(listOf("nfc", "nfc")))
     }
 
+    /**
+     * Плитка-тупик — худшая поломка каталога: человек нажимает и попадает в никуда.
+     * Здесь сверяем, что имя каждого маршрута встречается в исходниках обработчиков
+     * (маршруты открываются по строке, поэтому «имя» и есть точка входа).
+     */
+    @Test
+    fun everyCatalogRouteHasReceiver() {
+        val ui = java.io.File("src/main/java/com/gsynk/app/ui")
+        val core = java.io.File("src/main/java/com/gsynk/app/core")
+        val sources = (ui.listFiles()!!.toList() + core.listFiles()!!.toList())
+            .filter { it.extension == "kt" }
+            .map { it.readText() }
+        val routes = com.gsynk.app.ui.Catalog.ALL.map { it.route }.distinct()
+        assertTrue(routes.isNotEmpty())
+        val dead = routes.filterNot { com.gsynk.app.core.CatalogGuards.routeHasReceiver(it, sources) }
+        assertEquals("плитки без экрана: " + dead, emptyList<String>(), dead)
+    }
+
+    /** Все страницы GSUI V4 должны разбираться одним разборщиком. */
+    @Test
+    fun everyPageRouteIsKnownToGsui4Page() {
+        val pages = com.gsynk.app.ui.Catalog.ALL
+            .map { it.route }
+            .filter { it.startsWith("page:") }
+            .map { it.removePrefix("page:") }
+            .distinct()
+        assertTrue(pages.isNotEmpty())
+        val screen = java.io.File("src/main/java/com/gsynk/app/ui/Gsui4Screens.kt").readText()
+        val unknown = pages.filterNot { screen.contains("\"" + it + "\" ->") }
+        assertEquals("страницы без экрана: " + unknown, emptyList<String>(), unknown)
+    }
+
     private fun profile(full: Boolean): com.gsynk.app.core.DeviceProfile.Info =
         com.gsynk.app.core.DeviceProfile.Info(
             model = "тест",

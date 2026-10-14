@@ -216,7 +216,12 @@ fun MainScreen(vm: MainViewModel) {
             }
 
             "sys" -> {
-                toolsVm.openSettings(name)
+                // «report» — не системный экран, а сбор отчёта: его собирает модель.
+                if (name == "report") {
+                    vm.collectReport("Отчёт по кнопке из каталога")
+                } else {
+                    toolsVm.openSettings(name)
+                }
                 Router.consume()
             }
 

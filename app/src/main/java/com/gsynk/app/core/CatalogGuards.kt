@@ -23,6 +23,24 @@ object CatalogGuards {
         return kind in setOf("panel", "page", "tool", "flag", "lab", "sys")
     }
 
+    /**
+     * У маршрута есть получатель: имя маршрута встречается в исходниках обработчиков.
+     *
+     * Проверка нарочно простая и честная: она смотрит исходный текст (как это делает
+     * `UiGuardTest`), а не догадывается. Смысл — не пустить в каталог плитку-тупик:
+     * человек нажимает и попадает в никуда.
+     */
+    fun routeHasReceiver(route: String, sources: List<String>): Boolean {
+        val name = route.substringAfter(':', missingDelimiterValue = route)
+        if (name.isBlank()) return false
+        val quoted = "\"" + name + "\""
+        return sources.any { it.contains(quoted) }
+    }
+
+    /** Все ли маршруты находят свой обработчик. */
+    fun everyRouteHasReceiver(routes: List<String>, sources: List<String>): Boolean =
+        routes.all { routeHasReceiver(it, sources) }
+
     /** Размер плитки должен быть одним из четырёх Metro. */
     fun knownSizes(): List<String> = listOf("1x1", "2x2", "4x2", "2x4", "4x4")
 }
