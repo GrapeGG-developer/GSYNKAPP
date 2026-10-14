@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.BuildConfig
 import com.gsynk.app.core.IslandPosition
@@ -68,7 +70,7 @@ fun SettingsSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = CardBg,
-        shape = RectangleShape,
+        shape = skinShape("sheet"),
         dragHandle = null
     ) {
         Column(
@@ -86,26 +88,30 @@ fun SettingsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
-                    GradientText(
+                    // Заголовок Metro: 42 pt Light, без градиента — плитка сама кричит цветом.
+                    Text(
                         text = "Настройки",
-                        style = MaterialTheme.typography.headlineMedium,
-                        brush = com.gsynk.app.ui.theme.GrapeGradient
+                        color = TextPrimary,
+                        fontSize = Metro.Type.pageTitle,
+                        fontWeight = FontWeight.Light,
+                        letterSpacing = (-1).sp
                     )
                     Text(
                         text = "GSYNK ${BuildConfig.VERSION_NAME}",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall
+                        fontSize = Metro.Type.caption,
+                        letterSpacing = 1.2.sp
                     )
                 }
+                // Закрытие — как «назад» в Metro: 44×44, без заливки, в правом верхнем углу.
                 Box(
                     Modifier
-                        .size(38.dp)
-                        .clip(RectangleShape)
-                        .background(CardBorder)
+                        .size(44.dp)
+                        .clip(skinShape("button"))
                         .clickable { onDismiss() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("✕", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+                    Text("✕", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Light)
                 }
             }
 
@@ -164,7 +170,7 @@ fun SettingsSheet(
             }
 
             Spacer(Modifier.height(12.dp))
-            Text("Расположение", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+            Text("Расположение", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 IslandPosition.ALL.forEach { position ->
@@ -176,7 +182,7 @@ fun SettingsSheet(
             }
 
             Spacer(Modifier.height(12.dp))
-            Text("Что показывать", color = TextSecondary, style = MaterialTheme.typography.labelMedium)
+            Text("Что показывать", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 IslandWidget.ALL.forEach { widget ->
@@ -229,7 +235,7 @@ fun SettingsSheet(
             SectionTitle("Кастомизация")
             Spacer(Modifier.height(8.dp))
             SurfaceCard(borderColor = CardBorder) {
-                Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+                Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     UiTweaks.ACCENTS.forEachIndexed { index, (name, _) ->
@@ -239,7 +245,7 @@ fun SettingsSheet(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Переливание фона", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+                Text("Переливание фона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     listOf("спокойно", "обычно", "быстро").forEachIndexed { index, name ->
@@ -249,7 +255,7 @@ fun SettingsSheet(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Плитки", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+                Text("Плитки", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     listOf("мелкие", "обычные", "крупные").forEachIndexed { index, name ->
@@ -305,13 +311,13 @@ fun SettingsSheet(
                     Text(
                         text = item.title,
                         color = if (item.granted) TextSecondary else TextPrimary,
-                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = Metro.Type.body,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
                         text = if (item.granted) "выдано" else "выдать →",
                         color = if (item.granted) TextDim else GrapeVioletSoft,
-                        style = MaterialTheme.typography.labelMedium
+                        fontSize = Metro.Type.caption
                     )
                 }
             }
@@ -335,7 +341,7 @@ fun SettingsSheet(
                 text = "Правил в расписании: " + (vm.rules.collectAsStateWithLifecycle().value.size) +
                     " • вся работа идёт на телефоне, интернет нужен только для проверки обновлений",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                fontSize = Metro.Type.caption
             )
             Spacer(Modifier.height(24.dp))
         }
@@ -358,8 +364,13 @@ fun SettingRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-            Text(subtitle, color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text(
+                title,
+                color = TextPrimary,
+                fontSize = Metro.Type.body,
+                fontWeight = FontWeight.Normal
+            )
+            Text(subtitle, color = TextDim, fontSize = Metro.Type.caption)
         }
         ToggleDot(checked = checked) { onChange(!checked) }
     }

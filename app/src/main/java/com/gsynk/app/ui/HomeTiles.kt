@@ -153,7 +153,7 @@ fun LiveTile(
                 Text(
                     text = title,
                     color = Color.White,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
                     modifier = Modifier.weight(1f)
                 )
                 if (badge != null) {
@@ -166,7 +166,7 @@ fun LiveTile(
                         Text(
                             text = badge,
                             color = Color.White,
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -183,7 +183,7 @@ fun LiveTile(
                     Text(
                         text = text,
                         color = Color.White,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -191,7 +191,7 @@ fun LiveTile(
             Text(
                 text = subtitle,
                 color = Color.White.copy(alpha = 0.76f),
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -312,8 +312,8 @@ fun AddRuleTile(modifier: Modifier = Modifier, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("＋", color = com.gsynk.app.ui.theme.GrapeVioletSoft, style = MaterialTheme.typography.headlineSmall)
-            Text("Новое правило", color = com.gsynk.app.ui.theme.TextDim, style = MaterialTheme.typography.labelSmall)
+            Text("＋", color = com.gsynk.app.ui.theme.GrapeVioletSoft, style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
+            Text("Новое правило", color = com.gsynk.app.ui.theme.TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
     }
 }
@@ -448,7 +448,7 @@ fun MetroTile(
                                 .background(Color.Black.copy(alpha = 0.28f))
                                 .padding(horizontal = 6.dp, vertical = 1.dp)
                         ) {
-                            Text(badge, color = Color.White, style = MaterialTheme.typography.labelSmall)
+                            Text(badge, color = Color.White, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                         }
                     }
                 }
@@ -468,7 +468,7 @@ fun MetroTile(
                     Text(
                         text = subtitle.lowercase(),
                         color = Color.White.copy(alpha = 0.72f),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
                         maxLines = 1
                     )
                 }
@@ -486,7 +486,7 @@ fun MetroTile(
                     Text(
                         text = liveLabel.lowercase(),
                         color = Color.White.copy(alpha = 0.72f),
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
                 Text(

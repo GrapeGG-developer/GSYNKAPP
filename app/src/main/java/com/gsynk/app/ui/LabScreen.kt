@@ -118,13 +118,13 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
         } else {
             GrapeScreen(title = "ИК-пульт", onBack = { tool = null }) {
                 SurfaceCard(borderColor = GrapeRed.copy(alpha = 0.5f)) {
-                    Text("Инфракрасного излучателя нет", color = GrapeRed, style = MaterialTheme.typography.titleSmall)
+                    Text("Инфракрасного излучателя нет", color = GrapeRed, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text = "На этом телефоне нет ИК-порта. Он есть у Poco X3 Pro и большинства " +
                             "старых Xiaomi — там ПУЛЬТ появится сам.",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
             }
@@ -138,9 +138,9 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
         onBack = onBack
     ) {
         SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.45f)) {
-            Text("Безопасно и возвращается назад", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall)
+            Text("Безопасно и возвращается назад", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
-            Text(DeviceLab.SAFETY_NOTE, color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text(DeviceLab.SAFETY_NOTE, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(12.dp))
 
@@ -257,7 +257,7 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
                 "Слой гасит свет поверх всего экрана: чёрные пиксели AMOLED не светятся, поэтому " +
                 "телефон ещё и ест меньше.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = if (dimmerPercent > 0) GrapeGreen.copy(alpha = 0.5f) else CardBorder) {
@@ -279,7 +279,7 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
 
         Spacer(Modifier.height(16.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Что открылось для этого телефона", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+            Text("Что открылось для этого телефона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             InfoRow("Модель", profile.model)
             InfoRow("Экран", profile.width.toString() + "×" + profile.height)
@@ -289,7 +289,7 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
             InfoRow("NFC", if (profile.hasNfc) "есть" else "нет", if (profile.hasNfc) GrapeGreen else TextDim)
             InfoRow("HyperOS", if (profile.isHyperOs) "да" else "нет", if (profile.isHyperOs) GrapeAmber else TextDim)
             Spacer(Modifier.height(6.dp))
-            Text(profile.reason, color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text(profile.reason, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(20.dp))
     }
@@ -334,7 +334,7 @@ private fun StrobeScreen(onBack: () -> Unit) {
             Text(
                 text = "коснитесь, чтобы остановить",
                 color = if (color == Color.White) Color.Black else Color.White.copy(alpha = 0.7f),
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
                 modifier = Modifier.padding(bottom = 40.dp)
             )
         }
@@ -343,13 +343,13 @@ private fun StrobeScreen(onBack: () -> Unit) {
 
     GrapeScreen(title = "Стробоскоп", subtitle = "мигание экраном · " + strobe.label, onBack = onBack) {
         SurfaceCard(borderColor = GrapeAmber.copy(alpha = 0.5f)) {
-            Text("Осторожно", color = GrapeAmber, style = MaterialTheme.typography.titleSmall)
+            Text("Осторожно", color = GrapeAmber, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Мелькание света может быть неприятно людям с чувствительностью к мерцанию. " +
                     "Не направляйте экран в глаза и не держите вспышки дольше пары минут.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -361,8 +361,8 @@ private fun StrobeScreen(onBack: () -> Unit) {
                     borderColor = if (option == strobe) GrapeAmber.copy(alpha = 0.6f) else CardBorder,
                     onClick = { strobe = option }
                 ) {
-                    Text(option.label + " · " + option.hertz.roundToInt() + " Гц", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-                    Text(option.hint, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Text(option.label + " · " + option.hertz.roundToInt() + " Гц", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                    Text(option.hint, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
             }
         }
@@ -411,17 +411,17 @@ private fun ScreenTestScreen(onBack: () -> Unit) {
             DeviceLab.ScreenTest.entries.forEach { option ->
                 SurfaceCard(borderColor = CardBorder, onClick = { test = option }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(option.label, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                        Text(option.label, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                     }
                     Spacer(Modifier.height(4.dp))
-                    Text(option.hint, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Text(option.hint, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
                 Spacer(Modifier.height(9.dp))
             }
             Text(
                 text = "Каждая проверка — на весь экран: коснитесь, чтобы вернуться.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(20.dp))
         }
@@ -444,7 +444,7 @@ private fun FlatFieldsTest(onExit: () -> Unit) {
         Text(
             text = name + " · далее " + (index + 1) + " / " + DeviceLab.flatFields.size,
             color = if (color == 0xFFFFFFFF.toInt()) Color.Black else Color.White.copy(alpha = 0.65f),
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
             modifier = Modifier.padding(bottom = 40.dp)
         )
     }
@@ -504,7 +504,7 @@ private fun PixelCleanTest(onExit: () -> Unit) {
         Text(
             text = if (running) "перебор цветов · коснитесь для паузы" else "пауза · коснитесь для продолжения",
             color = Color.White.copy(alpha = 0.75f),
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
             modifier = Modifier.padding(bottom = 40.dp)
         )
     }
@@ -567,7 +567,7 @@ private fun PwmTest(onExit: () -> Unit) {
                 text = "Поставьте системную яркость на минимум: если полосы «дрожат» или рябят — " +
                     "у панели заметное мерцание (ШИМ). Это чувствуют глаза при долгом чтении.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -628,12 +628,12 @@ private fun MultiTouchTest(onExit: () -> Unit) {
             Text(
                 text = "Одновременно касаний: " + points.size.toString() + " · максимум: $maxTouches",
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleSmall
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
             )
             Text(
                 text = "Положите ладонь: видно, сколько пальцев панель слышит на самом деле и где есть мёртвые зоны.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             SortChip("выход", selected = false) { onExit() }
@@ -675,7 +675,7 @@ private fun GhostTest(onExit: () -> Unit) {
         Text(
             text = "Серая плита едет медленно: если за ней тянется светлый шлейф — у панели медленный отклик",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(24.dp)
@@ -730,13 +730,13 @@ private fun SensorsScreen(onBack: () -> Unit) {
         onBack = onBack
     ) {
         SurfaceCard(borderColor = GrapeCyan.copy(alpha = 0.5f)) {
-            Text("Живые показания", color = GrapeCyan, style = MaterialTheme.typography.titleSmall)
+            Text("Живые показания", color = GrapeCyan, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Значения обновляются прямо сейчас — датчиков в телефоне больше десятка, " +
                     "и большинство приложений показывают из них три-четыре.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         // ————— системные датчики: показываем, что они есть, но не читаем —————
@@ -749,7 +749,7 @@ private fun SensorsScreen(onBack: () -> Unit) {
                 Text(
                     text = "Только для системы: " + systemOnly.size,
                     color = GrapeAmber,
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -757,7 +757,7 @@ private fun SensorsScreen(onBack: () -> Unit) {
                         "службам: подписка из обычного приложения запрещена и раньше роняла GSYNK. " +
                         "Показываем список — читать их нельзя ни одному приложению, и это правильно.",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
                 Spacer(Modifier.height(8.dp))
                 systemOnly.take(12).forEach { sensor ->
@@ -765,7 +765,7 @@ private fun SensorsScreen(onBack: () -> Unit) {
                         Text(
                             text = "• " + sensor.name,
                             color = TextSecondary,
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -817,7 +817,7 @@ private fun SensorsScreen(onBack: () -> Unit) {
                     ) { }
                     Spacer(Modifier.width(9.dp))
                     Column {
-                        Text(sensor.name, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                        Text(sensor.name, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                         Text(
                             text = "тип " + sensor.type + " · " + sensor.vendor + " · " +
                                 String.format("%.1f мА", sensor.power) + " · " +
@@ -829,12 +829,12 @@ private fun SensorsScreen(onBack: () -> Unit) {
                                     else -> "неизвестно"
                                 },
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                         Text(
                             text = values[sensor.type] ?: "нет данных",
                             color = GrapeGreen,
-                            style = MaterialTheme.typography.labelMedium
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -873,13 +873,13 @@ private fun CoilsScreen(onBack: () -> Unit) {
         onBack = onBack
     ) {
         SurfaceCard(borderColor = GrapePink.copy(alpha = 0.5f)) {
-            Text("Вибромотор — это катушка", color = GrapePink, style = MaterialTheme.typography.titleSmall)
+            Text("Вибромотор — это катушка", color = GrapePink, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Внутри телефона вибрирует грузик на валу, который толкает катушка индуктивности. " +
                     "Меняя форму импульсов, из неё можно выжать щелчок, сердцебиение, мотор или SOS.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -895,9 +895,9 @@ private fun CoilsScreen(onBack: () -> Unit) {
                                 AppLog.event("Лаборатория", "вибро-шаблон: " + option.label)
                             }
                         ) {
-                            Text(option.label, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                            Text(option.label, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                             Spacer(Modifier.height(2.dp))
-                            Text(option.hint, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                            Text(option.hint, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                         }
                     }
                 }
@@ -911,7 +911,7 @@ private fun CoilsScreen(onBack: () -> Unit) {
             text = "Удары в секунду: медленно — постукивание, быстро — жужжание. " +
                 "На 16 ударах телефон «поёт» басом через стол.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = if (hertz > 0) GrapePink.copy(alpha = 0.5f) else CardBorder) {
@@ -937,7 +937,7 @@ private fun CoilsScreen(onBack: () -> Unit) {
             text = "Динамик — тоже катушка в магнитном поле. Тон-генератор делает чистые тоны, " +
                 "развёртку и ультразвук: проверка на слух и «отпугиватель» для комаров.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = GrapeCyan.copy(alpha = 0.4f)) {
@@ -965,7 +965,7 @@ private fun CoilsScreen(onBack: () -> Unit) {
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Играть 2 секунды", color = GrapeCyan, style = MaterialTheme.typography.labelLarge)
+                    Text("Играть 2 секунды", color = GrapeCyan, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                 }
                 Box(
                     Modifier
@@ -980,7 +980,7 @@ private fun CoilsScreen(onBack: () -> Unit) {
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(if (sweep) "развёртка идёт…" else "Развёртка 20→20к", color = GrapeAmber, style = MaterialTheme.typography.labelLarge)
+                    Text(if (sweep) "развёртка идёт…" else "Развёртка 20→20к", color = GrapeAmber, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                 }
             }
             Spacer(Modifier.height(10.dp))
@@ -992,7 +992,7 @@ private fun CoilsScreen(onBack: () -> Unit) {
                 text = "Осторожно с громкостью: ультразвук на 17 кГц и низкие тоны громко не слушайте — " +
                     "это нагрузка на динамик.",
                 color = GrapeRed.copy(alpha = 0.8f),
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(20.dp))
@@ -1040,14 +1040,14 @@ private fun InductionScreen(onBack: () -> Unit) {
         onBack = onBack
     ) {
         SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.5f)) {
-            Text("Как это работает", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall)
+            Text("Как это работает", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "В телефоне есть датчик магнитного поля на эффекте Холла. Металл рядом меняет " +
                     "поле — это и есть металлоискатель. Беспроводная зарядка, динамик и вибромотор " +
                     "тоже создают поле: поднесите телефон к ним и увидите всплеск.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -1082,18 +1082,18 @@ private fun InductionScreen(onBack: () -> Unit) {
                     else -> "Пока спокойно — металла рядом нет."
                 },
                 color = TextSecondary,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(12.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Проверка катушки зарядки и динамика", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+            Text("Проверка катушки зарядки и динамика", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Включите вибро-шаблон «Мотор» и держите телефон — датчик поймает поле катушки " +
                     "вибромотора. То же с беспроводной зарядкой: поднесите к ней телефон и увидите всплеск.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             PrimaryButton(
@@ -1148,7 +1148,7 @@ private fun TorchStrobeScreen(onBack: () -> Unit) {
                 text = "Вспышка камеры мигает с выбранной частотой. Так проверяют экран второго телефона " +
                     "на мерцание и делают стробоскоп для съёмки. Долго не держите — вспышка греется.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -1180,15 +1180,15 @@ private fun DialCodesScreen(onBack: () -> Unit) {
                 text = "Нажмите код — откроется звонилка с уже набранным номером. Дальше достаточно " +
                     "нажать вызов: это штатные тесты железа, они ничего не меняют.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(12.dp))
         DeviceLab.dialCodes.forEach { (code, hint) ->
             SurfaceCard(borderColor = CardBorder, onClick = { DeviceLab.openDialer(context, code) }) {
-                Text(code, color = GrapeGreen, style = MaterialTheme.typography.titleSmall)
+                Text(code, color = GrapeGreen, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(2.dp))
-                Text(hint, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                Text(hint, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
             Spacer(Modifier.height(9.dp))
         }
@@ -1212,13 +1212,13 @@ private fun IrRemoteScreen(onBack: () -> Unit) {
         onBack = onBack
     ) {
         SurfaceCard(borderColor = GrapeRed.copy(alpha = 0.5f)) {
-            Text("Настоящий пульт в телефоне", color = GrapeRed, style = MaterialTheme.typography.titleSmall)
+            Text("Настоящий пульт в телефоне", color = GrapeRed, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Xiaomi ставит в дешёвые модели инфракрасный излучатель — им управляют техникой. " +
                     "Коды протокола NEC считаются прямо на телефоне, никакой интернет не нужен.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -1254,7 +1254,7 @@ private fun IrRemoteScreen(onBack: () -> Unit) {
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(key.title, color = TextPrimary, style = MaterialTheme.typography.labelLarge)
+                        Text(key.title, color = TextPrimary, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                     }
                 }
             }
@@ -1265,7 +1265,7 @@ private fun IrRemoteScreen(onBack: () -> Unit) {
             InfoRow("Выбрано", DeviceLab.tvBrands[brand].first, GrapeCyan)
             InfoRow("Адрес кода", "0x" + deviceCode.toString(16).uppercase(), GrapeVioletSoft)
             Spacer(Modifier.height(6.dp))
-            Text(log, color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+            Text(log, color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(20.dp))
     }
@@ -1301,7 +1301,7 @@ fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
     DisposableEffect(Unit) { onDispose { ToneSynth.stop() } }
 
     SurfaceCard(borderColor = if (holding) GrapeGreen.copy(alpha = 0.6f) else GrapeCyan.copy(alpha = 0.4f)) {
-        Text("Держу — играет", color = if (holding) GrapeGreen else GrapeCyan, style = MaterialTheme.typography.titleSmall)
+        Text("Держу — играет", color = if (holding) GrapeGreen else GrapeCyan, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(4.dp))
         Text(
             text = if (holding) {
@@ -1311,7 +1311,7 @@ fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
                     "частота едет без разрывов."
             },
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(10.dp))
         Box(
@@ -1346,7 +1346,7 @@ fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
             Text(
                 text = if (holding) "звучит ${hz.toInt()} Гц" else "ДЕРЖАТЬ",
                 color = if (holding) GrapeGreen else TextPrimary,
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -1393,7 +1393,7 @@ fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text("В мотив (${collected.size})", color = GrapeAmber, style = MaterialTheme.typography.labelLarge)
+                Text("В мотив (${collected.size})", color = GrapeAmber, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             }
             Box(
                 Modifier
@@ -1411,7 +1411,7 @@ fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text("Играть мотив", color = GrapeGreen, style = MaterialTheme.typography.labelLarge)
+                Text("Играть мотив", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             }
         }
         Spacer(Modifier.height(6.dp))
@@ -1426,7 +1426,7 @@ fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
                     .clickable { collected = emptyList() },
                 contentAlignment = Alignment.Center
             ) {
-                Text("Очистить мотив", color = TextDim, style = MaterialTheme.typography.labelMedium)
+                Text("Очистить мотив", color = TextDim, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             }
             Box(
                 Modifier
@@ -1445,7 +1445,7 @@ fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text("Мотив в буфер", color = TextDim, style = MaterialTheme.typography.labelMedium)
+                Text("Мотив в буфер", color = TextDim, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             }
         }
     }
@@ -1458,14 +1458,14 @@ private fun ToneLabScreen(onBack: () -> Unit) {
         ToneHoldPanel(initialHz = 440.0) { }
         Spacer(Modifier.height(14.dp))
         SurfaceCard(borderColor = GrapeAmber.copy(alpha = 0.4f)) {
-            Text("Что это даёт", color = GrapeAmber, style = MaterialTheme.typography.titleSmall)
+            Text("Что это даёт", color = GrapeAmber, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Катушка динамика работает как излучатель: можно проверить слух на высоких " +
                     "частотах, найти резонанс корпуса, «спеть» телефоном или собрать из частот мотив. " +
                     "Держите кнопку — тон идёт ровно, ведите палец — частота едет плавно.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -1493,13 +1493,13 @@ private fun ComposerScreen(onBack: () -> Unit) {
 
     GrapeScreen(title = "Композитор", subtitle = "музыка из частот", onBack = onBack) {
         SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.45f)) {
-            Text("Клавиши", color = GrapeGreen, style = MaterialTheme.typography.titleSmall)
+            Text("Клавиши", color = GrapeGreen, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (recording) "Запись идёт: каждое нажатие попадёт в мотив" else
                     "Нажмите клавишу — играет частота. Включите запись, и из нажатий соберётся мотив.",
                 color = if (recording) GrapeRed else TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1543,7 +1543,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                                 Text(
                                     text = Melody.nameOf(noteHz),
                                     color = TextPrimary,
-                                    style = MaterialTheme.typography.labelMedium
+                                    style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                                 )
                             }
                         }
@@ -1570,7 +1570,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(if (recording) "Стоп запись" else "Запись", color = if (recording) GrapeRed else TextPrimary, style = MaterialTheme.typography.labelLarge)
+                    Text(if (recording) "Стоп запись" else "Запись", color = if (recording) GrapeRed else TextPrimary, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                 }
                 Box(
                     Modifier
@@ -1588,12 +1588,12 @@ private fun ComposerScreen(onBack: () -> Unit) {
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Играть мотив", color = GrapeGreen, style = MaterialTheme.typography.labelLarge)
+                    Text("Играть мотив", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                 }
             }
             Spacer(Modifier.height(8.dp))
             InfoRow("В мотиве", Melody.summary(melody), GrapeCyan)
-            Text(melody.take(24).joinToString(" ") { it.name }, color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text(melody.take(24).joinToString(" ") { it.name }, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Box(
@@ -1605,7 +1605,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                         .border(1.dp, ChipBorder, RectangleShape)
                         .clickable { melody = Melody.transpose(melody, 1) },
                     contentAlignment = Alignment.Center
-                ) { Text("выше на 1", color = TextDim, style = MaterialTheme.typography.labelMedium) }
+                ) { Text("выше на 1", color = TextDim, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
                 Box(
                     Modifier
                         .weight(1f)
@@ -1615,7 +1615,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                         .border(1.dp, ChipBorder, RectangleShape)
                         .clickable { melody = Melody.tempo(melody, 125) },
                     contentAlignment = Alignment.Center
-                ) { Text("быстрее", color = TextDim, style = MaterialTheme.typography.labelMedium) }
+                ) { Text("быстрее", color = TextDim, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
                 Box(
                     Modifier
                         .weight(1f)
@@ -1625,7 +1625,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                         .border(1.dp, ChipBorder, RectangleShape)
                         .clickable { melody = emptyList() },
                     contentAlignment = Alignment.Center
-                ) { Text("очистить", color = TextDim, style = MaterialTheme.typography.labelMedium) }
+                ) { Text("очистить", color = TextDim, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
             }
         }
 
@@ -1640,11 +1640,11 @@ private fun ComposerScreen(onBack: () -> Unit) {
                 melody = notes
                 status = "Мотив «" + preset + "» играет"
             }) {
-                Text(preset, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                Text(preset, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Text(
                     text = Melody.summary(Melody.preset(preset)) + " • нажмите, чтобы послушать",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -1680,7 +1680,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                             }
                         },
                     contentAlignment = Alignment.Center
-                ) { Text("Сохранить", color = GrapeGreen, style = MaterialTheme.typography.labelLarge) }
+                ) { Text("Сохранить", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
                 Box(
                     Modifier
                         .weight(1f)
@@ -1698,27 +1698,27 @@ private fun ComposerScreen(onBack: () -> Unit) {
                             }
                         },
                     contentAlignment = Alignment.Center
-                ) { Text("Другу по связи", color = GrapeCyan, style = MaterialTheme.typography.labelLarge) }
+                ) { Text("Другу по связи", color = GrapeCyan, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
             }
             if (status.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
-                Text(status, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall)
+                Text(status, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
         }
 
         Spacer(Modifier.height(10.dp))
         if (saved.isEmpty()) {
-            Text("Сохранённых мотивов пока нет.", color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text("Сохранённых мотивов пока нет.", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         } else {
             saved.forEach { (title, encoded) ->
                 SurfaceCard(borderColor = CardBorder) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(title, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                            Text(title, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                             Text(
                                 text = Melody.summary(Melody.decode(encoded)),
                                 color = TextDim,
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                             )
                         }
                         Box(
@@ -1732,7 +1732,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                                     ToneSynth.playSequence(Melody.decode(encoded))
                                 },
                             contentAlignment = Alignment.Center
-                        ) { Text("▶", color = GrapeGreen, style = MaterialTheme.typography.labelLarge) }
+                        ) { Text("▶", color = GrapeGreen, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
                         Spacer(Modifier.width(8.dp))
                         Box(
                             Modifier
@@ -1745,7 +1745,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                                     name = title
                                 },
                             contentAlignment = Alignment.Center
-                        ) { Text("↑", color = GrapeCyan, style = MaterialTheme.typography.labelLarge) }
+                        ) { Text("↑", color = GrapeCyan, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
                         Spacer(Modifier.width(8.dp))
                         Box(
                             Modifier
@@ -1758,7 +1758,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                                     saved = MelodyStore.load(context)
                                 },
                             contentAlignment = Alignment.Center
-                        ) { Text("✕", color = GrapeRed, style = MaterialTheme.typography.labelLarge) }
+                        ) { Text("✕", color = GrapeRed, style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -1805,7 +1805,7 @@ fun LabExtrasGrid(onOpen: (String) -> Unit, modifier: androidx.compose.ui.Modifi
             text = "24 опыта с железом: от частот ядер до мерцания экрана. Всё только читает " +
                 "датчики и ничего не пишет в систему.",
             color = com.gsynk.app.ui.theme.TextDim,
-            style = androidx.compose.material3.MaterialTheme.typography.labelSmall
+            style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(10.dp))
         extrasLab.chunked(4).forEach { row ->

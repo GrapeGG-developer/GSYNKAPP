@@ -1,5 +1,6 @@
 package com.gsynk.app.ui
 
+import androidx.compose.ui.text.font.FontWeight
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -102,9 +103,9 @@ private fun rememberSensorValues(
 private fun sensorMissing(title: String, note: String, onBack: () -> Unit) {
     GrapeScreen(title = title, subtitle = "датчика нет", onBack = onBack) {
         SurfaceCard(borderColor = CardBorder) {
-            Text("Этого датчика в телефоне нет", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+            Text("Этого датчика в телефоне нет", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
-            Text(note, color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text(note, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
     }
 }
@@ -188,11 +189,11 @@ fun LabSensorGridScreen(onBack: () -> Unit) {
             SurfaceCard(borderColor = CardBorder) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(sensor.type, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-                        Text(sensor.name, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                        Text(sensor.type, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                        Text(sensor.name, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                     }
                     if (sensor.wakeUp) {
-                        Text("будит", color = GrapeGreen, style = MaterialTheme.typography.labelSmall)
+                        Text("будит", color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                     }
                 }
                 Spacer(Modifier.height(6.dp))
@@ -238,22 +239,22 @@ fun LabCoresScreen(onBack: () -> Unit) {
                     text = "Прошивка не отдаёт частоты через /sys — это бывает на новых ядрах " +
                         "с закрытым доступом. Остальное железо всё равно читается.",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
         cores.forEach { core ->
             SurfaceCard(borderColor = CardBorder) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("ядро " + core.index, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                    Text("ядро " + core.index, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = if (core.online) "в работе" else "спит",
                         color = if (core.online) GrapeGreen else TextDim,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.weight(1f))
-                    Text(core.currentMhz.toString() + " МГц", color = GrapeCyan, style = MaterialTheme.typography.labelMedium)
+                    Text(core.currentMhz.toString() + " МГц", color = GrapeCyan, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                 }
                 Spacer(Modifier.height(7.dp))
                 BarIndicator(
@@ -271,27 +272,27 @@ fun LabCoresScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(8.dp))
         }
         SurfaceCard(borderColor = CardBorder) {
-            Text("Ступени частот", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+            Text("Ступени частот", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (frequencies.isEmpty()) "недоступны" else frequencies.joinToString(" · ") + " МГц",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
-            Text("Регуляторы", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+            Text("Регуляторы", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (governors.isEmpty()) "недоступны" else governors.joinToString(" · "),
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "Уровень телефона: " + profile.tierLabel + ". Turbо-режим GSYNK греет чип " +
                     "до 45 °C и потом сам останавливается — это защита, а не ограничение.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -323,8 +324,8 @@ fun LabThermalScreen(onBack: () -> Unit) {
         onBack = onBack
     ) {
         SurfaceCard(borderColor = if (battery.tempC >= 42f) Metro.Palette.Red.copy(alpha = 0.5f) else CardBorder) {
-            Text("Батарея", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
-            Text(Deep.round1(battery.tempC).toString() + " °C · " + battery.status, color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text("Батарея", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text(Deep.round1(battery.tempC).toString() + " °C · " + battery.status, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(8.dp))
             BarIndicator(
                 percent = (battery.tempC / 60f * 100).toInt().coerceIn(0, 100),
@@ -339,10 +340,10 @@ fun LabThermalScreen(onBack: () -> Unit) {
             SurfaceCard(borderColor = CardBorder) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(zone.label, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-                        Text(zone.name, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                        Text(zone.label, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                        Text(zone.name, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                     }
-                    Text(Deep.round1(zone.celsius).toString() + " °C", color = GrapeCyan, style = MaterialTheme.typography.titleSmall)
+                    Text(Deep.round1(zone.celsius).toString() + " °C", color = GrapeCyan, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -353,7 +354,7 @@ fun LabThermalScreen(onBack: () -> Unit) {
                     "поэтому часть подписей переведена вручную: чип, ускоритель, разъём, корпус. " +
                     "45 °C — рубеж, после которого телефон сам сбрасывает частоты.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -391,11 +392,11 @@ fun LabChargeScreen(onBack: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(battery.percent.toString() + "%", color = TextPrimary, fontSize = Metro.Type.pageTitle)
-                    Text(battery.plugged + " · " + battery.status, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Text(battery.plugged + " · " + battery.status, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(Deep.round1(battery.watts).toString() + " Вт", color = GrapeGreen, style = MaterialTheme.typography.titleMedium)
-                    Text("пик " + Deep.round1(peakW).toString() + " Вт", color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Text(Deep.round1(battery.watts).toString() + " Вт", color = GrapeGreen, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                    Text("пик " + Deep.round1(peakW).toString() + " Вт", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -430,7 +431,7 @@ fun LabChargeScreen(onBack: () -> Unit) {
                 text = "Чем ниже заряд, тем выше ток — так работает быстрая зарядка. Ближе к 80% " +
                     "телефон сам сбрасывает мощность, поэтому ватты падают: это не поломка.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -480,7 +481,7 @@ fun LabGpuScreen(onBack: () -> Unit) {
                     text = "Шейдерный стенд доступен на Android 13 и новее — здесь система " +
                         "рисует поле ускорителем, а мы считаем кадры.",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -494,10 +495,10 @@ fun LabGpuScreen(onBack: () -> Unit) {
         }
 
         SurfaceCard(borderColor = CardBorder) {
-            Text("Что сообщает сам ускоритель", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+            Text("Что сообщает сам ускоритель", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             if (gpu == null) {
-                Text("контекст EGL не создался — строки недоступны", color = TextDim, style = MaterialTheme.typography.labelSmall)
+                Text("контекст EGL не создался — строки недоступны", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             } else {
                 InfoRow("Производитель", gpu.vendor)
                 InfoRow("Ускоритель", gpu.renderer)
@@ -511,7 +512,7 @@ fun LabGpuScreen(onBack: () -> Unit) {
                 text = "Расширения — это набор возможностей, которые ускоритель умеет напрямую: " +
                     "размытие, анизотропия, вычисления. Чем их больше, тем лучше тянет стекло и лучи.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -558,7 +559,7 @@ fun LabShakeScreen(onBack: () -> Unit) {
             Text(
                 text = "покой — ровно 1 g: это ускорение свободного падения. Тряска даёт 3–20 g.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -572,7 +573,7 @@ fun LabShakeScreen(onBack: () -> Unit) {
                 text = "Акселерометр ловит не скорость, а изменение скорости. Именно он решает, " +
                     "что телефон упал: короткий всплеск выше 18 g.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -609,7 +610,7 @@ fun LabCompassScreen(onBack: () -> Unit) {
 
 
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -643,7 +644,7 @@ fun LabCompassScreen(onBack: () -> Unit) {
                 text = "Компас считает направление по магнитному полю Земли, а не по спутникам. " +
                     "Рядом с динамиком, магнитом или металлическим столом он врёт — отнеси телефон на метр.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -684,7 +685,7 @@ fun LabBarometerScreen(onBack: () -> Unit) {
             Text(
                 text = "высота по стандартной атмосфере: " + Deep.round1(DeviceLab.altitudeMeters(pressure)).toString() + " м",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -699,7 +700,7 @@ fun LabBarometerScreen(onBack: () -> Unit) {
                 text = "1 гПа разницы — это примерно 8 метров высоты. Подъём на один этаж меняет " +
                     "давление на 0,4 гПа, поэтому барометр чувствует лифт.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -750,7 +751,7 @@ fun LabProximityScreen(onBack: () -> Unit) {
                 Text(
                     text = "значение датчика: " + Deep.round1(values.firstOrNull() ?: 0f),
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -762,7 +763,7 @@ fun LabProximityScreen(onBack: () -> Unit) {
                 text = "Закрой верхнюю часть экрана ладонью: датчик у динамика увидит отражение " +
                     "инфракрасного света и переключится. Так телефон узнаёт, что он у уха.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -806,7 +807,7 @@ fun LabLuxScreen(onBack: () -> Unit) {
                     else -> "яркое солнце"
                 },
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -857,7 +858,7 @@ fun LabStepsScreen(onBack: () -> Unit) {
                 text = "шагов с момента открытия экрана · всего с загрузки: " +
                     (total?.roundToInt()?.toString() ?: "нет счётчика"),
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -867,7 +868,7 @@ fun LabStepsScreen(onBack: () -> Unit) {
                 text = "Счётчик шагов работает даже в кармане и живёт в отдельном чипе: он не " +
                     "тратит батарею процессора и обнуляется только при перезагрузке.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -898,7 +899,7 @@ fun LabMemoryScreen(onBack: () -> Unit) {
                 color = TextPrimary,
                 fontSize = Metro.Type.pageTitle
             )
-            Text("оперативная память", color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text("оперативная память", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(8.dp))
             BarIndicator(
                 percent = memory.usedPercent,
@@ -913,8 +914,8 @@ fun LabMemoryScreen(onBack: () -> Unit) {
         }
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text(Deep.round1(storage.totalGb).toString() + " ГБ всего", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
-            Text("свободно " + Deep.round1(storage.freeGb).toString() + " ГБ", color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text(Deep.round1(storage.totalGb).toString() + " ГБ всего", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("свободно " + Deep.round1(storage.freeGb).toString() + " ГБ", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(8.dp))
             BarIndicator(
                 percent = ((storage.totalGb - storage.freeGb) / storage.totalGb * 100f).roundToInt().coerceIn(0, 100),
@@ -931,7 +932,7 @@ fun LabMemoryScreen(onBack: () -> Unit) {
                 text = "Подкачка (swap) — это кусок диска, который система использует как медленную " +
                     "память. Если её много — телефон начинает подтормаживать при переключении приложений.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -989,7 +990,7 @@ fun LabLatencyScreen(onBack: () -> Unit) {
                 Text(
                     text = "касаний: " + taps,
                     color = Color.White.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -997,20 +998,20 @@ fun LabLatencyScreen(onBack: () -> Unit) {
         SurfaceCard(borderColor = CardBorder) {
             Row {
                 Column(Modifier.weight(1f)) {
-                    Text(Deep.round1(inputMs).toString() + " мс", color = GrapeCyan, style = MaterialTheme.typography.titleMedium)
-                    Text("обработка касания", color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Text(Deep.round1(inputMs).toString() + " мс", color = GrapeCyan, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                    Text("обработка касания", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(Deep.round1(totalMs).toString() + " мс", color = GrapeGreen, style = MaterialTheme.typography.titleMedium)
-                    Text("кадр целиком", color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Text(Deep.round1(totalMs).toString() + " мс", color = GrapeGreen, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                    Text("кадр целиком", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = if (totalMs in 0.1f..7f) "120 Гц" else if (totalMs < 18f) "60 Гц" else "низко",
                         color = TextPrimary,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                     )
-                    Text("по времени кадра", color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Text("по времени кадра", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
             }
         }
@@ -1024,7 +1025,7 @@ fun LabLatencyScreen(onBack: () -> Unit) {
                 text = "Эти числа отдаёт сама система через метрики кадров: сколько миллисекунд " +
                     "проходит от касания до готового кадра. 8,3 мс — это честные 120 Гц.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -1059,7 +1060,7 @@ fun LabMultiTouchScreen(onBack: () -> Unit) {
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(points.toString(), color = TextPrimary, fontSize = Metro.Type.pageTitle)
-                Text("пальцев на экране", color = TextDim, style = MaterialTheme.typography.labelSmall)
+                Text("пальцев на экране", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -1068,7 +1069,7 @@ fun LabMultiTouchScreen(onBack: () -> Unit) {
                 text = "Положи сразу несколько пальцев и веди ими: телефон покажет, сколько касаний " +
                     "он различает. Дёшевые матрицы честно держат 5, хорошие — 10.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -1117,7 +1118,7 @@ fun LabFlickerScreen(onBack: () -> Unit) {
             Text(
                 text = "полоса мигает на " + hz + " Гц",
                 color = if (phase < 1f) Color.Black else Color.White,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(8.dp)
@@ -1147,7 +1148,7 @@ fun LabFlickerScreen(onBack: () -> Unit) {
             text = "Полоса мигает по-настоящему: на 240–960 Гц ты увидишь не мигание, а полосы " +
                 "или «шлейф» — так работает стробоскопический эффект от ШИМ.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
 
         Spacer(Modifier.height(16.dp))
@@ -1158,7 +1159,7 @@ fun LabFlickerScreen(onBack: () -> Unit) {
                 text = "Второй способ — посмотреть на свой экран через камеру: она снимет картинку " +
                     "с фиксированной выдержкой и посчитает частоту мерцания по кадрам.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
             PrimaryButton(
@@ -1185,7 +1186,7 @@ fun LabFlickerScreen(onBack: () -> Unit) {
                     color = TextPrimary,
                     fontSize = Metro.Type.pageSubtitle
                 )
-                Text(r.note, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                Text(r.note, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 Spacer(Modifier.height(6.dp))
                 InfoRow("Кадров снято", r.frames.toString())
                 InfoRow("Глубина мерцания", (r.depth * 100f).roundToInt().toString() + "%")
@@ -1196,12 +1197,12 @@ fun LabFlickerScreen(onBack: () -> Unit) {
         }
         error?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, color = Metro.Palette.Red, style = MaterialTheme.typography.labelSmall)
+            Text(it, color = Metro.Palette.Red, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
 
         Spacer(Modifier.height(14.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Как читать результат", color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+            Text("Как читать результат", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "· ниже 100 Гц — глазам тяжело, некоторые видят полосы;\n" +
@@ -1209,7 +1210,7 @@ fun LabFlickerScreen(onBack: () -> Unit) {
                     "· выше 2000 Гц — мерцания практически не видно.\n\n" +
                     DeviceLab.SAFETY_NOTE,
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }

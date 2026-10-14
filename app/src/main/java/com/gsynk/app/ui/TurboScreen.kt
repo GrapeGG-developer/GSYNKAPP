@@ -74,7 +74,7 @@ fun TurboScreen(vm: MainViewModel, onBack: () -> Unit) {
             Text(
                 text = if (active) "шейдер считает каждый пиксель" else "поле спит · нажмите «Включить»",
                 color = TextPrimary,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
                 modifier = Modifier
                     .align(androidx.compose.ui.Alignment.BottomStart)
                     .padding(10.dp)
@@ -95,7 +95,7 @@ fun TurboScreen(vm: MainViewModel, onBack: () -> Unit) {
                 "рисует шейдер, нейросеть учится на ходу. Ничего не скачивается и не уходит в сеть. " +
                 "Телефон при этом греется — при 45 °C нагрузка выключится сама.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
 
         Spacer(Modifier.height(14.dp))
@@ -118,7 +118,7 @@ fun TurboScreen(vm: MainViewModel, onBack: () -> Unit) {
             Text(
                 text = "режим: ${RealtimeAi.modeName(mode)}",
                 color = if (active) GrapeCyan else TextDim,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
                 fontWeight = FontWeight.Light
             )
             Spacer(Modifier.height(8.dp))
@@ -133,7 +133,7 @@ fun TurboScreen(vm: MainViewModel, onBack: () -> Unit) {
                     "От её ответа зависит переливание фона: спокойный режим — медленное, " +
                     "энергичный — быстрое, ночной — почти без движения.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
 

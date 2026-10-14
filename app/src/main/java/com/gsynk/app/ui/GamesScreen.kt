@@ -163,7 +163,7 @@ fun GamesScreen(
                 text = "Рекорды хранятся на телефоне и показываются на острове. " +
                     "Вызвать друга на дуэль можно касанием в Grape Link.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -256,7 +256,7 @@ private fun ReactionGame(scores: GameScores, onBack: () -> Unit) {
                 Text(
                     text = if (waiting && !lit) "появится цвет — и сразу касание" else message,
                     color = TextPrimary.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
                     textAlign = TextAlign.Center
                 )
             }
@@ -341,7 +341,7 @@ private fun MemoryGame(scores: GameScores, onBack: () -> Unit) {
     }
 
     GrapeScreen(title = "Память", subtitle = "уровень $level", onBack = onBack) {
-        Text(status, color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+        Text(status, color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             repeat(2) { row ->
@@ -511,9 +511,9 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Ходов нет", color = TextPrimary, style = MaterialTheme.typography.titleLarge)
+                    Text("Ходов нет", color = TextPrimary, style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
                     Spacer(Modifier.height(6.dp))
-                    Text("Счёт $score • нажмите для новой игры", color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Text("Счёт $score • нажмите для новой игры", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
             }
         }
@@ -545,7 +545,7 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
         Text(
             text = "Свайпайте по полю или пользуйтесь кнопками. Одинаковые плитки соединяются.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
     }
 }

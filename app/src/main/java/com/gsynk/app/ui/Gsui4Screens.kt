@@ -1,5 +1,6 @@
 package com.gsynk.app.ui
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,7 +66,7 @@ fun Island2Screen(vm: MainViewModel, onBack: () -> Unit) {
 
     GrapeScreen(title = "Остров 2.0", subtitle = "вплотную под камерой", onBack = onBack) {
         SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.45f)) {
-            Text("Где садится капсула", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+            Text("Где садится капсула", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (cutout > 0) {
@@ -75,7 +76,7 @@ fun Island2Screen(vm: MainViewModel, onBack: () -> Unit) {
                     "Выреза под камеру нет: остров садится под строкой состояния."
                 },
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             InfoRow("Позиция", com.gsynk.app.core.IslandPosition.label(settings.islandPosition))
@@ -138,14 +139,14 @@ fun Island2Screen(vm: MainViewModel, onBack: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Живое стекло", color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+            Text("Живое стекло", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Капсула не стоит на месте: два оттенка перетекают друг в друга " +
                     "в реальном времени, а не по картинке. На слабом телефоне это " +
                     "выключается вместе с уровнем эффектов.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(20.dp))
@@ -182,7 +183,7 @@ fun EffectsScreen(onBack: () -> Unit) {
                         text = "стекло: " + Skin.glassTitle(skin.glass) + ", размытие " + skin.blur + " dp, " +
                             "лучей " + skin.rays + ", фон " + skin.speed + "%",
                         color = Color.White.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
             }
@@ -203,7 +204,7 @@ fun EffectsScreen(onBack: () -> Unit) {
             text = if (profile.isFull) "Телефон тянет полный набор." else
                 "Телефон слабее: полный набор ограничен, чтобы не терять плавность.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
 
         Spacer(Modifier.height(12.dp))
@@ -276,12 +277,12 @@ fun EffectsScreen(onBack: () -> Unit) {
             SurfaceCard(borderColor = if (values.glass == skin.glass) GrapeVioletSoft.copy(alpha = 0.5f) else CardBorder) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(title, color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+                        Text(title, color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                         Text(
                             text = "стекло " + Skin.glassTitle(values.glass) + " · размытие " + values.blur +
                                 " · скругления " + values.card + "/" + values.toggle,
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                     SortChip("взять", skin == values) {
@@ -347,7 +348,7 @@ fun RadiusScreen(onBack: () -> Unit) {
             text = "Слева направо: плитка, карточка, переключатель, остров. Плитки Metro остаются " +
                 "прямыми по умолчанию — так задумано, но и их можно скруглить.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
 
         Spacer(Modifier.height(14.dp))
@@ -445,12 +446,12 @@ fun EverydayScreen(onBack: () -> Unit) {
                         Text(
                             text = "число дня: " + day.number + " · " + day.word,
                             color = Color.White.copy(alpha = 0.85f),
-                            style = MaterialTheme.typography.labelMedium
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                         )
                         Text(
                             text = "открыто дней: " + opened + " · " + Everyday.rewardFor(streak),
                             color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -461,19 +462,19 @@ fun EverydayScreen(onBack: () -> Unit) {
         SectionTitle("Факт о железе")
         Spacer(Modifier.height(6.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text(day.fact, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
+            Text(day.fact, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
         }
 
         Spacer(Modifier.height(12.dp))
         SectionTitle("Задание дня")
         Spacer(Modifier.height(6.dp))
         SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.4f)) {
-            Text(day.task, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
+            Text(day.task, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Выполнишь — отметь галочкой: счётчик заданий растёт, а серия не рвётся.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
             SortChip("сделано", false) {
@@ -491,7 +492,7 @@ fun EverydayScreen(onBack: () -> Unit) {
             Text(
                 text = if (taken) "Подарок на сегодня забран" else Everyday.rewardFor(streak),
                 color = TextPrimary,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
             PrimaryButton(
@@ -511,7 +512,7 @@ fun EverydayScreen(onBack: () -> Unit) {
         SectionTitle("Прикол дня")
         Spacer(Modifier.height(6.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text(day.joke, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
+            Text(day.joke, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
         }
 
         Spacer(Modifier.height(12.dp))
@@ -520,13 +521,13 @@ fun EverydayScreen(onBack: () -> Unit) {
         SurfaceCard(borderColor = CardBorder) {
             val total = Eggs.ALL.size
             val foundNow = Eggs.found(context).size
-            Text("Найдено " + foundNow + " из " + total, color = TextPrimary, style = MaterialTheme.typography.titleMedium)
+            Text("Найдено " + foundNow + " из " + total, color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Открывай их сама: секретных входов больше, чем кажется. " +
                     "Один из них — семь касаний значка на главной.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
             SecondaryButton(
@@ -537,7 +538,7 @@ fun EverydayScreen(onBack: () -> Unit) {
         }
         if (eggFound != null) {
             Spacer(Modifier.height(8.dp))
-            Text(eggFound!!, color = GrapeGreen, style = MaterialTheme.typography.labelMedium)
+            Text(eggFound!!, color = GrapeGreen, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(20.dp))
     }
@@ -572,20 +573,20 @@ fun EasterScreen(onBack: () -> Unit) {
         )
         message?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, color = GrapeGreen, style = MaterialTheme.typography.labelSmall)
+            Text(it, color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         }
         // Все секреты найдены: набор кожи, которого нет в обычном списке эффектов.
         if (found.size >= Eggs.ALL.size - 1) {
             Spacer(Modifier.height(12.dp))
             Eggs.unlock(context, "all")
             SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.5f)) {
-                Text("Секретный набор кожи", color = GrapeGreen, style = MaterialTheme.typography.titleMedium)
+                Text("Секретный набор кожи", color = GrapeGreen, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "«Виноградовая ночь»: аква-стекло, размытие 18, лучи 9 и почти капсульные " +
                         "скругления у всего. Такого набора нет в списке эффектов — он только за пасхалки.",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
                 Spacer(Modifier.height(8.dp))
                 PrimaryButton(
@@ -605,9 +606,9 @@ fun EasterScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         Eggs.ALL.filter { it.id in found }.forEach { egg ->
             SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.35f)) {
-                Text(egg.title, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
-                Text(egg.secret, color = TextDim, style = MaterialTheme.typography.labelSmall)
-                Text("награда: " + egg.reward, color = GrapeGreen, style = MaterialTheme.typography.labelSmall)
+                Text(egg.title, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text(egg.secret, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text("награда: " + egg.reward, color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -617,7 +618,7 @@ fun EasterScreen(onBack: () -> Unit) {
                     text = "Пока ничего не найдено. Начни со значка винограда на главной: " +
                         "семь касаний подряд откроют первую пасхалку.",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -650,11 +651,11 @@ private fun GridOfSecrets(items: List<Triple<String, String, Boolean>>) {
                                 fontSize = Metro.Type.pageSubtitle
                             )
                             Column {
-                                Text(title, color = Color.White, style = MaterialTheme.typography.labelMedium)
+                                Text(title, color = Color.White, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                                 Text(
                                     hint,
                                     color = Color.White.copy(alpha = 0.75f),
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
                                     maxLines = 2
                                 )
                             }
@@ -702,12 +703,12 @@ fun SurpriseScreen(onBack: () -> Unit) {
                         Text(
                             text = picked?.subtitle ?: "нажми — выпадет что-нибудь из приложения",
                             color = Color.White.copy(alpha = 0.85f),
-                            style = MaterialTheme.typography.labelMedium
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                         )
                         Text(
                             text = "открыто раз: " + opened + " · " + daily.word,
                             color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -749,7 +750,7 @@ fun SurpriseScreen(onBack: () -> Unit) {
             text = "Рулетка не повторяет предыдущую функцию и знает про железо: на слабом телефоне " +
                 "тяжёлые вещи не выпадают.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(20.dp))
     }

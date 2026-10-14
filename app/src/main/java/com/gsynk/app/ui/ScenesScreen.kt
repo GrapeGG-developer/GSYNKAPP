@@ -1,5 +1,6 @@
 package com.gsynk.app.ui
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -115,7 +116,7 @@ fun ScenesScreen(onBack: () -> Unit) {
             text = "Сцена — это набор настроек, который применяется мгновенно. " +
                 "Отличается от правил тем, что не ждёт времени: нажали и получили.",
             color = TextDim,
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(14.dp))
 
@@ -160,8 +161,8 @@ fun ScenesScreen(onBack: () -> Unit) {
             SurfaceCard {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Выполнено", color = TextDim, style = MaterialTheme.typography.labelSmall)
-                        Text(status, color = com.gsynk.app.ui.theme.TextPrimary, style = MaterialTheme.typography.bodySmall)
+                        Text("Выполнено", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                        Text(status, color = com.gsynk.app.ui.theme.TextPrimary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                     }
                 }
             }

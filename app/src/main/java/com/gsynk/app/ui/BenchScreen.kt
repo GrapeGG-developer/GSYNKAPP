@@ -1,5 +1,6 @@
 package com.gsynk.app.ui
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -205,12 +206,12 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                     Text(
                         text = result?.let { it.score.toString() + " баллов" } ?: "Баллов пока нет",
                         color = if (result != null) GrapeGreen else TextPrimary,
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
                     )
                     Text(
                         text = result?.let { it.tier + " • ядер: " + it.cores } ?: Bench.estimateSeconds(Runtime.getRuntime().availableProcessors()).toString() + " секунд на прогон",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
                 if (stage == null) {
@@ -227,7 +228,7 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                         Text(
                             text = if (result == null) "Запустить" else "Ещё раз",
                             color = GrapeGreen,
-                            style = MaterialTheme.typography.labelLarge
+                            style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -243,7 +244,7 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                     ) { GpuField(Modifier.fillMaxSize(), reportFps = true, speed = 2.4f) }
                     Spacer(Modifier.height(8.dp))
                 }
-                Text(stage!!.title, color = GrapeCyan, style = MaterialTheme.typography.titleSmall)
+                Text(stage!!.title, color = GrapeCyan, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(8.dp))
                 Box(
                     Modifier
@@ -259,10 +260,10 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                     )
                 }
                 Spacer(Modifier.height(6.dp))
-                Text("$progress проц. • ${partial.orEmpty()}", color = TextDim, style = MaterialTheme.typography.labelSmall)
+                Text("$progress проц. • ${partial.orEmpty()}", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             } else if (note.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
-                Text(note, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall)
+                Text(note, color = GrapeVioletSoft, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
             }
         }
 
@@ -284,7 +285,7 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                 Text(
                     text = Bench.compare(done, history.drop(1).firstOrNull()),
                     color = GrapeGreen,
-                    style = MaterialTheme.typography.labelMedium
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                 )
             }
 
@@ -305,7 +306,7 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                             note = if (ok) "Баллы ушли другу" else "Нет связи — подключитесь в «GSYNK рядом»"
                         },
                     contentAlignment = Alignment.Center
-                ) { Text("Отправить другу", color = GrapeCyan, style = MaterialTheme.typography.labelMedium) }
+                ) { Text("Отправить другу", color = GrapeCyan, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
 
                 Box(
                     Modifier
@@ -316,7 +317,7 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                         .border(1.dp, ChipBorder, RectangleShape)
                         .clickable { run() },
                     contentAlignment = Alignment.Center
-                ) { Text("Повторить", color = GrapeGreen, style = MaterialTheme.typography.labelMedium) }
+                ) { Text("Повторить", color = GrapeGreen, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)) }
             }
         }
 
@@ -328,7 +329,7 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                 text = "Без баллов и графиков: телефон держит полную нагрузку, пока вы не остановите. " +
                     "Годится, чтобы проверить охлаждение и посмотреть, как падает скорость от нагрева.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp), modifier = Modifier.fillMaxWidth()) {
@@ -346,17 +347,17 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                     Text(
                         text = if (active) "Остановить нагрузку" else "Держать нагрузку",
                         color = if (active) GrapePink else GrapeGreen,
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                     )
                 }
                 val speed by TurboState.cpuGflops.collectAsStateWithLifecycle()
                 val heat by TurboState.batteryTemp.collectAsStateWithLifecycle()
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                    Text("Сейчас: %.1f млрд оп/с".format(speed), color = TextSecondary, style = MaterialTheme.typography.labelSmall)
+                    Text("Сейчас: %.1f млрд оп/с".format(speed), color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                     Text(
                         text = "температура: " + "%.0f".format(heat) + "°C",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
             }
@@ -366,22 +367,22 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
         SectionTitle("Прошлые прогоны")
         Spacer(Modifier.height(9.dp))
         if (history.isEmpty()) {
-            Text("Пока пусто: первый прогон сохранится автоматически.", color = TextDim, style = MaterialTheme.typography.labelSmall)
+            Text("Пока пусто: первый прогон сохранится автоматически.", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
         } else {
             history.forEachIndexed { index, item ->
                 SurfaceCard(borderColor = CardBorder) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(item.score.toString() + " • " + item.tier, color = TextPrimary, style = MaterialTheme.typography.titleSmall)
+                            Text(item.score.toString() + " • " + item.tier, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                             Text(
                                 text = java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale("ru")).format(java.util.Date(item.at)) +
                                     " • ядер: " + item.cores,
                                 color = TextDim,
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                             )
                         }
                         if (index == 0) {
-                            Text("последний", color = GrapeGreen, style = MaterialTheme.typography.labelSmall)
+                            Text("последний", color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                         }
                     }
                 }
@@ -399,7 +400,7 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
 
         Spacer(Modifier.height(14.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Как считается балл", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+            Text("Как считается балл", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Процессор: 1.0 и 0.9 веса за целые числа и дроби, 2.4 за матрицы. Память — 0.4, " +
@@ -407,7 +408,7 @@ fun BenchScreen(vm: MainViewModel, onBack: () -> Unit) {
                     "всех телефонов, поэтому баллы сравнимы между собой. Ориентиры: 250 тысяч — " +
                     "средний класс, 500 — почти флагман, 900 — флагман.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(20.dp))

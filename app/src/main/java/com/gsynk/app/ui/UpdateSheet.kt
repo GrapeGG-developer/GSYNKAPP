@@ -1,5 +1,6 @@
 package com.gsynk.app.ui
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -64,13 +65,13 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                 androidx.compose.material3.Text(
                     text = "Обновление передано вам",
                     color = com.gsynk.app.ui.theme.GrapeCyan,
-                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall
+                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                 )
                 Spacer(Modifier.height(4.dp))
                 androidx.compose.material3.Text(
                     text = com.gsynk.app.core.UpdateShare.describe(carried),
                     color = com.gsynk.app.ui.theme.TextDim,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -96,7 +97,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         androidx.compose.material3.Text(
                             "Скачать APK",
                             color = com.gsynk.app.ui.theme.GrapeGreen,
-                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge
+                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                     Box(
@@ -112,7 +113,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         androidx.compose.material3.Text(
                             "Проверить",
                             color = com.gsynk.app.ui.theme.GrapeCyan,
-                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge
+                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -120,7 +121,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                 androidx.compose.material3.Text(
                     text = "Забыть это предложение",
                     color = com.gsynk.app.ui.theme.TextDim,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
                     modifier = Modifier.clickable {
                         com.gsynk.app.core.UpdateShare.clearLast()
                         shared = null
@@ -136,14 +137,14 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                 androidx.compose.material3.Text(
                     text = "Передать обновление другу",
                     color = com.gsynk.app.ui.theme.GrapeVioletSoft,
-                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall
+                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                 )
                 Spacer(Modifier.height(4.dp))
                 androidx.compose.material3.Text(
                     text = "Приложите телефоны (касание NFC) — в метке уедут версия и ссылка на APK, " +
                         "а друг скачает файл сам. Или свяжитесь по Bluetooth/Wi-Fi в разделе «GSYNK рядом».",
                     color = com.gsynk.app.ui.theme.TextDim,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -152,25 +153,25 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
         SurfaceCard(borderColor = if (update?.updateAvailable == true) GrapeGreen.copy(alpha = 0.5f) else CardBorder) {
             when {
                 update == null -> {
-                    Text("Проверяю наличие новой версии…", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                    Text("Проверяю наличие новой версии…", color = TextSecondary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
                 }
 
                 update!!.updateAvailable -> {
                     Text(
                         text = "Вышла версия ${update!!.latestTag}",
                         color = TextPrimary,
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "Установлено: ${BuildConfig.VERSION_NAME}",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.height(14.dp))
 
                     if (downloading) {
-                        Text("Скачиваю: $progress%", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall)
+                        Text("Скачиваю: $progress%", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
                         Spacer(Modifier.height(8.dp))
                         BarIndicator(percent = progress, brush = TileBrush.Green)
                     } else {
@@ -184,15 +185,15 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                             text = "Установка «поверх» сохранит все правила, настройки и игры — " +
                                 "подпись та же, данные не теряются.",
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
 
                 else -> {
-                    Text("Обновлений нет", color = TextPrimary, style = MaterialTheme.typography.titleLarge)
+                    Text("Обновлений нет", color = TextPrimary, style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
                     Spacer(Modifier.height(4.dp))
-                    Text(update!!.message, color = TextDim, style = MaterialTheme.typography.labelSmall)
+                    Text(update!!.message, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
                 }
             }
         }
@@ -206,12 +207,12 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                     Text(
                         text = if (settings.updateAuto) "Проверять автоматически" else "Проверять вручную",
                         color = TextPrimary,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                     )
                     Text(
                         text = "Не чаще одного раза в 6 часов, при запуске приложения",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
                 ToggleDot(settings.updateAuto) { vm.setUpdateAuto(!settings.updateAuto) }
@@ -238,14 +239,14 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
 
         Spacer(Modifier.height(14.dp))
         SurfaceCard {
-            Text("Что нового", color = TextSecondary, style = MaterialTheme.typography.titleSmall)
+            Text("Что нового", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = update?.notes?.takeIf { it.isNotBlank() }
                     ?: "2.1 — живые плитки и сортировка, компактный остров с новыми позициями, " +
                     "локальная модель с чатом, новый Grape Link, сцены и «хакерский набор» инструментов.",
                 color = TextDim,
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
             )
         }
     }
