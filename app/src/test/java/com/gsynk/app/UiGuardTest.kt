@@ -103,12 +103,29 @@ class UiGuardTest {
     fun updatesAreCheckedConstantly() {
         val vm = File("src/main/java/com/gsynk/app/ui/MainViewModel.kt").readText()
         assertTrue(
-            "проверка обновлений должна идти часто (не реже раза в 5 минут)",
-            vm.contains("REFRESH_INTERVAL_MS = 2 * 60 * 1000L")
+            "проверка обновлений должна идти часто (раз в минуту)",
+            vm.contains("REFRESH_INTERVAL_MS = 60 * 1000L")
         )
         assertTrue(
             "при возвращении в приложение проверка тоже должна идти быстро",
-            vm.contains("STALE_INTERVAL_MS = 90 * 1000L")
+            vm.contains("STALE_INTERVAL_MS = 30 * 1000L")
+        )
+        // Проверка должна идти с токеном (иначе лимит GitHub — 60 запросов в час)
+        // и с меткой ETag: ответ 304 лимит не тратит вообще.
+        assertTrue(
+            "проверка обновлений обязана идти с вшитым токеном",
+            vm.contains("UpdateChecker.check(app(), repo, token)")
+        )
+        assertTrue(
+            "в проверке должен быть запасной путь без API",
+            File("src/main/java/com/gsynk/app/core/UpdateChecker.kt").readText()
+                .contains("checkByPage")
+        )
+        // Панель обновления больше не «одноразовая»: её зовёт политика напоминаний.
+        assertTrue(
+            "панель обновления должна открываться по событию, а не один раз",
+            File("src/main/java/com/gsynk/app/ui/MainScreen.kt").readText()
+                .contains("LaunchedEffect(updatePrompt)")
         )
     }
 

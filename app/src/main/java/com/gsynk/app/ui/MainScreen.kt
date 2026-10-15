@@ -248,13 +248,18 @@ fun MainScreen(vm: MainViewModel) {
         }
     }
 
-    // Новая версия сама вылезает на экран и закрывает все лишние панели.
-    // Единственное исключение — живая игра: там перебивать нельзя, баннер подождёт.
-    LaunchedEffect(hasUpdate) {
+    // Новая версия сама вылезает на экран. Раньше это работало только на «изменение флага»:
+    // закрыл панель один раз — и она больше не появится. Теперь модель зовёт панель событием
+    // (первый раз при находке и потом раз в 20 минут), поэтому версия не теряется.
+    // Единственное исключение — живая игра: там перебивать нельзя, дождётся.
+    val updatePrompt by vm.updatePrompt.collectAsStateWithLifecycle()
+    LaunchedEffect(updatePrompt) {
+        if (updatePrompt == 0) return@LaunchedEffect
         if (!hasUpdate) return@LaunchedEffect
         if (panel == "rogue" || panel == "coop") return@LaunchedEffect
         panelBeforeUpdate = panel
         panel = "update"
+        vm.noteUpdatePanelShown()
     }
 
     // Автопроверка почаще: при возвращении в приложение, если прошло больше 15 минут.
@@ -314,12 +319,19 @@ fun MainScreen(vm: MainViewModel) {
                 }
 
                 item {
+                    val updateStatus by vm.updateStatus.collectAsStateWithLifecycle()
                     AnimatedVisibility(
                         visible = hasUpdate,
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
-                        UpdateBanner(onClick = { panel = "update" })
+                        UpdateBanner(
+                            subtitle = updateStatus.ifBlank { "Нажмите, чтобы обновить приложение" },
+                            onClick = {
+                                vm.noteUpdatePanelShown()
+                                panel = "update"
+                            }
+                        )
                     }
                 }
 
@@ -867,7 +879,7 @@ private fun CrashBanner(onClick: () -> Unit) {
 
 /** Панель обновления: выезжает сама, ничего искать не нужно. */
 @Composable
-private fun UpdateBanner(onClick: () -> Unit) {
+private fun UpdateBanner(subtitle: String, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -884,7 +896,7 @@ private fun UpdateBanner(onClick: () -> Unit) {
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
             )
             Text(
-                text = "Нажмите, чтобы обновить приложение",
+                text = subtitle,
                 color = Color(0xFF052E1F).copy(alpha = 0.75f),
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
             )

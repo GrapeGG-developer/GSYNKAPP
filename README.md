@@ -1,4 +1,4 @@
-# GSYNK 4.0.2 — мультитул для телефона в стиле Metro
+# GSYNK 4.0.3 — мультитул для телефона в стиле Metro
 
 **GSYNK** — приложение-мультитул для Android: расписание яркости и громкости, компактный
 «остров» под фронтальной камерой, Grape Link (NFC для данных и знакомства, Wi-Fi для
@@ -21,7 +21,8 @@
 
 | Версия | Ссылка |
 |---|---|
-| **4.0.2** (текущая, versionCode 17) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v4.0.2/GSYNK-v4.0.2-debug.apk |
+| **4.0.3** (текущая, versionCode 18) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v4.0.3/GSYNK-v4.0.3-debug.apk |
+| 4.0.2 (связь с агентом внутри приложения) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v4.0.2/GSYNK-v4.0.2-debug.apk |
 | 4.0.1 (папки, фазы чипа, живые эффекты) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v4.0.1/GSYNK-v4.0.1-debug.apk |
 | 4.0 (Metro, островок 2.0, автопилот) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v4.0/GSYNK-v4.0-debug.apk |
 | 3.0 (связь, музыка из частот, обновление по NFC) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v3.0/GSYNK-v3.0-debug.apk |

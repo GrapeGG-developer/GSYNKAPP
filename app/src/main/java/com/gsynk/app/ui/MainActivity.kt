@@ -16,8 +16,23 @@ import com.gsynk.app.ui.theme.GSYNKTheme
 
 class MainActivity : ComponentActivity() {
 
+    /** Нажали уведомление — открываем панель обновления через общий роутер. */
+    private fun openUpdateIfAsked(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_OPEN_UPDATE, false) != true) return
+        com.gsynk.app.ui.Router.go("panel:update")
+    }
+
+    companion object {
+        /**
+         * Уведомление о новой версии приходит из фоновой проверки: этим ключом
+         * приложение понимает, что человек нажал именно «обновить».
+         */
+        const val EXTRA_OPEN_UPDATE = "gsynk_open_update"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        openUpdateIfAsked(intent)
         enableEdgeToEdge()
         // Если приложение открыли касанием метки — сразу показываем Grape Link
         PendingNfcPayload.capture(intent)
@@ -41,6 +56,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        openUpdateIfAsked(intent)
         setIntent(intent)
         PendingNfcPayload.capture(intent)
     }

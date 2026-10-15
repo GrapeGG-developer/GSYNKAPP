@@ -22,6 +22,9 @@ class GSYNKApp : Application() {
         // поэтому держим ссылку на приложение в одном месте
         com.gsynk.app.core.AppContextHolder.install(this)
         com.gsynk.app.core.Skin.load(this)
+        // Фоновая проверка обновлений: система будит приложение раз в полчаса,
+        // чтобы новая версия находила телефон даже с закрытым приложением.
+        com.gsynk.app.core.UpdateJobs.schedule(this)
     }
 
     private fun createChannels() {

@@ -13,6 +13,7 @@ import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleEngine
 import com.gsynk.app.core.AgentMail
 import com.gsynk.app.core.Keys
+import com.gsynk.app.core.UpdateJobs
 import com.gsynk.app.core.RuleRepository
 import com.gsynk.app.core.ReportUploader
 import com.gsynk.app.core.RuleScheduler
@@ -266,17 +267,79 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private companion object {
         /**
-         * Круг автопроверки: раз в 2 минуты.
+         * Круг автопроверки: раз в минуту.
          *
-         * Раньше было раз в 6 часов, потом 20 минут — и всё равно обновление ждало
-         * человека. GitHub без токена пускает 60 запросов в час с одного адреса,
-         * поэтому 2 минуты (30 запросов в час) — это «почти постоянная» проверка
-         * без риска упереться в лимит.
+         * Так стало можно после V4p2: запрос идёт с вшитым токеном (лимит GitHub —
+         * 5000 обращений в час вместо 60) и с меткой ETag, поэтому ответ
+         * «ничего не изменилось» лимит не тратит вообще. Раньше без токена запросы
+         * тихо отбивались кодом 403 — из-за этого обновления и «приходили неохотно».
          */
-        const val REFRESH_INTERVAL_MS = 2 * 60 * 1000L
+        const val REFRESH_INTERVAL_MS = 60 * 1000L
 
-        /** Возвращение в приложение: проверяем, если прошло больше полутора минут. */
-        const val STALE_INTERVAL_MS = 90 * 1000L
+        /** Возвращение в приложение: проверяем, если прошло больше полуминуты. */
+        const val STALE_INTERVAL_MS = 30 * 1000L
+
+        /** Пока обновление не установлено, напоминаем в островке раз в 15 минут. */
+        const val REMIND_CAPSULE_MS = 15 * 60 * 1000L
+
+        /** И раз в 20 минут зовём панель обновления — сами, без нажатий. */
+        const val REMIND_PANEL_MS = 20 * 60 * 1000L
+
+        /** «Напомнить позже» в панели: откладываем автопоказ на 10 минут. */
+        const val POSTPONE_MS = 10 * 60 * 1000L
+    }
+
+    /**
+     * Политика напоминаний — чистые правила, их проверяют тесты.
+     *
+     * Смысл: обновление должно попадаться на глаза, но не превращаться в спам.
+     * Пока версия не установлена и не отмечена «пропустить» — панель зовёт себя сама.
+     */
+    object UpdatePolicy {
+
+        /** Пора ли показать панель обновления прямо сейчас. */
+        fun shouldPrompt(
+            available: Boolean,
+            acked: Boolean,
+            postponedUntil: Long,
+            lastPromptAt: Long,
+            now: Long
+        ): Boolean {
+            if (!available || acked) return false
+            if (now < postponedUntil) return false
+            return now - lastPromptAt >= REMIND_PANEL_MS
+        }
+
+        /** Пора ли напомнить в островке. */
+        fun shouldRemind(available: Boolean, acked: Boolean, lastCapsuleAt: Long, now: Long): Boolean {
+            if (!available || acked) return false
+            return now - lastCapsuleAt >= REMIND_CAPSULE_MS
+        }
+
+        /**
+         * Через сколько проверять снова. Если GitHub попросил подождать — уважаем
+         * его срок и не тратим попытки впустую; при обрывах связи отступаем понемногу.
+         */
+        fun nextDelayMs(failures: Int, rateLimitedUntil: Long, now: Long): Long = when {
+            rateLimitedUntil > now -> (rateLimitedUntil - now).coerceAtMost(30 * 60 * 1000L) + 5_000L
+            failures <= 0 -> REFRESH_INTERVAL_MS
+            failures == 1 -> 2 * 60 * 1000L
+            failures == 2 -> 5 * 60 * 1000L
+            else -> 10 * 60 * 1000L
+        }
+
+        /** Человеческая подпись для панели: когда проверяли и когда проверим снова. */
+        fun describe(lastCheckAt: Long, nextCheckAt: Long, now: Long): String {
+            if (lastCheckAt <= 0L) return "ещё не проверял"
+            val ago = ((now - lastCheckAt) / 1000L).coerceAtLeast(0L)
+            val ahead = ((nextCheckAt - now) / 1000L).coerceAtLeast(0L)
+            fun span(seconds: Long): String = when {
+                seconds < 60 -> seconds.toString() + " с"
+                seconds < 3600 -> (seconds / 60).toString() + " мин"
+                else -> (seconds / 3600).toString() + " ч"
+            }
+            return "проверено " + span(ago) + " назад · следующая через " + span(ahead)
+        }
     }
 
     private val _update = MutableStateFlow<UpdateChecker.Result?>(null)
@@ -294,6 +357,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             result?.updateAvailable == true && result.latestTag != current.seenVersion
         }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    /**
+     * Счётчик «пора показать панель обновления». Растёт, когда версия найдена впервые
+     * и потом каждые 20 минут, пока её не установили. Экран следит за числом: одно и то же
+     * значение второй раз панель не откроет, а новое — откроет, даже если человек её закрыл.
+     */
+    private val _updatePrompt = MutableStateFlow(0)
+    val updatePrompt: StateFlow<Int> = _updatePrompt.asStateFlow()
+
+    /** Когда последний раз показывали панель и когда отложили напоминание. */
+    private var lastPromptAt = 0L
+    private var lastCapsuleAt = 0L
+    private var postponedUntil = 0L
+
+    /** Проверка идёт прямо сейчас: панель показывает это честно. */
+    private val _updateChecking = MutableStateFlow(false)
+    val updateChecking: StateFlow<Boolean> = _updateChecking.asStateFlow()
+
+    /** Что рассказать про саму проверку: когда была, когда следующая, что мешало. */
+    private val _updateStatus = MutableStateFlow("")
+    val updateStatus: StateFlow<String> = _updateStatus.asStateFlow()
+
+    private var updateFailures = 0
+    private var nextCheckAt = 0L
+
     init {
         initUpdateCheck()
     }
@@ -306,21 +393,60 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun initUpdateCheck() {
         viewModelScope.launch {
             val current = repository.currentSettings()
-            if (current.updateAuto) {
-                val stale = System.currentTimeMillis() - current.lastUpdateCheck < REFRESH_INTERVAL_MS
-                if (!stale) checkUpdate(silent = true)
-            }
-            // дальше — ровным кругом, пока приложение живёт
+            // Первая проверка — сразу: человек открыл приложение, значит хочет знать.
+            if (current.updateAuto) checkUpdate(silent = true)
             var circles = 0
             while (true) {
-                kotlinx.coroutines.delay(REFRESH_INTERVAL_MS)
+                val now = System.currentTimeMillis()
+                val delayMs = UpdatePolicy.nextDelayMs(updateFailures, _update.value?.rateLimitedUntil ?: 0L, now)
+                nextCheckAt = now + delayMs
+                refreshUpdateStatus()
+                kotlinx.coroutines.delay(delayMs)
                 if (repository.currentSettings().updateAuto) checkUpdate(silent = true)
-                // Переписку проверяем через круг (раз в четыре минуты): два обращения
-                // в две минуты вместе с обновлениями упёрлись бы в лимит GitHub в 60 в час.
+                // Переписку проверяем реже обновлений: там мгновенности и не обещали.
                 circles++
-                if (circles % 2 == 0) checkAgentMail(silent = true)
+                if (circles % 4 == 0) checkAgentMail(silent = true)
             }
         }
+    }
+
+    /** Подпись для панели: «проверено 12 с назад · следующая через 48 с». */
+    private fun refreshUpdateStatus() {
+        _updateStatus.value = UpdatePolicy.describe(
+            lastCheckAt = settings.value.lastUpdateCheck,
+            nextCheckAt = nextCheckAt,
+            now = System.currentTimeMillis()
+        )
+    }
+
+    /**
+     * Напоминания об обновлении. Живут в том же круге: пока версия не установлена и не
+     * отмечена «пропустить», панель зовёт себя сама, а островок тихо напоминает.
+     */
+    private fun remindAboutUpdate() {
+        val now = System.currentTimeMillis()
+        val result = _update.value ?: return
+        val acked = result.latestTag == settings.value.seenVersion
+        val available = result.updateAvailable
+        if (UpdatePolicy.shouldPrompt(available, acked, postponedUntil, lastPromptAt, now)) {
+            lastPromptAt = now
+            _updatePrompt.value = _updatePrompt.value + 1
+        }
+        if (UpdatePolicy.shouldRemind(available, acked, lastCapsuleAt, now)) {
+            lastCapsuleAt = now
+            announceIsland("GSYNK " + result.latestTag, "обновление ждёт установки", persistent = false)
+        }
+    }
+
+    /** Панель открыли — отметим время, чтобы не звать её слишком часто. */
+    fun noteUpdatePanelShown() {
+        lastPromptAt = System.currentTimeMillis()
+    }
+
+    /** «Напомнить позже»: десять минут панель не открывается сама. */
+    fun postponeUpdate() {
+        postponedUntil = System.currentTimeMillis() + POSTPONE_MS
+        _message.value = "Напомню об обновлении через 10 минут"
     }
 
     /**
@@ -352,37 +478,67 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Возвращение в приложение: если с последней проверки прошло больше 15 минут — проверяем. */
     fun checkUpdateIfStale() = viewModelScope.launch {
+        // Напоминания работают даже без автопроверки: версию уже нашли раньше.
+        remindAboutUpdate()
         val current = repository.currentSettings()
         if (!current.updateAuto) return@launch
         if (System.currentTimeMillis() - current.lastUpdateCheck < STALE_INTERVAL_MS) return@launch
         checkUpdate(silent = true)
     }
 
-    fun checkUpdate(silent: Boolean = false) = viewModelScope.launch {
-        val repo = repository.currentSettings().updateRepo
+    /**
+     * Проверка обновлений. Идёт с вшитым токеном (иначе GitHub пускает только 60 запросов
+     * в час на всех за общим адресом оператора и отвечает 403) и с меткой ETag, поэтому
+     * повторные ответы «ничего не изменилось» лимит не тратят вообще.
+     */
+    fun checkUpdate(silent: Boolean = false, force: Boolean = false) = viewModelScope.launch {
+        val current = settings.value
+        val repo = current.updateRepo.ifBlank { Keys.REPO }
         if (repo.isBlank()) {
             if (!silent) _message.value = "Укажите репозиторий обновлений"
             return@launch
         }
-        val result = withContext(Dispatchers.IO) { UpdateChecker.check(app(), repo) }
+        if (force) postponedUntil = 0L
+        _updateChecking.value = true
+        val token = current.reportToken.ifBlank { Keys.REPORT_TOKEN }
+        val result = withContext(Dispatchers.IO) { UpdateChecker.check(app(), repo, token) }
+        _updateChecking.value = false
         _update.value = result
+        updateFailures = if (result.ok) 0 else updateFailures + 1
         repository.saveSettings(
             repository.currentSettings().copy(lastUpdateCheck = System.currentTimeMillis())
         )
-        if (!silent) {
+        nextCheckAt = System.currentTimeMillis() +
+            UpdatePolicy.nextDelayMs(updateFailures, result.rateLimitedUntil, System.currentTimeMillis())
+        refreshUpdateStatus()
+
+        if (!result.ok) {
+            // Ошибку показываем даже в тихом режиме: молча ждать человек не должен.
             _message.value = result.message
+            AppLog.event("Обновление", "проверка не удалась: " + result.message)
+            return@launch
         }
-        // Фирменная анимация: обновление приходит в островок, а не «где-то в настройках».
-        if (result.updateAvailable && result.latestTag != repository.currentSettings().seenVersion) {
-            val previous = repository.currentSettings().lastUpdateCheck
+        if (!silent) _message.value = result.message
+
+        // Версия нашлась: капсула в островке + зов панели, даже если её закрывали.
+        if (result.updateAvailable && result.latestTag != settings.value.seenVersion) {
+            val fresh = result.latestTag != (_updateAnnounce.value ?: "")
             _updateAnnounce.value = result.latestTag
-            announceIsland(
-                title = "GSYNK " + result.latestTag,
-                subtitle = "обновление готово",
-                persistent = false,
-                progress = -1
-            )
-            if (previous == 0L) AppLog.event("Обновление", "найден " + result.latestTag)
+            if (fresh || lastCapsuleAt + REMIND_CAPSULE_MS < System.currentTimeMillis()) {
+                lastCapsuleAt = System.currentTimeMillis()
+                announceIsland(
+                    title = "GSYNK " + result.latestTag,
+                    subtitle = if (result.webOnly) "есть новая версия" else "обновление готово",
+                    persistent = false,
+                    progress = -1
+                )
+            }
+            AppLog.event("Обновление", "найден " + result.latestTag)
+            // Панель открывается сама — это и есть «обновление пришло».
+            _updatePrompt.value = _updatePrompt.value + 1
+            lastPromptAt = System.currentTimeMillis()
+        } else if (!result.updateAvailable && result.latestTag.isNotBlank()) {
+            _updateAnnounce.value = null
         }
     }
 
@@ -436,16 +592,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _updateAnnounce = MutableStateFlow<String?>(null)
     val updateAnnounce: StateFlow<String?> = _updateAnnounce.asStateFlow()
 
-    /** Пользователь закрыл панель: больше не показываем баннер для этой версии. */
+    /**
+     * «Пропустить эту версию»: человек сознательно отказался от неё — больше не напоминаем.
+     * Просто закрыть панель теперь можно без отказа: кнопка «напомнить позже».
+     */
     fun dismissUpdate() = viewModelScope.launch {
         guarded {
             val version = _update.value?.latestTag.orEmpty()
             repository.saveSettings(repository.currentSettings().copy(seenVersion = version))
+            // Про фоновое уведомление тоже помним: пропущенную версию не поднимаем.
+            UpdateJobs.rememberSkipped(app(), version)
+            postponedUntil = 0L
+            _message.value = "Версия " + version + " пропущена — напомню о следующей"
+        }
+    }
+
+    /** Вернуть напоминания о версии, которую раньше пропустили. */
+    fun unskipUpdate() = viewModelScope.launch {
+        guarded {
+            repository.saveSettings(repository.currentSettings().copy(seenVersion = ""))
+            checkUpdate(silent = true, force = true)
         }
     }
 
     fun setUpdateAuto(enabled: Boolean) = viewModelScope.launch {
-        guarded { repository.saveSettings(repository.currentSettings().copy(updateAuto = enabled)) }
+        guarded {
+            val current = repository.currentSettings()
+            repository.saveSettings(current.copy(updateAuto = enabled))
+            // Фоновая проверка живёт ровно столько, сколько разрешил человек.
+            UpdateJobs.remember(app(), current.updateRepo.ifBlank { Keys.REPO }, enabled)
+        }
     }
 
     fun setUpdateRepo(repo: String) = viewModelScope.launch {
@@ -454,41 +630,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Скачать и установить обновление с показом прогресса. */
     fun downloadAndInstall() = viewModelScope.launch {
-        val url = _update.value?.apkUrl.orEmpty()
+        val result = _update.value
+        val url = result?.apkUrl.orEmpty()
+        val tag = result?.latestTag.orEmpty()
         if (url.isBlank()) {
-            _message.value = "Нет ссылки на APK"
+            // Ссылки нет, если версию увидели по странице релиза: ведём в браузер.
+            val page = result?.pageUrl.orEmpty()
+            if (page.isNotBlank()) {
+                UpdateChecker.open(app(), page)
+                _message.value = "Открываю страницу релиза в браузере"
+            } else {
+                _message.value = "Нет ссылки на APK — попробуйте проверить ещё раз"
+            }
             return@launch
         }
         _updateDownloading.value = true
         _updateProgress.value = 0
-        val tag = _update.value?.latestTag.orEmpty()
         announceIsland("GSYNK " + tag, "качаю 0%", persistent = true, progress = 0)
-        val file = withContext(Dispatchers.IO) {
-            UpdateChecker.download(app(), url) { percent ->
+        val download = withContext(Dispatchers.IO) {
+            UpdateChecker.download(
+                context = app(),
+                url = url,
+                sha256 = result?.sha256.orEmpty()
+            ) { percent ->
                 _updateProgress.value = percent
                 // Полоса и подпись в островке идут за настоящей загрузкой.
                 announceIsland("GSYNK " + tag, "качаю " + percent.toString() + "%", persistent = true, progress = percent)
             }
         }
         _updateDownloading.value = false
+        val file = download.file
         if (file == null) {
-            _message.value = "Не удалось скачать обновление"
+            // Причину показываем как есть: «не скачалось» без объяснения бесполезно.
+            _message.value = "Обновление не скачалось: " + download.message
             announceIsland("GSYNK " + tag, "не скачалось", persistent = false)
+            AppLog.event("Обновление", "скачивание не удалось: " + download.message)
             return@launch
         }
         announceIsland("GSYNK " + tag, "скачано, ставлю", persistent = false)
         if (!UpdateChecker.canInstall(app())) {
-            _message.value = "Разрешите установку из GSYNK и повторите"
+            _message.value = "Разрешите установку из GSYNK — сейчас открою настройки"
             UpdateChecker.openInstallSettings(app())
             return@launch
         }
         if (UpdateChecker.install(app(), file)) {
             _message.value = "Запускаю установку…"
         } else {
-            _message.value = "Не удалось запустить установку"
+            _message.value = "Не удалось запустить установку — откройте файл вручную"
+            UpdateChecker.openInstallSettings(app())
         }
     }
-
 
     // ————— отчёты и диагностика —————
 

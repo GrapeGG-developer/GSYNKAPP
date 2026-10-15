@@ -34,6 +34,8 @@ import com.gsynk.app.ui.theme.ChipBorder
 import com.gsynk.app.ui.theme.GrapeGreen
 import com.gsynk.app.ui.theme.GrapeGreenSoft
 import com.gsynk.app.ui.theme.GrapeVioletSoft
+import com.gsynk.app.ui.theme.GrapeCyan
+import com.gsynk.app.ui.theme.GrapePink
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
@@ -51,9 +53,12 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    // Панель открылась — значит человек смотрит именно сюда: проверяем сразу и по-настоящему.
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        if (update == null) vm.checkUpdate(silent = true)
+        vm.checkUpdate(silent = true, force = true)
     }
+    val checking by vm.updateChecking.collectAsStateWithLifecycle()
+    val status by vm.updateStatus.collectAsStateWithLifecycle()
 
     var shared by remember { mutableStateOf(com.gsynk.app.core.UpdateShare.last) }
 
@@ -151,6 +156,25 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
         }
 
         SurfaceCard(borderColor = if (update?.updateAvailable == true) GrapeGreen.copy(alpha = 0.5f) else CardBorder) {
+            // Состояние самой проверки: видно, что приложение не спит.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = if (checking) "проверяю версию…" else status.ifBlank { "готов к проверке" },
+                        color = TextDim,
+                        fontSize = Metro.Type.caption
+                    )
+                    if (update?.unchanged == true) {
+                        Text(
+                            text = "Ответ GitHub «ничего не изменилось» — лимит обращений не потрачен",
+                            color = TextDim,
+                            fontSize = Metro.Type.caption
+                        )
+                    }
+                }
+                if (checking) PulseDot(GrapeCyan)
+            }
+            Spacer(Modifier.height(10.dp))
             when {
                 update == null -> {
                     Text("Проверяю наличие новой версии…", color = TextSecondary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
@@ -176,10 +200,23 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         BarIndicator(percent = progress, brush = TileBrush.Green)
                     } else {
                         PrimaryButton(
-                            text = "Скачать и обновить",
+                            text = if (update!!.webOnly) "Открыть страницу релиза" else "Скачать и обновить",
                             onClick = { vm.downloadAndInstall() },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            SecondaryButton(
+                                text = "Напомнить позже",
+                                onClick = { vm.postponeUpdate(); onDismiss() },
+                                modifier = Modifier.weight(1f)
+                            )
+                            SecondaryButton(
+                                text = "Пропустить версию",
+                                onClick = { vm.dismissUpdate(); onDismiss() },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = "Установка «поверх» сохранит все правила, настройки и игры — " +
@@ -191,9 +228,55 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                 }
 
                 else -> {
-                    Text("Обновлений нет", color = TextPrimary, style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
+                    Text(
+                        text = if (update!!.ok) "Обновлений нет" else "Проверка не прошла",
+                        color = if (update!!.ok) TextPrimary else GrapePink,
+                        fontSize = Metro.Type.tileLive,
+                        fontWeight = FontWeight.Light
+                    )
                     Spacer(Modifier.height(4.dp))
-                    Text(update!!.message, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                    Text(
+                        text = update!!.message,
+                        color = if (update!!.ok) TextDim else GrapePink,
+                        fontSize = Metro.Type.caption
+                    )
+                    if (update!!.rateLimitedUntil > 0L) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "GitHub ограничил частоту обращений. Приложение подождёт и " +
+                                "проверит само — вручную жать не нужно.",
+                            color = TextDim,
+                            fontSize = Metro.Type.caption
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        SecondaryButton(
+                            text = "Повторить",
+                            onClick = { vm.checkUpdate(force = true) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (update!!.pageUrl.isNotBlank()) {
+                            SecondaryButton(
+                                text = "Страница релиза",
+                                onClick = { UpdateChecker.open(context, update!!.pageUrl) }
+                            )
+                        }
+                    }
+                    if (settings.seenVersion.isNotBlank()) {
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = "Версия " + settings.seenVersion + " отмечена как пропущенная.",
+                            color = TextDim,
+                            fontSize = Metro.Type.caption
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        SecondaryButton(
+                            text = "Вернуть напоминания",
+                            onClick = { vm.unskipUpdate() },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
@@ -210,7 +293,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
                     )
                     Text(
-                        text = "Не чаще одного раза в 6 часов, при запуске приложения",
+                        text = "Раз в минуту, с токеном и меткой ETag — лимит GitHub не тратится",
                         color = TextDim,
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
                     )
