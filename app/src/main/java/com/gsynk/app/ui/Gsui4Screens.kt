@@ -762,8 +762,11 @@ fun SurpriseScreen(onBack: () -> Unit) {
  * действительно разбирается в `when` ниже.
  */
 
-val Gsui4PageIds: List<String> =
-    listOf("island", "effects", "radius", "everyday", "easter", "surprise", "ai", "bench")
+val Gsui4PageIds: List<String> = listOf(
+    "island", "effects", "radius", "everyday", "easter", "surprise", "ai", "bench",
+    // V4p2: добавка GSUI V4 — эхо-линейка, проверка глаз и пульс камерой
+    "echo", "eyes", "pulse"
+)
 
 @Composable
 fun Gsui4Page(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
@@ -776,6 +779,9 @@ fun Gsui4Page(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
         "surprise" -> { SurpriseScreen(onBack); return true }
         "ai" -> { AiScreen(onBack); return true }
         "bench" -> { BenchScreen(vm, onBack); return true }
+        "echo" -> { EchoRulerScreen(onBack); return true }
+        "eyes" -> { EyeScreen(onBack); return true }
+        "pulse" -> { PulseScreen(onBack); return true }
     }
     return false
 }

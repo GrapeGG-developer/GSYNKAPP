@@ -132,6 +132,24 @@ object DeviceProfile {
      * Лаборатория и датчики безопасны и открыты всем, ИК — если есть излучатель,
      * шейдерное поле — с Android 13, максимальная нагрузка — только полному набору.
      */
+    /**
+     * Короткая строка о телефоне для отправки другу по связи.
+     * Без секретов: только модель, система, набор функций и заряд.
+     */
+    fun shareLine(info: Info, batteryPercent: Int): String {
+        val screen = if (info.width > 0 && info.height > 0) {
+            ", экран " + info.width.toString() + "×" + info.height.toString()
+        } else {
+            ""
+        }
+        val battery = if (batteryPercent in 0..100) ", заряд " + batteryPercent.toString() + " %" else ""
+        return "профиль: " + info.brand + " " + info.model +
+            ", Android " + info.androidLabel +
+            ", набор " + info.tierLabel +
+            (if (info.hasNfc) ", NFC" else ", без NFC") +
+            screen + battery
+    }
+
     fun feature(info: Info, featureId: String): Boolean = when (featureId) {
         Feature.LAB, Feature.SENSORS -> true
         Feature.IR -> info.hasIr

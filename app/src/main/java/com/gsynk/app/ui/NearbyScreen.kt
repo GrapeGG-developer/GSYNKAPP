@@ -33,8 +33,12 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import com.gsynk.app.BuildConfig
 import com.gsynk.app.core.AppLog
+import com.gsynk.app.core.Deep
+import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.Nearby
 import com.gsynk.app.core.NfcLink
 import com.gsynk.app.core.NfcShow
@@ -83,6 +87,8 @@ fun NearbyScreen(
     val rules by vm.rules.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val update by vm.update.collectAsStateWithLifecycle()
+    val latency by Nearby.latency.collectAsStateWithLifecycle()
+    val partnerBattery by Nearby.partnerBattery.collectAsStateWithLifecycle()
 
     var channel by remember { mutableStateOf(Nearby.Channel.BLUETOOTH) }
     var showKind by remember { mutableStateOf(NfcShow.Kind.FIREWORKS) }
@@ -90,6 +96,28 @@ fun NearbyScreen(
     var sayText by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var waiting by remember { mutableStateOf(false) }
+    var cardName by remember { mutableStateOf("") }
+    var cardPhone by remember { mutableStateOf("") }
+    var pinging by remember { mutableStateOf(false) }
+
+    // Точка на карте: сначала разрешение, потом последнее известное место.
+    val locationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        note = if (!granted) {
+            "Без разрешения на местоположение точку не отправить"
+        } else {
+            val point = lastPoint(context)
+            if (point == null) {
+                "Место пока неизвестно: включите GPS и откройте карты, потом повторите"
+            } else if (Nearby.sendGeo(point.first, point.second)) {
+                "Точка отправлена: " + String.format(java.util.Locale.US, "%.5f", point.first) +
+                    ", " + String.format(java.util.Locale.US, "%.5f", point.second)
+            } else {
+                "Нет связи"
+            }
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -494,6 +522,147 @@ fun NearbyScreen(
         }
 
         Spacer(Modifier.height(14.dp))
+        SectionTitle("Канал связи: отклик, профиль, адрес")
+        Spacer(Modifier.height(8.dp))
+        SurfaceCard(borderColor = GrapeCyan.copy(alpha = 0.4f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Задержка связи",
+                        color = GrapeCyan,
+                        style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                    )
+                    Text(
+                        text = if (latency <= 0L) "ещё не мерили" else latency.toString() + " мс в обе стороны",
+                        color = if (latency in 1L..40L) GrapeGreen else TextDim,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    )
+                }
+                if (partnerBattery >= 0) {
+                    MetricPill(
+                        icon = Icons.Filled.Favorite,
+                        text = partnerBattery.toString() + " %",
+                        tint = GrapeGreen
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            PrimaryButton(
+                text = if (pinging) "меряю…" else "проверить отклик",
+                onClick = {
+                    if (!Nearby.isConnected()) {
+                        note = "Сначала свяжитесь с телефоном"
+                    } else {
+                        pinging = true
+                        Nearby.ping()
+                        note = "Отправил сигнал: ответ придёт за доли секунды"
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Сигнал уходит другу и сразу возвращается. По нему видно, годится ли связь " +
+                    "для игры: до 40 мс играется бодро, больше 120 — уже заметно.",
+                color = TextDim,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            )
+            Spacer(Modifier.height(10.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SecondaryButton(
+                    text = "мой профиль",
+                    onClick = {
+                        val info = DeviceProfile.detect(context)
+                        val battery = Deep.battery(context).percent
+                        note = if (Nearby.sendSay(DeviceProfile.shareLine(info, battery))) {
+                            "Профиль телефона отправлен"
+                        } else {
+                            "Нет связи"
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                SecondaryButton(
+                    text = "мой заряд",
+                    onClick = {
+                        val battery = Deep.battery(context).percent
+                        note = if (Nearby.sendBattery(battery)) {
+                            "Заряд " + battery.toString() + " % отправлен"
+                        } else {
+                            "Нет связи"
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Визитка",
+                color = GrapeVioletSoft,
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                TextField(
+                    value = cardName,
+                    onValueChange = { cardName = it },
+                    label = { Text("Имя") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+                TextField(
+                    value = cardPhone,
+                    onValueChange = { cardPhone = it },
+                    label = { Text("Телефон") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SecondaryButton(
+                    text = "отправить визитку",
+                    onClick = {
+                        note = if (cardName.isBlank() && cardPhone.isBlank()) {
+                            "Заполните имя и телефон"
+                        } else if (Nearby.sendContact(cardName.ifBlank { "без имени" }, cardPhone)) {
+                            "Визитка отправлена"
+                        } else {
+                            "Нет связи"
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+                SecondaryButton(
+                    text = "моя точка",
+                    onClick = {
+                        val fine = android.Manifest.permission.ACCESS_FINE_LOCATION
+                        val allowed = androidx.core.content.ContextCompat.checkSelfPermission(context, fine) ==
+                            android.content.pm.PackageManager.PERMISSION_GRANTED
+                        if (!allowed) {
+                            locationLauncher.launch(fine)
+                        } else {
+                            val point = lastPoint(context)
+                            note = when {
+                                point == null -> "Место неизвестно: включите GPS и повторите"
+                                Nearby.sendGeo(point.first, point.second) -> "Точка отправлена в сообщении"
+                                else -> "Нет связи"
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Профиль и визитка уходят обычным сообщением: друг увидит их в журнале связи. " +
+                    "Точка — тоже сообщение с координатами, карту откроет уже он сам.",
+                color = TextDim,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            )
+        }
+
+        Spacer(Modifier.height(14.dp))
         SectionTitle("Журнал связи")
         Spacer(Modifier.height(8.dp))
         SurfaceCard(borderColor = CardBorder) {
@@ -522,4 +691,27 @@ fun NearbyScreen(
         }
         Spacer(Modifier.height(20.dp))
     }
+}
+
+/**
+ * Последнее известное место телефона.
+ *
+ * Берём именно «последнее известное», а не ждём спутники: человеку нужна точка сейчас,
+ * а не через минуту. Если система ничего не помнит — честно вернём null.
+ */
+@android.annotation.SuppressLint("MissingPermission")
+private fun lastPoint(context: android.content.Context): Pair<Double, Double>? {
+    val manager = context.getSystemService(android.content.Context.LOCATION_SERVICE)
+        as? android.location.LocationManager ?: return null
+    val providers = listOf(
+        android.location.LocationManager.GPS_PROVIDER,
+        android.location.LocationManager.NETWORK_PROVIDER,
+        android.location.LocationManager.PASSIVE_PROVIDER
+    )
+    val best = providers
+        .mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }
+        .maxByOrNull { it.time }
+        ?: return null
+    if (best.latitude == 0.0 && best.longitude == 0.0) return null
+    return best.latitude to best.longitude
 }

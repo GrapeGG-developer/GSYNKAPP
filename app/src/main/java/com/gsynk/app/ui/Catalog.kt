@@ -143,6 +143,9 @@ object Catalog {
         Entry("screen", "проверка экрана", "AMOLED, ШИМ, мультитач", Group.SCREEN, Metro.Size.SMALL, 16, BRIGHT, "lab:screen", 48, words = listOf("пиксель", "битый")),
         Entry("pwm", "шим-микроскоп", "замер мерцания камерой", Group.SCREEN, Metro.Size.SMALL, 17, BRIGHT, "lab:pwm", 44, fresh = true, words = listOf("мерцание", "истощение")),
         Entry("latency", "латентность экрана", "касание → свет", Group.SCREEN, Metro.Size.SMALL, 18, TIME, "lab:latency", 30, fresh = true, words = listOf("отклик", "задержка")),
+        Entry("echo", "эхо-линейка", "расстояние звуком", Group.HARDWARE, Metro.Size.MEDIUM, 14, TUNE, "page:echo", 79, fresh = true, words = listOf("эхо", "дальномер", "расстояние", "звук", "рулетка")),
+        Entry("eyes", "проверка глаз", "острота и цвет", Group.SCREEN, Metro.Size.MEDIUM, 7, BRIGHT, "page:eyes", 63, fresh = true, words = listOf("зрение", "острота", "цвет", "дальтонизм", "таблица")),
+        Entry("pulse", "пульс камерой", "удары сердца по свету", Group.HARDWARE, Metro.Size.WIDE, 12, BOLT, "page:pulse", 85, fresh = true, words = listOf("пульс", "сердце", "бпм", "камера", "здоровье")),
 
         // ——— управление железом (V4p1: фазы чипа) ———
         Entry("folders", "папки", "все функции по категориям", Group.SYSTEM, Metro.Size.WIDE, 1, TUNE, "page:folders", 99, fresh = true, words = listOf("категории", "сортировка", "каталог")),
