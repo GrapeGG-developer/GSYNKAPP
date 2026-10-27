@@ -15,13 +15,13 @@ import org.junit.Test
 import java.time.LocalDate
 
 /**
- * Тесты GSUI V4: всё, что можно проверить без телефона.
+ * Тесты GIOUI: всё, что можно проверить без телефона.
  *
  * Проверяем не «нарисовалось ли», а логику: разборы из лаборатории железа,
  * ежедневный набор (детерминированный), пасхалки, рулетку, кожу и правила каталога.
  * Каждая из этих вещей раньше жила в интерфейсе и не проверялась вовсе.
  */
-class Gsui4Test {
+class GiouiCoreTest {
 
     // ————— железо: разборы —————
 
@@ -168,7 +168,7 @@ class Gsui4Test {
         (0..60).forEach { offset ->
             val day = Everyday.forDate(LocalDate.of(2026, 1, 1).plusDays(offset.toLong()))
             assertTrue(day.number in 100..999)
-            assertTrue(day.tone in 0 until Everyday.MetroTones)
+            assertTrue(day.tone in 0 until Everyday.GioTones)
             assertTrue(day.sticker in 0 until 12)
             assertTrue(day.fact.length > 20)
         }
@@ -256,7 +256,7 @@ class Gsui4Test {
         val wild = Skin.Values(tile = 500, card = -20, sheet = 900, blur = 99, rays = 99, speed = 1_000, level = 9)
         val clamped = Skin.clamp(wild)
         assertEquals(32, clamped.tile)
-        assertEquals(0, clamped.card)
+        assertEquals(12, clamped.card) // GIOUI: ниже 12 dp единая система не опускается
         assertEquals(36, clamped.sheet)
         assertEquals(30, clamped.blur)
         assertEquals(12, clamped.rays)
@@ -295,31 +295,31 @@ class Gsui4Test {
     // ————— метрики плиток и каталога —————
 
     @Test
-    fun metroGridPlacesTilesWithoutOverlap() {
-        val plan = com.gsynk.app.ui.Metro.plan(
+    fun giouiGridPlacesTilesWithoutOverlap() {
+        val plan = com.gsynk.app.ui.Gioui.plan(
             listOf(
-                com.gsynk.app.ui.Metro.Size.SMALL,
-                com.gsynk.app.ui.Metro.Size.SMALL,
-                com.gsynk.app.ui.Metro.Size.MEDIUM,
-                com.gsynk.app.ui.Metro.Size.SMALL,
-                com.gsynk.app.ui.Metro.Size.WIDE
+                com.gsynk.app.ui.Gioui.Size.SMALL,
+                com.gsynk.app.ui.Gioui.Size.SMALL,
+                com.gsynk.app.ui.Gioui.Size.MEDIUM,
+                com.gsynk.app.ui.Gioui.Size.SMALL,
+                com.gsynk.app.ui.Gioui.Size.WIDE
             )
         )
         assertEquals(5, plan.size)
         // Плитки не накладываются друг на друга — это главное свойство сетки.
         val sizes = listOf(
-            com.gsynk.app.ui.Metro.Size.SMALL,
-            com.gsynk.app.ui.Metro.Size.SMALL,
-            com.gsynk.app.ui.Metro.Size.MEDIUM,
-            com.gsynk.app.ui.Metro.Size.SMALL,
-            com.gsynk.app.ui.Metro.Size.WIDE
+            com.gsynk.app.ui.Gioui.Size.SMALL,
+            com.gsynk.app.ui.Gioui.Size.SMALL,
+            com.gsynk.app.ui.Gioui.Size.MEDIUM,
+            com.gsynk.app.ui.Gioui.Size.SMALL,
+            com.gsynk.app.ui.Gioui.Size.WIDE
         )
         val taken = HashSet<Pair<Int, Int>>()
         plan.forEachIndexed { index, place ->
             val size = sizes[index]
             for (row in place.first until place.first + size.h) {
                 for (column in place.second until place.second + size.w) {
-                    assertTrue("колонка вышла за сетку", column < com.gsynk.app.ui.Metro.COLUMNS)
+                    assertTrue("колонка вышла за сетку", column < com.gsynk.app.ui.Gioui.COLUMNS)
                     assertTrue("плитки наложились", taken.add(row to column))
                 }
             }
@@ -376,18 +376,30 @@ class Gsui4Test {
 
     @Test
     fun catalogToneIsInsidePalette() {
-        val tones = com.gsynk.app.ui.Metro.Palette.tiles.size
+        val tones = com.gsynk.app.ui.Gioui.Palette.tiles.size
         com.gsynk.app.ui.Catalog.ALL.forEach { entry ->
             assertTrue("плитка " + entry.id, entry.tone in 0 until tones)
         }
     }
 
     @Test
-    fun metroPaletteKeepsWindowsColors() {
-        // Цвета Metro должны остаться узнаваемыми: фиолетовый, бирюзовый, оранжевый.
-        assertEquals(0xFFA200FF.toInt(), com.gsynk.app.ui.Metro.Palette.Purple.toArgbCompat())
-        assertEquals(0xFF00ABA9.toInt(), com.gsynk.app.ui.Metro.Palette.Teal.toArgbCompat())
-        assertEquals(0xFFF09609.toInt(), com.gsynk.app.ui.Metro.Palette.Mango.toArgbCompat())
+    fun giouiPaletteIsTheGrapeSet() {
+        // Единая палитра GIOUI: виноградный фиолетовый, бирюза и манго GSYNK, а не цвета чужой ОС.
+        assertEquals(0xFF7C3AED.toInt(), com.gsynk.app.ui.Gioui.Palette.Purple.toArgbCompat())
+        assertEquals(0xFF14B8A6.toInt(), com.gsynk.app.ui.Gioui.Palette.Teal.toArgbCompat())
+        assertEquals(0xFFFB923C.toInt(), com.gsynk.app.ui.Gioui.Palette.Mango.toArgbCompat())
+        assertEquals(20, com.gsynk.app.ui.Gioui.Palette.tiles.size)
+    }
+
+    @Test
+    fun giouiIsTheOnlyUiSystem() {
+        assertEquals("GIOUI 1.0", com.gsynk.app.ui.Gioui.UI_VERSION)
+        val uiDir = java.io.File("src/main/java/com/gsynk/app/ui")
+        assertTrue("старый файл дизайн-системы остался", !java.io.File(uiDir, "Metro.kt").exists())
+        val leftovers = uiDir.listFiles()!!.filter { it.extension == "kt" }
+            .filter { file -> file.readText().let { it.contains("Metro.") || it.contains("GSUI") } }
+            .map { it.name }
+        assertEquals("огрызки старого UI: " + leftovers, emptyList<String>(), leftovers)
     }
 
     @Test
@@ -419,16 +431,16 @@ class Gsui4Test {
         assertEquals("плитки без экрана: " + dead, emptyList<String>(), dead)
     }
 
-    /** Все страницы GSUI V4 должны разбираться одним разборщиком. */
+    /** Все страницы GIOUI должны разбираться одним разборщиком. */
     @Test
-    fun everyPageRouteIsKnownToGsui4Page() {
+    fun everyPageRouteIsKnownToGiouiPage() {
         val pages = com.gsynk.app.ui.Catalog.ALL
             .map { it.route }
             .filter { it.startsWith("page:") }
             .map { it.removePrefix("page:") }
             .distinct()
         assertTrue(pages.isNotEmpty())
-        val screens = listOf("Gsui4Screens.kt", "V4P1Screens.kt")
+        val screens = listOf("GiouiScreens.kt", "GiouiExtraScreens.kt")
             .map { java.io.File("src/main/java/com/gsynk/app/ui/" + it).readText() }
             .joinToString("\n")
         val unknown = pages.filterNot { screens.contains("\"" + it + "\" ->") }

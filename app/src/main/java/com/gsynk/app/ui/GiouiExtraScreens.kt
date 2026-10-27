@@ -80,13 +80,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * GSUI V4p1 — патч поверх V4.
+ * GIOUI — патч поверх V4.
  *
  * Что здесь живёт:
  *  1. Вау-эффекты 2099: живое сияние (aurora), параллакс от наклона телефона, блик по плиткам.
  *  2. «Фазы» чипа — восемь страниц управления железом вместо чтения датчиков:
  *     частоты ядер, питание изнутри, панель, радио, светодиод вспышки, мотор, датчики, память.
- *  3. Папки вместо фильтров: человек выбирает папку и заходит внутрь, а не листает ленту.
+ *  3. Категории вместо фильтров: человек выбирает группу и заходит внутрь, а не листает ленту.
  *
  * Правило то же, что и во всём приложении: ничего не выдумываем. Если система не дала
  * управление — так и написано прямо в интерфейсе, вместо выдуманного «сделано».
@@ -232,15 +232,15 @@ object Phases {
  * Идентификаторы фаз — одной строкой.
  *
  * Нужны тестам и каталогу: если фаза объявлена, у неё обязана быть страница
- * в разборщике `V4P1Page`. Список строится из фаз, поэтому разойтись не может.
+ * в разборщике `GiouiExtraPage`. Список строится из фаз, поэтому разойтись не может.
  */
 val PhaseIds: List<String> = Phases.ALL.map { it.id }
 
-/** Разбор страниц V4P1: та же схема, что у Gsui4Page — «сделал и вернул true». */
+/** Разбор дополнительных страниц GIOUI: та же схема, что у GiouiPage — «сделал и вернул true». */
 @Composable
-fun V4P1Page(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
+fun GiouiExtraPage(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
     when (id) {
-        "folders" -> { FolderHubScreen(onBack); return true }
+        "folders" -> { CategoryHubScreen(onBack); return true }
         "agent" -> { AgentMailScreen(onBack); return true }
         "cpu" -> { PhaseCpuScreen(onBack); return true }
         "battery" -> { PhaseBatteryScreen(onBack); return true }
@@ -262,7 +262,7 @@ private fun AnswerBox(answer: String, accent: Color) {
         Text(
             text = answer,
             color = accent,
-            fontSize = Metro.Type.body
+            fontSize = Gioui.Type.body
         )
     }
     Spacer(Modifier.height(8.dp))
@@ -331,7 +331,7 @@ private fun PhaseCpuScreen(onBack: () -> Unit) {
                 text = "Полоска — не загрузка, а частота между минимумом и максимумом ядра: " +
                     "так видно, поднимается ли оно вообще.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
 
@@ -341,7 +341,7 @@ private fun PhaseCpuScreen(onBack: () -> Unit) {
                 text = "Режим решает, когда ядро поднимает частоту. Сменить его можно только с root: " +
                     "без него прошивка закрывает запись.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
             Spacer(Modifier.height(8.dp))
             ChipFlow {
@@ -367,14 +367,14 @@ private fun PhaseCpuScreen(onBack: () -> Unit) {
                 Text(
                     text = "Прошивка не показывает список режимов — на новых ядрах это закрыто.",
                     color = GrapePink,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
             Spacer(Modifier.height(6.dp))
             Text(
                 text = if (busy) "записываю…" else "нажми режим — покажу, что из этого выйдет",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
 
@@ -383,12 +383,12 @@ private fun PhaseCpuScreen(onBack: () -> Unit) {
         SurfaceCard(borderColor = CardBorder) {
             SectionTitle("ступени частот")
             if (frequencies.isEmpty()) {
-                Text("Список ступеней закрыт прошивкой.", color = GrapePink, fontSize = Metro.Type.body)
+                Text("Список ступеней закрыт прошивкой.", color = GrapePink, fontSize = Gioui.Type.body)
             } else {
                 Text(
                     text = frequencies.joinToString(" · ") { it.toString() },
                     color = TextSecondary,
-                    fontSize = Metro.Type.body
+                    fontSize = Gioui.Type.body
                 )
                 Spacer(Modifier.height(6.dp))
                 InfoRow("ступеней", frequencies.size.toString())
@@ -401,7 +401,7 @@ private fun PhaseCpuScreen(onBack: () -> Unit) {
             SectionTitle("узлы ядра")
             nodes.forEach { node ->
                 InfoRow(node.title, node.value.ifBlank { "не читается" })
-                Text(node.path + " — " + node.note, color = TextDim, fontSize = Metro.Type.caption)
+                Text(node.path + " — " + node.note, color = TextDim, fontSize = Gioui.Type.caption)
                 Spacer(Modifier.height(4.dp))
             }
         }
@@ -412,7 +412,7 @@ private fun PhaseCpuScreen(onBack: () -> Unit) {
                 text = DeviceLab.SAFETY_NOTE + " Частоты и режимы — единственное, что можно менять, " +
                     "и только с root и по нажатию: значения возвращаются обратно при выходе.",
                 color = TextSecondary,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
     }
@@ -461,7 +461,7 @@ private fun PhaseBatteryScreen(onBack: () -> Unit) {
                 Text(
                     text = "Счётчик циклов закрыт: на новых ядрах его видно только системным службам.",
                     color = GrapePink,
-                    fontSize = Metro.Type.body
+                    fontSize = Gioui.Type.body
                 )
             }
             battery.wearPercent?.let { wear ->
@@ -469,7 +469,7 @@ private fun PhaseBatteryScreen(onBack: () -> Unit) {
                 Text(
                     text = "Ёмкость от заводской",
                     color = TextPrimary,
-                    fontSize = Metro.Type.body,
+                    fontSize = Gioui.Type.body,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.height(6.dp))
@@ -479,11 +479,11 @@ private fun PhaseBatteryScreen(onBack: () -> Unit) {
                     text = wear.toString() + "% · " + (battery.fullUah / 1000) + " из " +
                         (battery.designUah / 1000) + " мА·ч",
                     color = if (wear < 80) GrapeRed else TextSecondary,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
             Spacer(Modifier.height(6.dp))
-            Text(battery.note, color = TextDim, fontSize = Metro.Type.caption)
+            Text(battery.note, color = TextDim, fontSize = Gioui.Type.caption)
         }
 
         SurfaceCard(borderColor = CardBorder) {
@@ -492,7 +492,7 @@ private fun PhaseBatteryScreen(onBack: () -> Unit) {
                 text = "Ток берётся из узла `current_now`, напряжение — из `voltage_now`, температура — из `temp`. " +
                     "Мощность = ток × напряжение. Всё только чтение, ничего не меняется.",
                 color = TextSecondary,
-                fontSize = Metro.Type.body
+                fontSize = Gioui.Type.body
             )
         }
     }
@@ -527,14 +527,14 @@ private fun PhaseDisplayScreen(onBack: () -> Unit) {
                 text = "Телефон может сам опускать герцы, когда изображение не меняется: " +
                     "поэтому значение стоит смотреть на подвижном экране.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
 
         SurfaceCard(borderColor = CardBorder) {
             SectionTitle("уровень телефона")
             if (!level.supported) {
-                Text("Акселерометр не отдаёт данные.", color = GrapePink, fontSize = Metro.Type.body)
+                Text("Акселерометр не отдаёт данные.", color = GrapePink, fontSize = Gioui.Type.body)
             } else {
                 // Пузырёк: круг смещается по наклону — видно, куда телефон «падает».
                 Box(
@@ -569,13 +569,13 @@ private fun PhaseDisplayScreen(onBack: () -> Unit) {
                 text = "Задержку «касание → свет» измеряет отдельный опыт в лаборатории: " +
                     "там же видно, сколько кадров уходит на ответ.",
                 color = TextSecondary,
-                fontSize = Metro.Type.body
+                fontSize = Gioui.Type.body
             )
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Затемнение: " + dimmer.toString() + "%",
                 color = TextPrimary,
-                fontSize = Metro.Type.body
+                fontSize = Gioui.Type.body
             )
             NeoSlider(
                 value = dimmer,
@@ -662,7 +662,7 @@ private fun PhaseRadioScreen(onBack: () -> Unit) {
                     text = "Данные сети Android отдаёт только с разрешением на местоположение — " +
                         "иначе приложение видит пустоту.",
                     color = TextSecondary,
-                    fontSize = Metro.Type.body
+                    fontSize = Gioui.Type.body
                 )
                 Spacer(Modifier.height(8.dp))
                 PrimaryButton(
@@ -674,24 +674,24 @@ private fun PhaseRadioScreen(onBack: () -> Unit) {
 
         SurfaceCard(borderColor = CardBorder) {
             SectionTitle("мобильная сеть")
-            Text(cellNote, color = TextPrimary, fontSize = Metro.Type.body)
+            Text(cellNote, color = TextPrimary, fontSize = Gioui.Type.body)
         }
 
         SurfaceCard(borderColor = CardBorder) {
             SectionTitle("wi-fi")
-            Text(wifiNote, color = TextPrimary, fontSize = Metro.Type.body)
+            Text(wifiNote, color = TextPrimary, fontSize = Gioui.Type.body)
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Каналы и загрузку эфира показывает опыт «каналы wi-fi» в лаборатории: " +
                     "там же видно, какой канал забит соседями.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
 
         SurfaceCard(borderColor = CardBorder) {
             SectionTitle("bluetooth")
-            Text(btNote, color = TextPrimary, fontSize = Metro.Type.body)
+            Text(btNote, color = TextPrimary, fontSize = Gioui.Type.body)
         }
 
         SurfaceCard(borderColor = CardBorder) {
@@ -701,7 +701,7 @@ private fun PhaseRadioScreen(onBack: () -> Unit) {
                     "сопряжённых устройств. Передатчиком управлять обычному приложению нельзя — " +
                     "поэтому мы показываем всё, что отдаёт система, и честно пишем, где она закрыта.",
                 color = TextSecondary,
-                fontSize = Metro.Type.body
+                fontSize = Gioui.Type.body
             )
         }
     }
@@ -774,7 +774,7 @@ private fun PhaseFlashScreen(onBack: () -> Unit) {
                 text = "Частота задаётся вручную и работает на настоящем светодиоде: " +
                     "на малых герцах видно, как свет «дышит», на больших — сливается в ровный свет.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
             Spacer(Modifier.height(8.dp))
             InfoRow("частота", strobeHz.toString() + " Гц")
@@ -816,7 +816,7 @@ private fun PhaseMotorScreen(onBack: () -> Unit) {
                 text = "Резонансный мотор на этой частоте трясёт сильнее всего при той же энергии: " +
                     "именно её используют телефоны для «сочного» отклика.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
 
@@ -847,7 +847,7 @@ private fun PhaseMotorScreen(onBack: () -> Unit) {
             Text(
                 text = "20–60 Гц — крупная дрожь, 120–200 — рабочий диапазон отклика, выше 250 — уже почти не чувствуется.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
 
@@ -857,7 +857,7 @@ private fun PhaseMotorScreen(onBack: () -> Unit) {
                 text = "Катушка мотора создаёт поле: приложи телефон к магнитометру (или просто тряси), " +
                     "и увидишь всплеск — так проверяют, что мотор живой.",
                 color = TextSecondary,
-                fontSize = Metro.Type.body
+                fontSize = Gioui.Type.body
             )
             Spacer(Modifier.height(8.dp))
             InfoRow("поле сейчас", "%.1f мкТл".format(echo))
@@ -914,7 +914,7 @@ private fun PhaseSensorDeepScreen(onBack: () -> Unit) {
             SectionTitle("закрытые для приложений")
             val closed = all.filter { DeviceLab.isSystemOnlySensor(it.type, it.name, it.stringType.orEmpty()) }
             if (closed.isEmpty()) {
-                Text("Прошивка ничего не прячет — все датчики доступны.", color = GrapeGreen, fontSize = Metro.Type.body)
+                Text("Прошивка ничего не прячет — все датчики доступны.", color = GrapeGreen, fontSize = Gioui.Type.body)
             } else {
                 closed.forEach { sensor ->
                     InfoRow(sensor.name, "тип " + sensor.type, GrapePink)
@@ -925,7 +925,7 @@ private fun PhaseSensorDeepScreen(onBack: () -> Unit) {
                         "Читать их напрямую нельзя — Android 16 за это роняет приложение, " +
                         "поэтому мы их честно отмечаем, а не делаем вид, что читаем.",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
         }
@@ -935,7 +935,7 @@ private fun PhaseSensorDeepScreen(onBack: () -> Unit) {
                 Text(
                     text = sensor.name,
                     color = TextPrimary,
-                    fontSize = Metro.Type.body,
+                    fontSize = Gioui.Type.body,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(Modifier.height(4.dp))
@@ -972,9 +972,9 @@ private fun PhaseMemoryScreen(onBack: () -> Unit) {
         nodes.forEach { node ->
             SurfaceCard(borderColor = CardBorder) {
                 SectionTitle(node.title)
-                Text(node.value.ifBlank { "узел не читается" }, color = TextSecondary, fontSize = Metro.Type.body)
+                Text(node.value.ifBlank { "узел не читается" }, color = TextSecondary, fontSize = Gioui.Type.body)
                 Spacer(Modifier.height(4.dp))
-                Text(node.path + " — " + node.note, color = TextDim, fontSize = Metro.Type.caption)
+                Text(node.path + " — " + node.note, color = TextDim, fontSize = Gioui.Type.caption)
             }
         }
 
@@ -997,7 +997,7 @@ private fun PhaseMemoryScreen(onBack: () -> Unit) {
                 text = "Планировщик решает, в каком порядке читать с накопителя. На телефонах с быстрой " +
                     "памятью он почти не влияет на скорость, зато видно, что прошивка вообще использует.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
     }
@@ -1008,14 +1008,14 @@ private fun PhaseMemoryScreen(onBack: () -> Unit) {
 // ————————————————————————————————————————————————————————————————
 
 /**
- * Папки вместо фильтров.
+ * Категории вместо фильтров.
  *
  * Сверху — плитки папок: в каждой сразу видно, сколько внутри функций. Заходишь внутрь —
  * видишь только эти функции, крупными плитками, и заходишь в нужную. Сортировка — чипами,
- * но она меняет порядок внутри папки, а не «прячет» функции.
+ * но она меняет порядок внутри категории, а не «прячет» функции.
  */
 @Composable
-fun FolderHubScreen(onBack: () -> Unit) {
+fun CategoryHubScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var group by remember { mutableStateOf(Catalog.loadGroup(context)) }
     var sort by remember { mutableStateOf(Catalog.loadSort(context)) }
@@ -1028,9 +1028,9 @@ fun FolderHubScreen(onBack: () -> Unit) {
     }
 
     GrapeScreen(
-        title = if (group == null) "Папки" else group!!.title,
+        title = if (group == null) "Категории" else group!!.title,
         subtitle = if (group == null) {
-            Catalog.ALL.size.toString() + " функций в " + Catalog.Group.entries.size + " папках"
+            Catalog.ALL.size.toString() + " функций в " + Catalog.Group.entries.size + " категориях"
         } else {
             inFolder.size.toString() + " функций · " + group!!.hint
         },
@@ -1043,7 +1043,7 @@ fun FolderHubScreen(onBack: () -> Unit) {
             }
         }
     ) {
-        GrapeTextField(value = query, onValueChange = { query = it }, label = "поиск внутри папок")
+        GrapeTextField(value = query, onValueChange = { query = it }, label = "поиск по функциям")
 
         ChipFlow {
             Catalog.Sort.entries.forEach { mode ->
@@ -1055,20 +1055,20 @@ fun FolderHubScreen(onBack: () -> Unit) {
         }
 
         if (group == null) {
-            // ——— сам список папок: крупные плитки, каждая со счётчиком ———
+            // ——— сам список категорий: крупные карточки, каждая со счётчиком ———
             Spacer(Modifier.height(6.dp))
             Catalog.Group.entries.chunked(2).forEach { row ->
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Metro.gutter)
+                    horizontalArrangement = Arrangement.spacedBy(Gioui.gutter)
                 ) {
                     row.forEach { entry ->
                         val count = Catalog.ALL.count { it.group == entry && it.matches(query) }
-                        Tile8(
+                        GioCard(
                             title = entry.title,
                             subtitle = count.toString() + " функций\n" + entry.hint,
-                            size = Metro.Size.MEDIUM,
-                            color = Metro.Palette.tiles[entry.ordinal % Metro.Palette.tiles.size],
+                            size = Gioui.Size.MEDIUM,
+                            color = Gioui.Palette.tiles[entry.ordinal % Gioui.Palette.tiles.size],
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 group = entry
@@ -1079,46 +1079,46 @@ fun FolderHubScreen(onBack: () -> Unit) {
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
-                Spacer(Modifier.height(Metro.gutter))
+                Spacer(Modifier.height(Gioui.gutter))
             }
 
-            // ——— избранное и недавние: тоже папки, только собираются сами ———
+            // ——— избранное и недавние: умные подборки поверх категорий ———
             val my = Catalog.favoritesOrdered(favorites)
             if (my.isNotEmpty()) {
                 SectionTitle("мои")
                 Spacer(Modifier.height(6.dp))
-                TileRowOf(my.take(4)) { entry -> Catalog.open(context, entry) }
+                GioEntryRow(my.take(4)) { entry -> Catalog.open(context, entry) }
             }
             val last = Catalog.recentOrdered(recent).take(4)
             if (last.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
                 SectionTitle("недавние")
                 Spacer(Modifier.height(6.dp))
-                TileRowOf(last) { entry -> Catalog.open(context, entry) }
+                GioEntryRow(last) { entry -> Catalog.open(context, entry) }
             }
         } else {
-            // ——— внутри папки: только её функции, крупными плитками ———
+            // ——— внутри категории: только её функции ———
             val list = if (sort == Catalog.Sort.FAVORITE) inFolder else inFolder.filter { it.group == group }
             if (list.isEmpty()) {
                 SurfaceCard(borderColor = CardBorder) {
                     Text(
-                        text = "В этой папке пока пусто. Это не поломка: функций здесь просто нет " +
+                        text = "В этой категории пока пусто. Это не поломка: функций здесь просто нет " +
                             "под такой поиск или такой отбор.",
                         color = TextSecondary,
-                        fontSize = Metro.Type.body
+                        fontSize = Gioui.Type.body
                     )
                 }
             }
             list.chunked(2).forEach { row ->
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Metro.gutter)
+                    horizontalArrangement = Arrangement.spacedBy(Gioui.gutter)
                 ) {
                     row.forEach { entry ->
-                        Tile8(
+                        GioCard(
                             title = entry.title,
                             subtitle = entry.subtitle,
-                            size = Metro.Size.MEDIUM,
+                            size = Gioui.Size.MEDIUM,
                             color = entry.color,
                             badge = if (entry.fresh) "новое" else null,
                             modifier = Modifier.weight(1f),
@@ -1132,12 +1132,12 @@ fun FolderHubScreen(onBack: () -> Unit) {
                     }
                     repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
-                Spacer(Modifier.height(Metro.gutter))
+                Spacer(Modifier.height(Gioui.gutter))
             }
             Text(
-                text = "Долгое нажатие — в «мои» · нажми «назад», чтобы вернуться к папкам",
+                text = "Долгое нажатие — в «мои» · нажми «назад», чтобы вернуться к категориям",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
     }
@@ -1145,18 +1145,18 @@ fun FolderHubScreen(onBack: () -> Unit) {
 
 /** Небольшая горизонтальная лента из плиток — для «мои» и «недавние». */
 @Composable
-private fun TileRowOf(entries: List<Catalog.Entry>, onOpen: (Catalog.Entry) -> Unit) {
+private fun GioEntryRow(entries: List<Catalog.Entry>, onOpen: (Catalog.Entry) -> Unit) {
     LazyRow(
         modifier = Modifier.height(112.dp),
-        horizontalArrangement = Arrangement.spacedBy(Metro.gutter),
+        horizontalArrangement = Arrangement.spacedBy(Gioui.gutter),
         contentPadding = PaddingValues(vertical = 2.dp)
     ) {
         items(entries) { entry ->
             Box(Modifier.width(148.dp)) {
-                Tile8(
+                GioCard(
                     title = entry.title,
                     subtitle = entry.subtitle,
-                    size = Metro.Size.SMALL,
+                    size = Gioui.Size.SMALL,
                     color = entry.color,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { onOpen(entry) }
@@ -1164,53 +1164,4 @@ private fun TileRowOf(entries: List<Catalog.Entry>, onOpen: (Catalog.Entry) -> U
             }
         }
     }
-}
-
-/** Обёртка для главного экрана: лента папок одной строкой. */
-@Composable
-fun FolderStrip(onOpen: (Catalog.Group) -> Unit, onAll: () -> Unit) {
-    val context = LocalContext.current
-    Column {
-        SectionTitle("папки")
-        Spacer(Modifier.height(6.dp))
-        LazyRow(
-            modifier = Modifier.height(112.dp),
-            horizontalArrangement = Arrangement.spacedBy(Metro.gutter)
-        ) {
-            item {
-                Box(Modifier.width(170.dp)) {
-                    Tile8(
-                        title = "все функции",
-                        subtitle = Catalog.ALL.size.toString() + " штук",
-                        size = Metro.Size.MEDIUM,
-                        color = GrapeVioletDeep,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onAll
-                    )
-                }
-            }
-            items(Catalog.Group.entries) { entry ->
-                val count = Catalog.ALL.count { it.group == entry }
-                Box(Modifier.width(170.dp)) {
-                    Tile8(
-                        title = entry.title,
-                        subtitle = count.toString() + " функций",
-                        size = Metro.Size.MEDIUM,
-                        color = Metro.Palette.tiles[entry.ordinal % Metro.Palette.tiles.size],
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            Haptics.tick(context, 20L)
-                            onOpen(entry)
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** Не используется напрямую, но оставлено для экранов, которым нужен пустой фон карточки. */
-@Composable
-private fun FolderBackdrop() {
-    Box(Modifier.fillMaxWidth().height(0.dp).background(CardBg))
 }

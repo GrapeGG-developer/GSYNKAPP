@@ -34,8 +34,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -97,7 +95,7 @@ import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
-import com.gsynk.app.ui.theme.TileBrush
+import com.gsynk.app.ui.theme.GioBrush
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.ZonedDateTime
@@ -134,8 +132,6 @@ fun MainScreen(vm: MainViewModel) {
     var pendingFlag by remember { mutableStateOf<String?>(null) }
     var pendingLab by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
-    var group by remember { mutableStateOf<Catalog.Group?>(null) }
-    var sort by remember { mutableStateOf(Catalog.loadSort(context)) }
     var favorites by remember { mutableStateOf(Catalog.loadFavorites(context)) }
     val recent = remember { Catalog.loadRecent(context) }
     val toolsVm: ToolsViewModel = viewModel()
@@ -352,16 +348,16 @@ fun MainScreen(vm: MainViewModel) {
                                 verticalArrangement = Arrangement.Bottom
                             ) {
                                 Text(
-                                    text = "gsynk " + Metro.UI_VERSION.lowercase(),
+                                    text = "gsynk " + Gioui.UI_VERSION.lowercase(),
                                     color = TextPrimary,
-                                    fontSize = Metro.Type.pageSubtitle,
+                                    fontSize = Gioui.Type.pageSubtitle,
                                     fontWeight = FontWeight.Light,
                                     letterSpacing = (-0.5).sp
                                 )
                                 Text(
-                                    text = "фон дышит, плитки живые, наклон чувствуется",
+                                    text = "единый интерфейс · все функции по категориям",
                                     color = TextSecondary,
-                                    fontSize = Metro.Type.caption
+                                    fontSize = Gioui.Type.caption
                                 )
                             }
                         }
@@ -370,152 +366,153 @@ fun MainScreen(vm: MainViewModel) {
                     }
                 }
 
-                // ————— папки: каждая функция в своей категории, без плутания —————
+                // ————— GIOUI: поиск по всем функциям —————
                 item {
-                    FolderStrip(
-                        onOpen = { entry ->
-                            group = entry
-                            Catalog.saveGroup(context, entry)
-                            panel = "page:folders"
-                        },
-                        onAll = { panel = "page:folders" }
+                    GrapeTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = "Найти функцию: шифр, пульс, nfc, нагрузка…",
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
 
-                // ————— фазы чипа: прямое управление железом, по одной плитке на фазу —————
+                // ————— GIOUI: быстрые переключатели одной карточкой —————
                 item {
-                    val visible = remember(query, group, sort, favorites) {
-                        Catalog.view(query, group, sort, favorites, recent)
-                    }
-                    SectionTitle("фазы чипа — управление, а не датчики")
-                    Spacer(Modifier.height(6.dp))
-                    Phases.ALL.chunked(2).forEach { row ->
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(Metro.gutter)
-                        ) {
-                            row.forEach { phase ->
-                                Tile8(
-                                    title = phase.title,
-                                    subtitle = phase.subtitle,
-                                    size = Metro.Size.MEDIUM,
-                                    color = Metro.Palette.tiles[phase.tone % Metro.Palette.tiles.size],
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { panel = "page:" + phase.id }
+                    SurfaceCard(Modifier.fillMaxWidth()) {
+                        SectionTitle("быстро")
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Автопилот", color = TextPrimary, fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
+                                Text(
+                                    text = nextRule?.let { "следующее правило через " + humanDelta(ZonedDateTime.now(), it) } ?: "правил пока нет",
+                                    color = TextDim, fontSize = Gioui.Type.caption
                                 )
                             }
-                            repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                            Switch(checked = settings.autopilot, onCheckedChange = { vm.setAutopilot(it) })
                         }
-                        Spacer(Modifier.height(Metro.gutter))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Остров", color = TextPrimary, fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
+                                Text(
+                                    text = if (settings.islandPersistent) "постоянный под камерой" else "только вспышки событий",
+                                    color = TextDim, fontSize = Gioui.Type.caption
+                                )
+                            }
+                            Switch(checked = settings.islandPersistent, onCheckedChange = { vm.setIslandPersistent(it) })
+                        }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Уведомления", color = TextPrimary, fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
+                                Text(
+                                    text = if (settings.notifications) "напоминать о правилах и событиях" else "тишина",
+                                    color = TextDim, fontSize = Gioui.Type.caption
+                                )
+                            }
+                            Switch(checked = settings.notifications, onCheckedChange = { vm.setNotifications(it) })
+                        }
+                        Text(
+                            text = profile.model.ifBlank { "Устройство" } + " · " +
+                                if (profile.isFull) "функции определены автоматически" else "базовый набор функций",
+                            color = TextDim, fontSize = Gioui.Type.caption
+                        )
                     }
-                    Text(
-                        text = "Функций в папках: " + visible.size + " из " + Catalog.ALL.size +
-                            " · долгое нажатие внутри папки — в «мои»",
-                        color = TextDim,
-                        fontSize = Metro.Type.caption
-                    )
                 }
 
-                item {
-                    DeviceTile(
-                        model = profile.model.ifBlank { "Устройство" },
-                        tierLabel = if (profile.isFull) {
-                            "функции определены автоматически"
+                // ————— GIOUI: поиск показывает результат сразу, без лишних экранов —————
+                if (query.isNotBlank()) {
+                    val found = Catalog.ALL.filter { it.matches(query) }.sortedByDescending { it.hot }
+                    item {
+                        SectionTitle("найдено: " + found.size)
+                        if (found.isEmpty()) {
+                            Text(
+                                text = "Ничего такого нет — попробуй другое слово: «шифр», «пульс», «nfc», «звук».",
+                                color = TextDim, fontSize = Gioui.Type.caption
+                            )
                         } else {
-                            "базовый набор функций"
-                        },
-                        isFull = profile.isFull,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { panel = "tools" }
-                    )
-                }
-
-                // ————— плитки Metro: 2×2, 1×1 и во всю ширину —————
-                item {
-                    TileRow {
-                        MetroAutopilotTile(
-                            enabled = settings.autopilot,
-                            countdown = nextRule?.let { humanDelta(ZonedDateTime.now(), it) } ?: "правил нет",
-                            rulesCount = rules.size,
-                            modifier = Modifier.weight(2f),
-                            onClick = { vm.setAutopilot(!settings.autopilot) }
-                        )
-                        Column(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(11.dp)
-                        ) {
-                            MetroTile(
-                                title = "остров",
-                                brush = if (settings.islandPersistent) TileBrush.Green else TileBrush.Ink,
-                                iconRes = R.drawable.ic_brightness,
-                                subtitle = if (settings.islandPersistent) "постоянный" else "вспышки",
-                                size = TileSize.Small,
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = { vm.setIslandPersistent(!settings.islandPersistent) }
-                            )
-                            MetroTile(
-                                title = "тишина",
-                                brush = if (settings.notifications) TileBrush.Ink else TileBrush.Blue,
-                                iconRes = R.drawable.ic_shield,
-                                subtitle = if (settings.notifications) "уведомления" else "не беспокоить",
-                                size = TileSize.Small,
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = { vm.setNotifications(!settings.notifications) }
-                            )
+                            GioGrid(Modifier.fillMaxWidth()) {
+                                found.forEach { entry ->
+                                    GioCard(
+                                        title = entry.title,
+                                        subtitle = entry.subtitle,
+                                        size = entry.size,
+                                        color = entry.color,
+                                        icon = ImageVector.vectorResource(entry.iconRes),
+                                        badge = when {
+                                            entry.fresh -> "новое"
+                                            entry.id in favorites -> "моё"
+                                            else -> null
+                                        },
+                                        onClick = { Catalog.open(context, entry) },
+                                        onLongClick = {
+                                            favorites = if (entry.id in favorites) favorites - entry.id else favorites + entry.id
+                                            Catalog.saveFavorites(context, favorites)
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-
-                item {
-                    TileRow {
-                        MetroTile(
-                            title = "grape link",
-                            subtitle = "nfc · игра и обмен",
-                            brush = TileBrush.Cyan,
-                            iconRes = R.drawable.ic_bolt,
-                            badge = if (settings.nfcTouches > 0) "${settings.nfcTouches}" else null,
-                            liveText = "${settings.nfcTouches}",
-                            liveLabel = "касаний меткой",
-                            size = TileSize.Medium,
-                            modifier = Modifier.weight(2f),
-                            onClick = { panel = "nfc" }
+                } else {
+                    // ————— категории GIOUI: каждая функция ровно в своей группе —————
+                    item {
+                        SectionTitle("категории")
+                        Text(
+                            text = Catalog.ALL.size.toString() + " функций · " + Catalog.Group.entries.size +
+                                " категорий · долгое нажатие в категории — в «моё»",
+                            color = TextDim, fontSize = Gioui.Type.caption
                         )
-                        Column(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(11.dp)
-                        ) {
-                            MetroTile(
-                                title = "инструменты",
-                                brush = TileBrush.Blue,
-                                iconRes = R.drawable.ic_tune,
-                                size = TileSize.Small,
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = { panel = "tools" }
-                            )
-                            MetroTile(
-                                title = "игры",
-                                brush = TileBrush.Pink,
-                                iconRes = R.drawable.ic_schedule,
-                                size = TileSize.Small,
-                                modifier = Modifier.fillMaxWidth(),
-                                onClick = { panel = "games" }
-                            )
+                        Spacer(Modifier.height(6.dp))
+                        Catalog.Group.entries.chunked(2).forEach { row ->
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Gioui.gutter)
+                            ) {
+                                row.forEach { grp ->
+                                    val count = Catalog.ALL.count { it.group == grp }
+                                    GioCard(
+                                        title = grp.title,
+                                        subtitle = grp.hint,
+                                        size = Gioui.Size.MEDIUM,
+                                        color = Gioui.Palette.tiles[grp.ordinal % Gioui.Palette.tiles.size],
+                                        live = count.toString(),
+                                        badge = if (grp == Catalog.Group.CRYPTO) "новое" else null,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            Catalog.saveGroup(context, grp)
+                                            panel = "page:folders"
+                                        }
+                                    )
+                                }
+                                repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                            Spacer(Modifier.height(Gioui.gutter))
                         }
                     }
-                }
 
-                item {
-                    MetroTile(
-                        title = "сцены и нагрузка",
-                        subtitle = "один тап · ии и графика в реальном времени",
-                        brush = TileBrush.Violet,
-                        iconRes = R.drawable.ic_shield,
-                        liveText = "готово",
-                        liveLabel = "сцены: ночь · кино · турбо",
-                        size = TileSize.Wide,
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { panel = "scenes" }
-                    )
+                    val lastHome = Catalog.recentOrdered(recent).take(2)
+                    if (lastHome.isNotEmpty()) {
+                        item {
+                            SectionTitle("недавнее")
+                            Spacer(Modifier.height(6.dp))
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(Gioui.gutter)
+                            ) {
+                                lastHome.forEach { entry ->
+                                    GioCard(
+                                        title = entry.title,
+                                        subtitle = entry.subtitle,
+                                        size = Gioui.Size.MEDIUM,
+                                        color = entry.color,
+                                        icon = ImageVector.vectorResource(entry.iconRes),
+                                        modifier = Modifier.weight(1f),
+                                        onClick = { Catalog.open(context, entry) }
+                                    )
+                                }
+                                repeat(2 - lastHome.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                    }
                 }
 
                 if (!permissions.allGranted) {
@@ -537,13 +534,13 @@ fun MainScreen(vm: MainViewModel) {
                         Text(
                             text = "Расписание",
                             color = TextPrimary,
-                            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+                            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light),
                             modifier = Modifier.weight(1f)
                         )
                         Text(
                             text = "${rules.count { it.enabled }} из ${rules.size} активны",
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -588,7 +585,7 @@ fun MainScreen(vm: MainViewModel) {
                 snackbar = { data ->
                     Snackbar(
                         snackbarData = data,
-                        shape = RectangleShape,
+                        shape = skinShape("sheet"),
                         containerColor = CardBgAlt,
                         contentColor = TextPrimary
                     )
@@ -657,11 +654,11 @@ fun MainScreen(vm: MainViewModel) {
         )
     }
 
-    // Страницы GSUI V4: остров, эффекты, скругления, каждый день, пасхалки, рулетка, ИИ, бенчмарк.
+    // Страницы GIOUI: остров, эффекты, скругления, каждый день, пасхалки, рулетка, ИИ, бенчмарк.
     panel?.takeIf { it.startsWith("page:") }?.let { name ->
         val page = name.removePrefix("page:")
-        if (Gsui4Page(page, vm, onBack = { panel = null })) return@let
-        if (V4P1Page(page, vm, onBack = { panel = null })) return@let
+        if (GiouiPage(page, vm, onBack = { panel = null })) return@let
+        if (GiouiExtraPage(page, vm, onBack = { panel = null })) return@let
         panel = null
     }
 
@@ -801,7 +798,7 @@ private fun HomeHeader(model: String, onSettings: () -> Unit, vm: MainViewModel?
                 Box {
                     GradientText(
                         text = "GSYNK",
-                        style = MaterialTheme.typography.displaySmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+                        style = MaterialTheme.typography.displaySmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light),
                         brush = GrapeGradient,
                         modifier = Modifier.clickable {
                             logoBurst++
@@ -826,15 +823,15 @@ private fun HomeHeader(model: String, onSettings: () -> Unit, vm: MainViewModel?
                 Text(
                     text = model.ifBlank { "мультитул для телефона" },
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
             Box(
                 Modifier
                     .size(42.dp)
-                    .clip(RectangleShape)
+                    .clip(skinShape("card"))
                     .background(CardBg)
-                    .border(1.dp, ChipBorder, RectangleShape)
+                    .border(1.dp, ChipBorder, skinShape("card"))
                     .clickable { onSettings() },
                 contentAlignment = Alignment.Center
             ) {
@@ -855,8 +852,8 @@ private fun CrashBanner(onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RectangleShape)
-            .background(TileBrush.Red)
+            .clip(skinShape("card"))
+            .background(GioBrush.Red)
             .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -865,15 +862,15 @@ private fun CrashBanner(onClick: () -> Unit) {
             Text(
                 text = "Был сбой",
                 color = Color.White,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
             )
             Text(
                 text = "Отчёт собран — нажмите, чтобы посмотреть и отправить",
                 color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
-        Text("→", color = Color.White, style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
+        Text("→", color = Color.White, style = MaterialTheme.typography.headlineSmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light))
     }
 }
 
@@ -883,8 +880,8 @@ private fun UpdateBanner(subtitle: String, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RectangleShape)
-            .background(TileBrush.Green)
+            .clip(skinShape("card"))
+            .background(GioBrush.Green)
             .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -893,15 +890,15 @@ private fun UpdateBanner(subtitle: String, onClick: () -> Unit) {
             Text(
                 text = "Доступно обновление",
                 color = Color(0xFF052E1F),
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
             )
             Text(
                 text = subtitle,
                 color = Color(0xFF052E1F).copy(alpha = 0.75f),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
-        Text("→", color = Color(0xFF052E1F), style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
+        Text("→", color = Color(0xFF052E1F), style = MaterialTheme.typography.headlineSmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light))
     }
 }
 
@@ -917,20 +914,20 @@ private fun PermissionsCard(
             Text(
                 text = "Нужны доступы",
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
                 modifier = Modifier.weight(1f)
             )
             Text(
                 text = snapshot.items.count { !it.granted }.toString(),
                 color = GrapeVioletSoft,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
             )
         }
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Откройте и выдайте — иначе часть функций не работает",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(8.dp))
         snapshot.items.filter { !it.granted }.take(6).forEach { item ->
@@ -944,7 +941,7 @@ private fun PermissionRow(item: Permissions.Item, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .clickable { onClick() }
             .padding(vertical = 9.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -952,10 +949,10 @@ private fun PermissionRow(item: Permissions.Item, onClick: () -> Unit) {
         Text(
             text = item.title,
             color = TextSecondary,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal),
             modifier = Modifier.weight(1f)
         )
-        Text("выдать →", color = GrapeVioletSoft, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+        Text("выдать →", color = GrapeVioletSoft, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
     }
 }
 
@@ -988,7 +985,7 @@ private fun RuleCard(
                     Text(
                         text = rule.timeLabel,
                         color = if (rule.enabled) TextPrimary else TextDim,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
                     )
                     if (isNext) {
                         Spacer(Modifier.width(10.dp))
@@ -1000,13 +997,13 @@ private fun RuleCard(
                     }
                 }
                 Spacer(Modifier.height(2.dp))
-                Text(rule.name, color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text(rule.name, color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 val scheduleText = buildString {
                     append(rule.daysLabel())
                     if (rule.hasDates) append(" • разово: ${rule.datesLabel(2)}")
                     if (rule.useInterval) append(" • ${rule.intervalLabel} с ${rule.intervalStartLabel}")
                 }
-                Text(scheduleText, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text(scheduleText, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (rule.useBrightness) {
@@ -1031,7 +1028,7 @@ private fun RuleCard(
                     Box(
                         Modifier
                             .size(36.dp)
-                            .clip(RectangleShape)
+                            .clip(skinShape("card"))
                             .clickable { menuOpen = true },
                         contentAlignment = Alignment.Center
                     ) {
@@ -1045,7 +1042,7 @@ private fun RuleCard(
                     DropdownMenu(
                         expanded = menuOpen,
                         onDismissRequest = { menuOpen = false },
-                        shape = RectangleShape,
+                        shape = skinShape("sheet"),
                         containerColor = CardBgAlt
                     ) {
                         DropdownMenuItem(
@@ -1108,12 +1105,12 @@ private fun RuleCard(
 @Composable
 private fun EmptyState(onAdd: () -> Unit) {
     SurfaceCard {
-        Text("Правил пока нет", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+        Text("Правил пока нет", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(4.dp))
         Text(
             text = "Правило меняет яркость и громкость по расписанию — например «вечером тише»",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(14.dp))
         PrimaryButton(

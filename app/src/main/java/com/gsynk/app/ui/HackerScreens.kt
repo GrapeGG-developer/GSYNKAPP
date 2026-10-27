@@ -59,7 +59,7 @@ import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
-import com.gsynk.app.ui.theme.TileBrush
+import com.gsynk.app.ui.theme.GioBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -86,7 +86,7 @@ fun PasswordToolScreen(onBack: () -> Unit) {
             Text(
                 text = password,
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light),
                 fontWeight = FontWeight.Medium
             )
             Spacer(Modifier.height(10.dp))
@@ -112,10 +112,10 @@ fun PasswordToolScreen(onBack: () -> Unit) {
             Text(
                 text = "Стойкость: " + listOf("очень слабый", "слабый", "средний", "хороший", "надёжный")[strength],
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(12.dp))
-            Text("Длина: $length", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Длина: $length", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 listOf(8, 12, 16, 24, 32, 48).forEach { option ->
@@ -155,7 +155,7 @@ fun PasswordToolScreen(onBack: () -> Unit) {
             Text(
                 text = "Покажите QR — второй телефон считает пароль камерой или через Grape Link.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -196,7 +196,7 @@ fun QrImage(content: String, modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth().aspectRatio(1f)
             )
         } else {
-            Text("Не удалось построить QR", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Не удалось построить QR", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
         }
     }
 }
@@ -247,7 +247,7 @@ fun MorseToolScreen(onBack: () -> Unit) {
                     }
                 }.ifBlank { "—" },
                 color = GrapeVioletSoft,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
             )
             Spacer(Modifier.height(12.dp))
             GrapeTextField(value = text, onValueChange = { text = it.uppercase() }, label = "Текст")
@@ -264,7 +264,7 @@ fun MorseToolScreen(onBack: () -> Unit) {
             Text(
                 text = "Фонарик мигает точками и тире: короткая вспышка — точка, длинная — тире.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -296,10 +296,10 @@ fun MetalDetectorScreen(onBack: () -> Unit) {
             Text(
                 text = "${value.roundToInt()} мкТл",
                 color = if (normalized > 0.6f) GrapeRed else TextPrimary,
-                style = MaterialTheme.typography.displaySmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
+                style = MaterialTheme.typography.displaySmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
             )
             Spacer(Modifier.height(10.dp))
-            BarIndicator(percent = (normalized * 100).roundToInt(), brush = TileBrush.Cyan)
+            BarIndicator(percent = (normalized * 100).roundToInt(), brush = GioBrush.Cyan)
             Spacer(Modifier.height(14.dp))
             InfoRow("Максимум", "${peak.roundToInt()} мкТл")
             InfoRow("Спокойный фон", "40–60 мкТл")
@@ -314,7 +314,7 @@ fun MetalDetectorScreen(onBack: () -> Unit) {
                 text = if (!compass.supported) "У этого телефона нет магнитометра" else
                     "Проводите телефоном по стене или коробке: резкий рост — там металл, проводка или магнит.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -348,7 +348,7 @@ fun LevelToolScreen(onBack: () -> Unit) {
                     Modifier
                         .size(120.dp)
                         .clip(RectangleShape)
-                        .background(if (aligned) TileBrush.Green else TileBrush.Ink)
+                        .background(if (aligned) GioBrush.Green else GioBrush.Ink)
                         .border(1.dp, ChipBorder, RectangleShape),
                     contentAlignment = Alignment.Center
                 ) {
@@ -368,7 +368,7 @@ fun LevelToolScreen(onBack: () -> Unit) {
                     Text(
                         text = if (aligned) "Ровно!" else "Подровняйте поверхность",
                         color = if (aligned) GrapeGreenSoft else GrapeVioletSoft,
-                        style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                        style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
                     )
                 }
             }
@@ -376,7 +376,7 @@ fun LevelToolScreen(onBack: () -> Unit) {
             Text(
                 text = "Положите телефон экраном вверх: круг смещается, пока наклон не станет нулевым.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -460,24 +460,24 @@ fun SoundMeterScreen(onBack: () -> Unit) {
                     db >= 75 -> GrapeVioletSoft
                     else -> TextPrimary
                 },
-                style = MaterialTheme.typography.displaySmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
+                style = MaterialTheme.typography.displaySmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
             )
             Spacer(Modifier.height(4.dp))
-            Text(label, color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text(label, color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(12.dp))
-            BarIndicator(percent = db, brush = TileBrush.Amber)
+            BarIndicator(percent = db, brush = GioBrush.Amber)
             Spacer(Modifier.height(14.dp))
             InfoRow("Пик", "$peak дБ")
             InfoRow("Безопасный предел", "до 85 дБ")
             if (recorderError.isNotBlank()) {
                 Spacer(Modifier.height(8.dp))
-                Text(recorderError, color = GrapeRed, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text(recorderError, color = GrapeRed, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
             }
             Spacer(Modifier.height(10.dp))
             Text(
                 text = "Оценка приблизительная: считается по амплитуде микрофона, калибровки нет.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -508,30 +508,30 @@ fun SysDashboardScreen(onBack: () -> Unit) {
         val data = snapshot
         SurfaceCard {
             if (data == null) {
-                Text("Считываю…", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                Text("Считываю…", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             } else {
-                Text(data.model, color = TextPrimary, style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
+                Text(data.model, color = TextPrimary, style = MaterialTheme.typography.titleLarge.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light))
                 Text(
                     "Android ${data.androidVersion} • ядер: ${data.cores}",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                 )
                 Spacer(Modifier.height(14.dp))
                 InfoRow("Память (система)", "${data.ramUsedMb} / ${data.ramTotalMb} МБ")
-                BarIndicator(data.ramPercent, TileBrush.Violet)
+                BarIndicator(data.ramPercent, GioBrush.Violet)
                 Spacer(Modifier.height(12.dp))
                 InfoRow(
                     "Накопитель",
                     "%.1f ГБ свободно из %.1f".format(data.storageFreeGb, data.storageTotalGb)
                 )
-                BarIndicator(100 - data.storageUsedPercent, TileBrush.Cyan)
+                BarIndicator(100 - data.storageUsedPercent, GioBrush.Cyan)
                 Spacer(Modifier.height(12.dp))
                 InfoRow(
                             "Батарея",
                             data.batteryPercent.toString() + "% • " +
                                 "%.1f".format(data.batteryTempC) + " °C"
                         )
-                BarIndicator(data.batteryPercent, TileBrush.Green)
+                BarIndicator(data.batteryPercent, GioBrush.Green)
                 Spacer(Modifier.height(12.dp))
                 InfoRow("Аптайм", "${data.uptimeHours} ч")
             }
@@ -570,7 +570,7 @@ fun EncoderScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             GrapeTextField(value = input, onValueChange = { input = it }, label = "Исходный текст")
             Spacer(Modifier.height(12.dp))
-            Text("Результат", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Результат", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(6.dp))
             Box(
                 Modifier
@@ -580,7 +580,7 @@ fun EncoderScreen(onBack: () -> Unit) {
                     .border(1.dp, ChipBorder, RectangleShape)
                     .padding(12.dp)
             ) {
-                Text(output, color = GrapeGreenSoft, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                Text(output, color = GrapeGreenSoft, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             }
             Spacer(Modifier.height(12.dp))
             SecondaryButton(
@@ -644,7 +644,7 @@ fun SubnetScreen(onBack: () -> Unit) {
                 keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
             )
             Spacer(Modifier.height(12.dp))
-            Text("Маска: /$prefix", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Маска: /$prefix", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 listOf(8, 16, 22, 24, 25, 26, 27, 28, 30, 31).forEach { value ->
@@ -653,7 +653,7 @@ fun SubnetScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(14.dp))
             if (result == null) {
-                Text("Введите адрес вида 192.168.1.10", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                Text("Введите адрес вида 192.168.1.10", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             } else {
                 InfoRow("Адрес сети", result.network)
                 InfoRow("Маска", result.mask)
@@ -669,7 +669,7 @@ fun SubnetScreen(onBack: () -> Unit) {
                 text = "Разведка сети через Wi-Fi требует системных прав (root/Shizuku) — " +
                     "поэтому здесь только честный расчёт адресов.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }

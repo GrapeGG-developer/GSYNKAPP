@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 
 /**
- * Роутер GSUI V4.
+ * Роутер GIOUI.
  *
  * Раньше каждый экран знал про соседей десяток лямбд, и открыть что-то из глубины
  * было нельзя. Теперь есть одна строка-маршрут: любой экран может попросить открыть
@@ -20,7 +20,7 @@ import java.util.Locale
  *  * `flag:turbo` — панель внутри мультитула (turbo, chronicle, chat, screensaver, diagnostics);
  *  * `lab:strobe` — экран лаборатории железа;
  *  * `sys:sound` — системный экран Android;
- *  * `page:everyday` — отдельная страница GSUI V4 (everyday, easter, ai, effects, surprise, bench).
+ *  * `page:everyday` — отдельная страница GIOUI (everyday, easter, ai, effects, surprise, bench).
  */
 object Router {
 
@@ -60,7 +60,7 @@ object Router {
 /**
  * Каталог всего приложения.
  *
- * Один список — все функции. Плитки раскладывает сетка Metro, поэтому нет ни одного
+ * Один список — все функции. Плитки раскладывает сетка GIOUI, поэтому нет ни одного
  * под-под-подпункта: любую функцию видно с главного экрана, а категории и сортировка
  * лишь меняют порядок, а не прячут вещи.
  */
@@ -72,6 +72,7 @@ object Catalog {
         HARDWARE("железо", "лаборатория: датчики, катушки, экран"),
         LOAD("нагрузка", "процессор, ускоритель, температура"),
         AI("умное", "локальный ИИ и настоящие сети"),
+        CRYPTO("шифраторы", "шифры, коды, пароли и авто-расшифровка"),
         SYSTEM("система", "правила, разрешения, отчёты, обновление"),
         FUN("забава", "игры, каждый день, пасхалки")
     }
@@ -87,14 +88,14 @@ object Catalog {
 
     /**
      * Плитка каталога. `hot` — насколько часто вещь нужна (для сортировки «часто»),
-     * `tone` — цвет плитки по палитре Metro, `fresh` — пометка «новое в GSUI V4».
+     * `tone` — цвет плитки по палитре GIOUI, `fresh` — пометка «новое в GIOUI».
      */
     data class Entry(
         val id: String,
         val title: String,
         val subtitle: String,
         val group: Group,
-        val size: Metro.Size,
+        val size: Gioui.Size,
         val tone: Int,
         val iconRes: Int,
         val route: String,
@@ -102,7 +103,7 @@ object Catalog {
         val fresh: Boolean = false,
         val words: List<String> = emptyList()
     ) {
-        val color: Color get() = Metro.Palette.tiles[tone.coerceIn(0, Metro.Palette.tiles.lastIndex)]
+        val color: Color get() = Gioui.Palette.tiles[tone.coerceIn(0, Gioui.Palette.tiles.lastIndex)]
 
         fun matches(query: String): Boolean {
             if (query.isBlank()) return true
@@ -125,99 +126,105 @@ object Catalog {
     /** Основной список. Он же — единственный источник плиток. */
     val ALL: List<Entry> = listOf(
         // ——— связь ———
-        Entry("nfc", "grape link", "NFC: обмен, связь, игра", Group.CONNECT, Metro.Size.WIDE, 4, BOLT, "panel:nfc", 100, words = listOf("нфс", "метка", "контакт")),
-        Entry("nearby", "gsynk рядом", "Bluetooth и Wi-Fi Direct", Group.CONNECT, Metro.Size.MEDIUM, 5, TUNE, "tool:nearby", 96, words = listOf("блютуз", "вайфай", "радар")),
-        Entry("ble", "ble-радар", "кто рядом по эфиру", Group.CONNECT, Metro.Size.SMALL, 6, SHIELD, "lab:ble", 70, fresh = true, words = listOf("блиuetooth", "сканирование")),
-        Entry("filelink", "передача файлов", "по Wi-Fi, без проводов", Group.CONNECT, Metro.Size.SMALL, 7, COPY, "tool:nearby", 68, words = listOf("файл", "обмен")),
-        Entry("wifiscan", "каналы wi-fi", "загрузка эфира", Group.CONNECT, Metro.Size.SMALL, 8, TUNE, "lab:wifi", 58, fresh = true, words = listOf("роутер", "сеть")),
-        Entry("netinfo", "подсети", "калькулятор адресов", Group.CONNECT, Metro.Size.SMALL, 9, BOLT, "tool:subnet", 40, words = listOf("ip", "маска")),
-        Entry("coop", "игра вдвоём", "grape link по Wi-Fi", Group.CONNECT, Metro.Size.SMALL, 10, SHIELD, "panel:coop", 62, words = listOf("кооп", "данж")),
-        Entry("nfcmark", "метка-визитка", "записать свою", Group.CONNECT, Metro.Size.SMALL, 11, COPY, "lab:nfcwrite", 45, fresh = true, words = listOf("запись", "тег")),
+        Entry("nfc", "grape link", "NFC: обмен, связь, игра", Group.CONNECT, Gioui.Size.WIDE, 4, BOLT, "panel:nfc", 100, words = listOf("нфс", "метка", "контакт")),
+        Entry("nearby", "gsynk рядом", "Bluetooth и Wi-Fi Direct", Group.CONNECT, Gioui.Size.MEDIUM, 5, TUNE, "tool:nearby", 96, words = listOf("блютуз", "вайфай", "радар")),
+        Entry("ble", "ble-радар", "кто рядом по эфиру", Group.CONNECT, Gioui.Size.SMALL, 6, SHIELD, "lab:ble", 70, fresh = true, words = listOf("блиuetooth", "сканирование")),
+        Entry("filelink", "передача файлов", "по Wi-Fi, без проводов", Group.CONNECT, Gioui.Size.SMALL, 7, COPY, "tool:nearby", 68, words = listOf("файл", "обмен")),
+        Entry("wifiscan", "каналы wi-fi", "загрузка эфира", Group.CONNECT, Gioui.Size.SMALL, 8, TUNE, "lab:wifi", 58, fresh = true, words = listOf("роутер", "сеть")),
+        Entry("netinfo", "подсети", "калькулятор адресов", Group.CONNECT, Gioui.Size.SMALL, 9, BOLT, "tool:subnet", 40, words = listOf("ip", "маска")),
+        Entry("coop", "игра вдвоём", "grape link по Wi-Fi", Group.CONNECT, Gioui.Size.SMALL, 10, SHIELD, "panel:coop", 62, words = listOf("кооп", "данж")),
+        Entry("nfcmark", "метка-визитка", "записать свою", Group.CONNECT, Gioui.Size.SMALL, 11, COPY, "lab:nfcwrite", 45, fresh = true, words = listOf("запись", "тег")),
 
         // ——— экран ———
-        Entry("island", "остров 2.0", "под камерой, живьём", Group.SCREEN, Metro.Size.MEDIUM, 0, BRIGHT, "page:island", 92, fresh = true, words = listOf("островок", "камера", "дырка")),
-        Entry("effects", "эффекты", "стёкла, лучи, размытие", Group.SCREEN, Metro.Size.MEDIUM, 12, TIME, "page:effects", 88, fresh = true, words = listOf("стекло", "блюр", "blur", "фокус")),
-        Entry("radius", "скругления", "у каждого элемента своё", Group.SCREEN, Metro.Size.SMALL, 13, TUNE, "page:radius", 64, fresh = true, words = listOf("радиус", "углы")),
-        Entry("tweaks", "кастомизация", "акцент, отклик, скорость", Group.SCREEN, Metro.Size.SMALL, 14, VOLUME, "panel:settings", 60, words = listOf("тема", "цвет")),
-        Entry("screensaver", "скринсейвер", "полка с часами", Group.SCREEN, Metro.Size.SMALL, 15, TIME, "flag:screensaver", 42, words = listOf("часы", "полка")),
-        Entry("screen", "проверка экрана", "AMOLED, ШИМ, мультитач", Group.SCREEN, Metro.Size.SMALL, 16, BRIGHT, "lab:screen", 48, words = listOf("пиксель", "битый")),
-        Entry("pwm", "шим-микроскоп", "замер мерцания камерой", Group.SCREEN, Metro.Size.SMALL, 17, BRIGHT, "lab:pwm", 44, fresh = true, words = listOf("мерцание", "истощение")),
-        Entry("latency", "латентность экрана", "касание → свет", Group.SCREEN, Metro.Size.SMALL, 18, TIME, "lab:latency", 30, fresh = true, words = listOf("отклик", "задержка")),
-        Entry("echo", "эхо-линейка", "расстояние звуком", Group.HARDWARE, Metro.Size.MEDIUM, 14, TUNE, "page:echo", 79, fresh = true, words = listOf("эхо", "дальномер", "расстояние", "звук", "рулетка")),
-        Entry("eyes", "проверка глаз", "острота и цвет", Group.SCREEN, Metro.Size.MEDIUM, 7, BRIGHT, "page:eyes", 63, fresh = true, words = listOf("зрение", "острота", "цвет", "дальтонизм", "таблица")),
-        Entry("pulse", "пульс камерой", "удары сердца по свету", Group.HARDWARE, Metro.Size.WIDE, 12, BOLT, "page:pulse", 85, fresh = true, words = listOf("пульс", "сердце", "бпм", "камера", "здоровье")),
+        Entry("island", "остров 2.0", "под камерой, живьём", Group.SCREEN, Gioui.Size.MEDIUM, 0, BRIGHT, "page:island", 92, fresh = true, words = listOf("островок", "камера", "дырка")),
+        Entry("effects", "эффекты", "стёкла, лучи, размытие", Group.SCREEN, Gioui.Size.MEDIUM, 12, TIME, "page:effects", 88, fresh = true, words = listOf("стекло", "блюр", "blur", "фокус")),
+        Entry("radius", "скругления", "у каждого элемента своё", Group.SCREEN, Gioui.Size.SMALL, 13, TUNE, "page:radius", 64, fresh = true, words = listOf("радиус", "углы")),
+        Entry("tweaks", "кастомизация", "акцент, отклик, скорость", Group.SCREEN, Gioui.Size.SMALL, 14, VOLUME, "panel:settings", 60, words = listOf("тема", "цвет")),
+        Entry("screensaver", "скринсейвер", "полка с часами", Group.SCREEN, Gioui.Size.SMALL, 15, TIME, "flag:screensaver", 42, words = listOf("часы", "полка")),
+        Entry("screen", "проверка экрана", "AMOLED, ШИМ, мультитач", Group.SCREEN, Gioui.Size.SMALL, 16, BRIGHT, "lab:screen", 48, words = listOf("пиксель", "битый")),
+        Entry("pwm", "шим-микроскоп", "замер мерцания камерой", Group.SCREEN, Gioui.Size.SMALL, 17, BRIGHT, "lab:pwm", 44, fresh = true, words = listOf("мерцание", "истощение")),
+        Entry("latency", "латентность экрана", "касание → свет", Group.SCREEN, Gioui.Size.SMALL, 18, TIME, "lab:latency", 30, fresh = true, words = listOf("отклик", "задержка")),
+        Entry("echo", "эхо-линейка", "расстояние звуком", Group.HARDWARE, Gioui.Size.MEDIUM, 14, TUNE, "page:echo", 79, fresh = true, words = listOf("эхо", "дальномер", "расстояние", "звук", "рулетка")),
+        Entry("eyes", "проверка глаз", "острота и цвет", Group.SCREEN, Gioui.Size.MEDIUM, 7, BRIGHT, "page:eyes", 63, fresh = true, words = listOf("зрение", "острота", "цвет", "дальтонизм", "таблица")),
+        Entry("pulse", "пульс камерой", "удары сердца по свету", Group.HARDWARE, Gioui.Size.WIDE, 12, BOLT, "page:pulse", 85, fresh = true, words = listOf("пульс", "сердце", "бпм", "камера", "здоровье")),
 
         // ——— управление железом (V4p1: фазы чипа) ———
-        Entry("folders", "папки", "все функции по категориям", Group.SYSTEM, Metro.Size.WIDE, 1, TUNE, "page:folders", 99, fresh = true, words = listOf("категории", "сортировка", "каталог")),
-        Entry("cpu", "частоты ядер", "режимы и ступени", Group.HARDWARE, Metro.Size.MEDIUM, 2, TUNE, "page:cpu", 86, fresh = true, words = listOf("governor", "мгц", "процессор")),
-        Entry("battery", "питание изнутри", "ток, ватты, ресурс", Group.HARDWARE, Metro.Size.MEDIUM, 3, BOLT, "page:battery", 84, fresh = true, words = listOf("батарея", "ток", "износ")),
-        Entry("panel", "панель и наклон", "экран и уровень", Group.SCREEN, Metro.Size.MEDIUM, 4, BRIGHT, "page:display", 74, fresh = true, words = listOf("герцы", "наклон", "экран")),
-        Entry("radio", "радио-тракт", "модем, сеть, wi-fi", Group.CONNECT, Metro.Size.MEDIUM, 5, BOLT, "page:radio", 76, fresh = true, words = listOf("сигнал", "оператор", "канал")),
-        Entry("flash", "светодиод вспышки", "уровни и накал", Group.HARDWARE, Metro.Size.MEDIUM, 6, BRIGHT, "page:camera", 80, fresh = true, words = listOf("вспышка", "фонарь", "светодиод")),
-        Entry("motor", "мотор и резонанс", "частота и поле", Group.HARDWARE, Metro.Size.MEDIUM, 7, VOLUME, "page:motor", 78, fresh = true, words = listOf("вибрация", "резонанс", "катушка")),
-        Entry("deepmem", "память и планировщик", "давление и накопитель", Group.LOAD, Metro.Size.MEDIUM, 8, TUNE, "page:memory", 70, fresh = true, words = listOf("озу", "диск", "очередь")),
-        Entry("sensorsdeep", "датчики изнутри", "что есть и что закрыто", Group.HARDWARE, Metro.Size.MEDIUM, 9, TIME, "page:sensors", 72, fresh = true, words = listOf("сенсоры", "always-on", "закрытые")),
+        Entry("folders", "категории", "все функции по группам GIOUI", Group.SYSTEM, Gioui.Size.WIDE, 1, TUNE, "page:folders", 99, fresh = true, words = listOf("категории", "сортировка", "каталог")),
+        Entry("cpu", "частоты ядер", "режимы и ступени", Group.HARDWARE, Gioui.Size.MEDIUM, 2, TUNE, "page:cpu", 86, fresh = true, words = listOf("governor", "мгц", "процессор")),
+        Entry("battery", "питание изнутри", "ток, ватты, ресурс", Group.HARDWARE, Gioui.Size.MEDIUM, 3, BOLT, "page:battery", 84, fresh = true, words = listOf("батарея", "ток", "износ")),
+        Entry("panel", "панель и наклон", "экран и уровень", Group.SCREEN, Gioui.Size.MEDIUM, 4, BRIGHT, "page:display", 74, fresh = true, words = listOf("герцы", "наклон", "экран")),
+        Entry("radio", "радио-тракт", "модем, сеть, wi-fi", Group.CONNECT, Gioui.Size.MEDIUM, 5, BOLT, "page:radio", 76, fresh = true, words = listOf("сигнал", "оператор", "канал")),
+        Entry("flash", "светодиод вспышки", "уровни и накал", Group.HARDWARE, Gioui.Size.MEDIUM, 6, BRIGHT, "page:camera", 80, fresh = true, words = listOf("вспышка", "фонарь", "светодиод")),
+        Entry("motor", "мотор и резонанс", "частота и поле", Group.HARDWARE, Gioui.Size.MEDIUM, 7, VOLUME, "page:motor", 78, fresh = true, words = listOf("вибрация", "резонанс", "катушка")),
+        Entry("deepmem", "память и планировщик", "давление и накопитель", Group.LOAD, Gioui.Size.MEDIUM, 8, TUNE, "page:memory", 70, fresh = true, words = listOf("озу", "диск", "очередь")),
+        Entry("sensorsdeep", "датчики изнутри", "что есть и что закрыто", Group.HARDWARE, Gioui.Size.MEDIUM, 9, TIME, "page:sensors", 72, fresh = true, words = listOf("сенсоры", "always-on", "закрытые")),
 
         // ——— железо ———
-        Entry("lab", "лаборатория", "всё железо телефона", Group.HARDWARE, Metro.Size.WIDE, 2, TUNE, "tool:lab", 90, words = listOf("железо", "опыты")),
-        Entry("sensors", "датчики", "все, что есть живьём", Group.HARDWARE, Metro.Size.MEDIUM, 5, TIME, "lab:sensors", 80, words = listOf("сенсоры", "гироскоп")),
-        Entry("coils", "катушки", "вибромотор и звук", Group.HARDWARE, Metro.Size.SMALL, 6, VOLUME, "lab:coils", 66, words = listOf("вибрация", "мотор")),
-        Entry("induction", "индукция", "металл, поля, зарядка", Group.HARDWARE, Metro.Size.SMALL, 7, SHIELD, "lab:metal", 55, words = listOf("магнит", "металлоискатель")),
-        Entry("compass", "компас", "азимут и стороны света", Group.HARDWARE, Metro.Size.SMALL, 8, TUNE, "lab:compass", 52, fresh = true, words = listOf("север", "курс")),
-        Entry("baro", "барометр", "давление и высота", Group.HARDWARE, Metro.Size.SMALL, 9, TIME, "lab:baro", 38, fresh = true, words = listOf("давление", "высота")),
-        Entry("charge", "заряд и ток", "вольты, амперы, ватты", Group.HARDWARE, Metro.Size.SMALL, 10, BOLT, "lab:charge", 58, fresh = true, words = listOf("батарея", "зарядка")),
-        Entry("thermal", "термощуп", "тепловые зоны", Group.HARDWARE, Metro.Size.SMALL, 11, SHIELD, "lab:thermal", 46, fresh = true, words = listOf("температура", "нагрев")),
-        Entry("oscope", "осциллограф", "звук на графике", Group.HARDWARE, Metro.Size.SMALL, 12, VOLUME, "lab:oscope", 50, fresh = true, words = listOf("микрофон", "волна")),
-        Entry("sweep", "свип-тон", "частота от и до", Group.HARDWARE, Metro.Size.SMALL, 13, VOLUME, "lab:sweep", 40, fresh = true, words = listOf("звук", "генератор")),
-        Entry("shaker", "акселерограф", "тряска на графике", Group.HARDWARE, Metro.Size.SMALL, 14, TUNE, "lab:shake", 44, fresh = true, words = listOf("ускорение", "трясёт")),
-        Entry("prox", "приближение", "датчик у динамика", Group.HARDWARE, Metro.Size.SMALL, 15, SHIELD, "lab:prox", 36, fresh = true, words = listOf("экран гаснет")),
-        Entry("light", "люксметр", "свет в комнате", Group.HARDWARE, Metro.Size.SMALL, 16, BRIGHT, "lab:light", 34, fresh = true, words = listOf("освещённость", "люкс")),
-        Entry("haptic", "вибро-код", "азбука мотором", Group.HARDWARE, Metro.Size.SMALL, 17, VOLUME, "lab:haptic", 42, fresh = true, words = listOf("морзе", "вибро")),
-        Entry("strobe", "стробоскоп", "мигание экраном", Group.HARDWARE, Metro.Size.SMALL, 18, BRIGHT, "lab:strobe", 54, words = listOf("мигание", "диско")),
-        Entry("ir", "ик-пульт", "телевизор одним касанием", Group.HARDWARE, Metro.Size.SMALL, 19, BOLT, "lab:ir", 47, words = listOf("инфракрасный", "пульт")),
-        Entry("codes", "инженерные коды", "тестовые меню", Group.HARDWARE, Metro.Size.SMALL, 0, COPY, "lab:codes", 33, words = listOf("коды", "меню")),
-        Entry("screentest", "тест фонарика", "вспышка в такт", Group.HARDWARE, Metro.Size.SMALL, 1, BRIGHT, "lab:torch", 32, words = listOf("фонарь", "вспышка")),
+        Entry("lab", "лаборатория", "всё железо телефона", Group.HARDWARE, Gioui.Size.WIDE, 2, TUNE, "tool:lab", 90, words = listOf("железо", "опыты")),
+        Entry("sensors", "датчики", "все, что есть живьём", Group.HARDWARE, Gioui.Size.MEDIUM, 5, TIME, "lab:sensors", 80, words = listOf("сенсоры", "гироскоп")),
+        Entry("coils", "катушки", "вибромотор и звук", Group.HARDWARE, Gioui.Size.SMALL, 6, VOLUME, "lab:coils", 66, words = listOf("вибрация", "мотор")),
+        Entry("induction", "индукция", "металл, поля, зарядка", Group.HARDWARE, Gioui.Size.SMALL, 7, SHIELD, "lab:metal", 55, words = listOf("магнит", "металлоискатель")),
+        Entry("compass", "компас", "азимут и стороны света", Group.HARDWARE, Gioui.Size.SMALL, 8, TUNE, "lab:compass", 52, fresh = true, words = listOf("север", "курс")),
+        Entry("baro", "барометр", "давление и высота", Group.HARDWARE, Gioui.Size.SMALL, 9, TIME, "lab:baro", 38, fresh = true, words = listOf("давление", "высота")),
+        Entry("charge", "заряд и ток", "вольты, амперы, ватты", Group.HARDWARE, Gioui.Size.SMALL, 10, BOLT, "lab:charge", 58, fresh = true, words = listOf("батарея", "зарядка")),
+        Entry("thermal", "термощуп", "тепловые зоны", Group.HARDWARE, Gioui.Size.SMALL, 11, SHIELD, "lab:thermal", 46, fresh = true, words = listOf("температура", "нагрев")),
+        Entry("oscope", "осциллограф", "звук на графике", Group.HARDWARE, Gioui.Size.SMALL, 12, VOLUME, "lab:oscope", 50, fresh = true, words = listOf("микрофон", "волна")),
+        Entry("sweep", "свип-тон", "частота от и до", Group.HARDWARE, Gioui.Size.SMALL, 13, VOLUME, "lab:sweep", 40, fresh = true, words = listOf("звук", "генератор")),
+        Entry("shaker", "акселерограф", "тряска на графике", Group.HARDWARE, Gioui.Size.SMALL, 14, TUNE, "lab:shake", 44, fresh = true, words = listOf("ускорение", "трясёт")),
+        Entry("prox", "приближение", "датчик у динамика", Group.HARDWARE, Gioui.Size.SMALL, 15, SHIELD, "lab:prox", 36, fresh = true, words = listOf("экран гаснет")),
+        Entry("light", "люксметр", "свет в комнате", Group.HARDWARE, Gioui.Size.SMALL, 16, BRIGHT, "lab:light", 34, fresh = true, words = listOf("освещённость", "люкс")),
+        Entry("haptic", "вибро-код", "азбука мотором", Group.HARDWARE, Gioui.Size.SMALL, 17, VOLUME, "lab:haptic", 42, fresh = true, words = listOf("морзе", "вибро")),
+        Entry("strobe", "стробоскоп", "мигание экраном", Group.HARDWARE, Gioui.Size.SMALL, 18, BRIGHT, "lab:strobe", 54, words = listOf("мигание", "диско")),
+        Entry("ir", "ик-пульт", "телевизор одним касанием", Group.HARDWARE, Gioui.Size.SMALL, 19, BOLT, "lab:ir", 47, words = listOf("инфракрасный", "пульт")),
+        Entry("codes", "инженерные коды", "тестовые меню", Group.HARDWARE, Gioui.Size.SMALL, 0, COPY, "lab:codes", 33, words = listOf("коды", "меню")),
+        Entry("screentest", "тест фонарика", "вспышка в такт", Group.HARDWARE, Gioui.Size.SMALL, 1, BRIGHT, "lab:torch", 32, words = listOf("фонарь", "вспышка")),
 
         // ——— нагрузка ———
-        Entry("bench", "бенчмарк", "как AnTuTu, только наш", Group.LOAD, Metro.Size.WIDE, 12, BOLT, "page:bench", 86, fresh = true, words = listOf("тест", "баллы", "antutu")),
-        Entry("turbo", "нагрузка", "все ядра сразу", Group.LOAD, Metro.Size.MEDIUM, 13, BOLT, "flag:turbo", 74, words = listOf("cpu", "процессор", "жар")),
-        Entry("gpu", "ускоритель", "кадры шейдера", Group.LOAD, Metro.Size.SMALL, 14, TIME, "flag:turbo", 56, words = listOf("gpu", "шейдер", "fps")),
-        Entry("chronicle", "хроника", "что было за день", Group.LOAD, Metro.Size.SMALL, 15, TIME, "flag:chronicle", 48, words = listOf("история", "события")),
-        Entry("sysinfo", "дашборд", "живое состояние", Group.LOAD, Metro.Size.SMALL, 16, TUNE, "tool:sysinfo", 64, words = listOf("память", "процессор")),
-        Entry("chronicle2", "статистика нагрузки", "график за час", Group.LOAD, Metro.Size.SMALL, 17, BOLT, "flag:chronicle", 38, words = listOf("график", "нагрузка")),
+        Entry("bench", "бенчмарк", "как AnTuTu, только наш", Group.LOAD, Gioui.Size.WIDE, 12, BOLT, "page:bench", 86, fresh = true, words = listOf("тест", "баллы", "antutu")),
+        Entry("turbo", "нагрузка", "все ядра сразу", Group.LOAD, Gioui.Size.MEDIUM, 13, BOLT, "flag:turbo", 74, words = listOf("cpu", "процессор", "жар")),
+        Entry("gpu", "ускоритель", "кадры шейдера", Group.LOAD, Gioui.Size.SMALL, 14, TIME, "flag:turbo", 56, words = listOf("gpu", "шейдер", "fps")),
+        Entry("chronicle", "хроника", "что было за день", Group.LOAD, Gioui.Size.SMALL, 15, TIME, "flag:chronicle", 48, words = listOf("история", "события")),
+        Entry("sysinfo", "дашборд", "живое состояние", Group.LOAD, Gioui.Size.SMALL, 16, TUNE, "tool:sysinfo", 64, words = listOf("память", "процессор")),
+        Entry("chronicle2", "статистика нагрузки", "график за час", Group.LOAD, Gioui.Size.SMALL, 17, BOLT, "flag:chronicle", 38, words = listOf("график", "нагрузка")),
 
         // ——— умное ———
-        Entry("ai", "умный помощник", "настоящие сети и офлайн", Group.AI, Metro.Size.MEDIUM, 3, SHIELD, "page:ai", 76, fresh = true, words = listOf("ии", "gpt", "нейросеть")),
-        Entry("chat", "локальный ии", "чат без интернета", Group.AI, Metro.Size.SMALL, 4, SHIELD, "flag:chat", 60, words = listOf("офлайн", "болталка")),
-        Entry("daily", "каждый день", "новое при открытии", Group.AI, Metro.Size.MEDIUM, 5, TIME, "page:everyday", 82, fresh = true, words = listOf("день", "серия", "подарок")),
-        Entry("surprise", "рулетка", "случайная функция", Group.AI, Metro.Size.SMALL, 6, VOLUME, "page:surprise", 66, fresh = true, words = listOf("рандом", "случайно")),
-        Entry("easter", "пасхалки", "секреты внутри", Group.AI, Metro.Size.SMALL, 7, COPY, "page:easter", 58, fresh = true, words = listOf("секрет", "секреты")),
+        Entry("ai", "умный помощник", "настоящие сети и офлайн", Group.AI, Gioui.Size.MEDIUM, 3, SHIELD, "page:ai", 76, fresh = true, words = listOf("ии", "gpt", "нейросеть")),
+        Entry("chat", "локальный ии", "чат без интернета", Group.AI, Gioui.Size.SMALL, 4, SHIELD, "flag:chat", 60, words = listOf("офлайн", "болталка")),
+        Entry("daily", "каждый день", "новое при открытии", Group.AI, Gioui.Size.MEDIUM, 5, TIME, "page:everyday", 82, fresh = true, words = listOf("день", "серия", "подарок")),
+        Entry("surprise", "рулетка", "случайная функция", Group.AI, Gioui.Size.SMALL, 6, VOLUME, "page:surprise", 66, fresh = true, words = listOf("рандом", "случайно")),
+        Entry("easter", "пасхалки", "секреты внутри", Group.AI, Gioui.Size.SMALL, 7, COPY, "page:easter", 58, fresh = true, words = listOf("секрет", "секреты")),
+
+        // ——— шифраторы (GIOUI/5.0) ———
+        Entry("ciphers", "шифраторы", "все шифры в одном окне", Group.CRYPTO, Gioui.Size.WIDE, 2, SHIELD, "page:ciphers", 97, fresh = true, words = listOf("шифр", "зашифровать", "расшифровать", "код", "base64", "крипто")),
+        Entry("cipherlock", "gs-замок", "AES и пароль", Group.CRYPTO, Gioui.Size.MEDIUM, 7, SHIELD, "page:cipherlock", 90, fresh = true, words = listOf("aes", "пароль", "секрет", "замок")),
+        Entry("ciphergrape", "виноградный код", "текст виноградом и бананом", Group.CRYPTO, Gioui.Size.MEDIUM, 4, COPY, "page:ciphergrape", 84, fresh = true, words = listOf("виноград", "банан", "фрукты", "эмодзи")),
+        Entry("cipherauto", "авто-расшифровка", "сама поймёт, чем закрыто", Group.CRYPTO, Gioui.Size.SMALL, 5, BOLT, "page:cipherauto", 88, fresh = true, words = listOf("авто", "определить", "узнать шифр", "расшифровать")),
 
         // ——— система ———
-        Entry("rules", "автопилот", "правила по времени", Group.SYSTEM, Metro.Size.MEDIUM, 8, TUNE, "panel:tools", 88, words = listOf("правила", "расписание")),
-        Entry("permissions", "разрешения", "всё, что нужно приложению", Group.SYSTEM, Metro.Size.SMALL, 9, SHIELD, "panel:settings", 70, words = listOf("права", "доступ")),
-        Entry("update", "обновление", "приходит само", Group.SYSTEM, Metro.Size.SMALL, 10, BOLT, "flag:update", 72, words = listOf("новая версия", "апдейт")),
-        Entry("diag", "диагностика", "отчёты и журнал", Group.SYSTEM, Metro.Size.SMALL, 11, TUNE, "flag:diagnostics", 50, words = listOf("сбои", "логи")),
-        Entry("agent", "связь с агентом", "переписка через GitHub", Group.SYSTEM, Metro.Size.WIDE, 0, COPY, "page:agent", 95, fresh = true, words = listOf("агент", "чат", "связь", "вопрос")),
-        Entry("report", "собрать отчёт", "состояние телефона", Group.SYSTEM, Metro.Size.SMALL, 12, COPY, "sys:report", 46, words = listOf("лог", "жалоба")),
-        Entry("syssound", "звук", "системный экран", Group.SYSTEM, Metro.Size.SMALL, 13, VOLUME, "sys:sound", 30),
-        Entry("sysbattery", "батарея", "системный экран", Group.SYSTEM, Metro.Size.SMALL, 14, BOLT, "sys:battery", 30),
-        Entry("syswifi", "wi-fi", "системный экран", Group.SYSTEM, Metro.Size.SMALL, 15, TUNE, "sys:wifi", 30),
-        Entry("sysbt", "bluetooth", "системный экран", Group.SYSTEM, Metro.Size.SMALL, 16, SHIELD, "sys:bluetooth", 28),
-        Entry("sysapps", "приложения", "системный экран", Group.SYSTEM, Metro.Size.SMALL, 17, COPY, "sys:apps", 24),
+        Entry("rules", "автопилот", "правила по времени", Group.SYSTEM, Gioui.Size.MEDIUM, 8, TUNE, "panel:tools", 88, words = listOf("правила", "расписание")),
+        Entry("permissions", "разрешения", "всё, что нужно приложению", Group.SYSTEM, Gioui.Size.SMALL, 9, SHIELD, "panel:settings", 70, words = listOf("права", "доступ")),
+        Entry("update", "обновление", "приходит само", Group.SYSTEM, Gioui.Size.SMALL, 10, BOLT, "flag:update", 72, words = listOf("новая версия", "апдейт")),
+        Entry("diag", "диагностика", "отчёты и журнал", Group.SYSTEM, Gioui.Size.SMALL, 11, TUNE, "flag:diagnostics", 50, words = listOf("сбои", "логи")),
+        Entry("agent", "связь с агентом", "переписка через GitHub", Group.SYSTEM, Gioui.Size.WIDE, 0, COPY, "page:agent", 95, fresh = true, words = listOf("агент", "чат", "связь", "вопрос")),
+        Entry("report", "собрать отчёт", "состояние телефона", Group.SYSTEM, Gioui.Size.SMALL, 12, COPY, "sys:report", 46, words = listOf("лог", "жалоба")),
+        Entry("syssound", "звук", "системный экран", Group.SYSTEM, Gioui.Size.SMALL, 13, VOLUME, "sys:sound", 30),
+        Entry("sysbattery", "батарея", "системный экран", Group.SYSTEM, Gioui.Size.SMALL, 14, BOLT, "sys:battery", 30),
+        Entry("syswifi", "wi-fi", "системный экран", Group.SYSTEM, Gioui.Size.SMALL, 15, TUNE, "sys:wifi", 30),
+        Entry("sysbt", "bluetooth", "системный экран", Group.SYSTEM, Gioui.Size.SMALL, 16, SHIELD, "sys:bluetooth", 28),
+        Entry("sysapps", "приложения", "системный экран", Group.SYSTEM, Gioui.Size.SMALL, 17, COPY, "sys:apps", 24),
 
         // ——— забава ———
-        Entry("games", "игры", "мини-игры и дуэли", Group.FUN, Metro.Size.MEDIUM, 18, TIME, "panel:games", 68, words = listOf("играть")),
-        Entry("rogue", "gtboi", "подземелье вдвоём", Group.FUN, Metro.Size.SMALL, 19, SHIELD, "panel:rogue", 64, words = listOf("игра", "данжен")),
-        Entry("music", "композитор", "музыка из частот", Group.FUN, Metro.Size.SMALL, 0, VOLUME, "lab:music", 56, words = listOf("мелодия", "ноты")),
-        Entry("tone", "камертон", "держу — играет", Group.FUN, Metro.Size.SMALL, 1, VOLUME, "lab:tone", 40, words = listOf("частота", "нота")),
-        Entry("torchlab", "фонарик-строб", "вспышка в такт", Group.FUN, Metro.Size.SMALL, 2, BRIGHT, "lab:torch", 44, words = listOf("вспышка", "свет")),
-        Entry("metal", "металл", "магнитометр", Group.FUN, Metro.Size.SMALL, 3, SHIELD, "tool:metal", 42, words = listOf("искать", "металлоискатель")),
-        Entry("level", "уровень", "наклон в градусах", Group.FUN, Metro.Size.SMALL, 4, TUNE, "tool:level", 46, words = listOf("горизонт", "ровно")),
-        Entry("noise", "шумомер", "уровень в дБ", Group.FUN, Metro.Size.SMALL, 5, VOLUME, "tool:sound", 44, words = listOf("громко", "децибел")),
-        Entry("morse", "морзянка", "мигание фонариком", Group.FUN, Metro.Size.SMALL, 6, BOLT, "tool:morse", 34, words = listOf("точка", "тире")),
-        Entry("password", "пароль и qr", "генератор", Group.FUN, Metro.Size.SMALL, 7, COPY, "tool:password", 36, words = listOf("код", "qr")),
-        Entry("coder", "кодер", "base64, url, hex", Group.FUN, Metro.Size.SMALL, 8, COPY, "tool:coder", 32, words = listOf("шифр", "кодирование"))
+        Entry("games", "игры", "мини-игры и дуэли", Group.FUN, Gioui.Size.MEDIUM, 18, TIME, "panel:games", 68, words = listOf("играть")),
+        Entry("rogue", "gtboi", "подземелье вдвоём", Group.FUN, Gioui.Size.SMALL, 19, SHIELD, "panel:rogue", 64, words = listOf("игра", "данжен")),
+        Entry("music", "композитор", "музыка из частот", Group.FUN, Gioui.Size.SMALL, 0, VOLUME, "lab:music", 56, words = listOf("мелодия", "ноты")),
+        Entry("tone", "камертон", "держу — играет", Group.FUN, Gioui.Size.SMALL, 1, VOLUME, "lab:tone", 40, words = listOf("частота", "нота")),
+        Entry("torchlab", "фонарик-строб", "вспышка в такт", Group.FUN, Gioui.Size.SMALL, 2, BRIGHT, "lab:torch", 44, words = listOf("вспышка", "свет")),
+        Entry("metal", "металл", "магнитометр", Group.FUN, Gioui.Size.SMALL, 3, SHIELD, "tool:metal", 42, words = listOf("искать", "металлоискатель")),
+        Entry("level", "уровень", "наклон в градусах", Group.FUN, Gioui.Size.SMALL, 4, TUNE, "tool:level", 46, words = listOf("горизонт", "ровно")),
+        Entry("noise", "шумомер", "уровень в дБ", Group.FUN, Gioui.Size.SMALL, 5, VOLUME, "tool:sound", 44, words = listOf("громко", "децибел")),
+        Entry("morse", "морзянка", "мигание фонариком", Group.CRYPTO, Gioui.Size.SMALL, 6, BOLT, "tool:morse", 34, words = listOf("точка", "тире")),
+        Entry("password", "пароль и qr", "генератор", Group.CRYPTO, Gioui.Size.SMALL, 7, COPY, "tool:password", 36, words = listOf("код", "qr")),
+        Entry("coder", "кодер", "base64, url, hex", Group.CRYPTO, Gioui.Size.SMALL, 8, COPY, "tool:coder", 32, words = listOf("шифр", "кодирование"))
     )
 
     fun byId(id: String): Entry? = ALL.firstOrNull { it.id == id }

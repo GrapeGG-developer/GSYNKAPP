@@ -22,7 +22,7 @@ import com.gsynk.app.R
 import com.gsynk.app.core.AutomationActions
 import com.gsynk.app.core.RuleEngine
 import com.gsynk.app.ui.theme.TextDim
-import com.gsynk.app.ui.theme.TileBrush
+import com.gsynk.app.ui.theme.GioBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -53,7 +53,7 @@ private val SCENES = listOf(
         volume = 0,
         dnd = true,
         icon = R.drawable.ic_schedule,
-        brush = TileBrush.Violet
+        brush = GioBrush.Violet
     ),
     Scene(
         id = "study",
@@ -63,7 +63,7 @@ private val SCENES = listOf(
         volume = 20,
         dnd = true,
         icon = R.drawable.ic_shield,
-        brush = TileBrush.Blue
+        brush = GioBrush.Blue
     ),
     Scene(
         id = "street",
@@ -73,7 +73,7 @@ private val SCENES = listOf(
         volume = 80,
         dnd = false,
         icon = R.drawable.ic_brightness,
-        brush = TileBrush.Amber
+        brush = GioBrush.Amber
     ),
     Scene(
         id = "movie",
@@ -83,7 +83,7 @@ private val SCENES = listOf(
         volume = 65,
         dnd = true,
         icon = R.drawable.ic_volume,
-        brush = TileBrush.Pink
+        brush = GioBrush.Pink
     )
 )
 
@@ -116,7 +116,7 @@ fun ScenesScreen(onBack: () -> Unit) {
             text = "Сцена — это набор настроек, который применяется мгновенно. " +
                 "Отличается от правил тем, что не ждёт времени: нажали и получили.",
             color = TextDim,
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(14.dp))
 
@@ -141,7 +141,7 @@ fun ScenesScreen(onBack: () -> Unit) {
         LiveTile(
             title = "Найти телефон",
             subtitle = "громкая сирена и вибрация",
-            brush = TileBrush.Red,
+            brush = GioBrush.Red,
             iconRes = R.drawable.ic_bolt,
             liveText = "Позвать",
             height = 96.dp,
@@ -161,8 +161,8 @@ fun ScenesScreen(onBack: () -> Unit) {
             SurfaceCard {
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Выполнено", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
-                        Text(status, color = com.gsynk.app.ui.theme.TextPrimary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                        Text("Выполнено", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
+                        Text(status, color = com.gsynk.app.ui.theme.TextPrimary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
                     }
                 }
             }

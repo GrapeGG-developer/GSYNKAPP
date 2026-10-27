@@ -43,7 +43,7 @@ import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
-import com.gsynk.app.ui.theme.TileBrush
+import com.gsynk.app.ui.theme.GioBrush
 
 /**
  * GrapeBot без языковой модели: простой помощник, который понимает команды.
@@ -109,7 +109,7 @@ fun ChatScreen(onBack: () -> Unit) {
                         Text(
                             text = item.first,
                             color = if (item.second) TextPrimary else GrapeGreen,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -136,7 +136,7 @@ fun ChatScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(14.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Что понимает бот", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Что понимает бот", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             CommandBot.examples.forEach { example ->
                 Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -150,7 +150,7 @@ fun ChatScreen(onBack: () -> Unit) {
                     Text(
                         text = example,
                         color = TextDim,
-                        style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
+                        style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal),
                         modifier = Modifier.clip(RectangleShape).clickable {
                             input = example
                             send()
@@ -165,14 +165,14 @@ fun ChatScreen(onBack: () -> Unit) {
                 .fillMaxWidth()
                 .height(66.dp)
                 .clip(RectangleShape)
-                .background(TileBrush.Violet)
+                .background(GioBrush.Violet)
                 .clickable { onBack() },
             contentAlignment = Alignment.Center
         ) {
             Text(
                 "Никаких загрузок моделей — всё считается на телефоне сразу",
                 color = Color.White,
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(20.dp))

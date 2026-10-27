@@ -113,11 +113,11 @@ private fun AcuityBlock() {
     SurfaceCard(borderColor = GrapeCyan.copy(alpha = 0.45f)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("расстояние до глаз", color = TextDim, fontSize = Metro.Type.caption)
+                Text("расстояние до глаз", color = TextDim, fontSize = Gioui.Type.caption)
                 Text(
                     text = (distanceMm / 10).toString() + " см",
                     color = TextPrimary,
-                    fontSize = Metro.Type.body,
+                    fontSize = Gioui.Type.body,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -125,7 +125,7 @@ private fun AcuityBlock() {
                 text = "строка " + Probe.lineLabel(acuity) + " · " +
                     String.format(Locale.US, "%.2f мм", Probe.optotypeMm(acuity, distanceMm.toFloat())),
                 color = GrapeCyan,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
         Spacer(Modifier.height(6.dp))
@@ -138,7 +138,7 @@ private fun AcuityBlock() {
         Text(
             text = "Держите телефон ровно на этом расстоянии и не приближайте его, когда строка станет мелкой.",
             color = TextDim,
-            fontSize = Metro.Type.caption
+            fontSize = Gioui.Type.caption
         )
     }
 
@@ -156,7 +156,7 @@ private fun AcuityBlock() {
         Text(
             text = "куда смотрит прорезь?",
             color = TextPrimary,
-            fontSize = Metro.Type.body,
+            fontSize = Gioui.Type.body,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
         if (tooSmall) {
@@ -165,7 +165,7 @@ private fun AcuityBlock() {
                 text = "Эта строка на экране всего " + sizePx.toString() + " пикселя — телефон её уже не " +
                     "покажет честно. Увеличьте расстояние нельзя, поэтому проверяйте строки крупнее.",
                 color = GrapePink,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
         Spacer(Modifier.height(10.dp))
@@ -185,18 +185,18 @@ private fun AcuityBlock() {
             Text(
                 text = message,
                 color = if (message == "верно") GrapeGreen else GrapeAmber,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
     }
 
     Spacer(Modifier.height(10.dp))
     SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.4f)) {
-        Text("итог", color = TextDim, fontSize = Metro.Type.caption)
+        Text("итог", color = TextDim, fontSize = Gioui.Type.caption)
         Text(
             text = if (passed == 0) "пока ничего" else Probe.lineLabel(Probe.LINES[(passed - 1).coerceAtLeast(0)]),
             color = GrapeGreen,
-            fontSize = Metro.Type.tileLive,
+            fontSize = Gioui.Type.tileLive,
             fontWeight = FontWeight.SemiBold
         )
         Text(
@@ -208,7 +208,7 @@ private fun AcuityBlock() {
                     )
                 ) + ", ответов " + asked.toString(),
             color = TextDim,
-            fontSize = Metro.Type.caption
+            fontSize = Gioui.Type.caption
         )
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -219,14 +219,14 @@ private fun AcuityBlock() {
 
     Spacer(Modifier.height(10.dp))
     SurfaceCard(borderColor = ChipBorder) {
-        Text("почему размеры такие", color = GrapeAmber, fontSize = Metro.Type.body)
+        Text("почему размеры такие", color = GrapeAmber, fontSize = Gioui.Type.body)
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Острота 1,0 значит, что знак целиком занимает 5 угловых минут: размер посчитан как " +
                 "2·d·tg(2,5′). При 40 см строка 1,0 — это кольцо 0,58 мм с прорезью 0,12 мм, то есть " +
                 "меньше миллиметра. Поэтому проверка без очков и офтальмолога — только для интереса.",
             color = TextDim,
-            fontSize = Metro.Type.caption
+            fontSize = Gioui.Type.caption
         )
         Spacer(Modifier.height(6.dp))
         InfoRow("плотность экрана", densityDpi.toString() + " ppi")
@@ -244,7 +244,7 @@ private fun DirectionButton(label: String, modifier: Modifier = Modifier, onClic
         Text(
             text = label,
             color = TextPrimary,
-            fontSize = Metro.Type.body,
+            fontSize = Gioui.Type.body,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
     }
@@ -325,7 +325,7 @@ private fun ColourBlock() {
     }
 
     SurfaceCard(borderColor = GrapePink.copy(alpha = 0.45f)) {
-        Text("что видно на пластине", color = GrapePink, fontSize = Metro.Type.body)
+        Text("что видно на пластине", color = GrapePink, fontSize = Gioui.Type.body)
         Spacer(Modifier.height(6.dp))
         Box(
             Modifier
@@ -349,7 +349,7 @@ private fun ColourBlock() {
             Text(
                 text = "пластина " + round.toString() + " · точек " + plate.size.toString(),
                 color = TextDim,
-                fontSize = Metro.Type.caption,
+                fontSize = Gioui.Type.caption,
                 modifier = Modifier.weight(1f)
             )
             TagChip(text = if (hardMode) "сложнее" else "обычно", selected = hardMode) {
@@ -369,7 +369,7 @@ private fun ColourBlock() {
         }
         if (shown) {
             Spacer(Modifier.height(8.dp))
-            Text(result, color = if (result.startsWith("верно")) GrapeGreen else GrapeAmber, fontSize = Metro.Type.caption)
+            Text(result, color = if (result.startsWith("верно")) GrapeGreen else GrapeAmber, fontSize = Gioui.Type.caption)
         }
         Spacer(Modifier.height(10.dp))
         InfoRow("разница яркости внутри и снаружи", String.format(Locale.US, "%.2f×", ratio))
@@ -380,17 +380,17 @@ private fun ColourBlock() {
             text = Probe.contrastVerdict(ratio) + ". Яркость подобрана близкой специально: цифру видно " +
                 "по оттенку, а не по свету.",
             color = TextDim,
-            fontSize = Metro.Type.caption
+            fontSize = Gioui.Type.caption
         )
     }
 
     Spacer(Modifier.height(10.dp))
     SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.4f)) {
-        Text("счёт", color = TextDim, fontSize = Metro.Type.caption)
+        Text("счёт", color = TextDim, fontSize = Gioui.Type.caption)
         Text(
             text = score.toString() + " из " + (round - if (shown) 0 else 1).coerceAtLeast(1),
             color = GrapeGreen,
-            fontSize = Metro.Type.tileLive,
+            fontSize = Gioui.Type.tileLive,
             fontWeight = FontWeight.SemiBold
         )
         Text(
@@ -401,13 +401,13 @@ private fun ColourBlock() {
                 else -> "часть пластин не разобралась: это повод проверить цветовое зрение у врача"
             },
             color = TextDim,
-            fontSize = Metro.Type.caption
+            fontSize = Gioui.Type.caption
         )
     }
 
     Spacer(Modifier.height(10.dp))
     SurfaceCard(borderColor = ChipBorder) {
-        Text("честно об этом тесте", color = GrapeAmber, fontSize = Metro.Type.body)
+        Text("честно об этом тесте", color = GrapeAmber, fontSize = Gioui.Type.body)
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Настоящие пластины Рабкина печатают на бумаге с выверенными чернилами и проверяют " +
@@ -415,7 +415,7 @@ private fun ColourBlock() {
                 "здесь можно заметить склонность, но поставить диагноз — нет. Яркость экрана лучше " +
                 "поставить на середину и выключить ночной режим.",
             color = TextDim,
-            fontSize = Metro.Type.caption
+            fontSize = Gioui.Type.caption
         )
     }
 }

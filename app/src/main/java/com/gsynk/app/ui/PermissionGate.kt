@@ -113,7 +113,7 @@ fun PermissionGate() {
             Text(
                 text = "разрешения",
                 color = TextPrimary,
-                style = MaterialTheme.typography.headlineMedium.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+                style = MaterialTheme.typography.headlineMedium.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light),
                 fontWeight = FontWeight.Light
             )
             Spacer(Modifier.height(6.dp))
@@ -122,7 +122,7 @@ fun PermissionGate() {
                     "включаются только с полным набором доступов. Панель закроется сама, " +
                     "как только список станет зелёным.",
                 color = TextDim,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
             )
 
             Spacer(Modifier.height(16.dp))
@@ -143,7 +143,7 @@ fun PermissionGate() {
                     )
                 }
                 Spacer(Modifier.width(10.dp))
-                Text("$granted / $total", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("$granted / $total", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
             }
 
             Spacer(Modifier.height(18.dp))
@@ -160,20 +160,20 @@ fun PermissionGate() {
                             Text(
                                 text = item.title,
                                 color = TextPrimary,
-                                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                                style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
                                 modifier = Modifier.weight(1f)
                             )
                             Text(
                                 text = if (isGranted) "включено" else "нужно включить",
                                 color = if (isGranted) GrapeGreen else GrapeRed,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                             )
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = hint(item.id),
                             color = TextDim,
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                         )
                         if (!isGranted) {
                             Spacer(Modifier.height(9.dp))
@@ -203,14 +203,14 @@ fun PermissionGate() {
                     Text(
                         text = "проверка №$ticks",
                         color = TextSecondary,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "Список обновляется сам. Вернулись из настроек — состояние " +
                             "пересчитается автоматически.",
                         color = TextDim,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.height(10.dp))
                     SecondaryButton(
@@ -228,7 +228,7 @@ fun PermissionGate() {
                     "Кнопка «назад» здесь не работает: сначала доступы."
                 },
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )

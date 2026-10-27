@@ -117,7 +117,7 @@ fun EchoRulerScreen(onBack: () -> Unit) {
             Text(
                 "как это работает",
                 color = GrapeCyan,
-                fontSize = Metro.Type.body,
+                fontSize = Gioui.Type.body,
                 fontWeight = FontWeight.Medium
             )
             Spacer(Modifier.height(6.dp))
@@ -126,7 +126,7 @@ fun EchoRulerScreen(onBack: () -> Unit) {
                     "его отражение возвращается позже — по разнице времени и считается расстояние. " +
                     "Скорость звука зависит от температуры: 331,3 м/с при нуле плюс 0,606 на градус.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
 
@@ -138,19 +138,19 @@ fun EchoRulerScreen(onBack: () -> Unit) {
                     Text(
                         text = "в комнате " + tempC.toString() + " °C",
                         color = TextPrimary,
-                        fontSize = Metro.Type.body
+                        fontSize = Gioui.Type.body
                     )
                     Text(
                         text = "скорость звука " + String.format(Locale.US, "%.1f", Echo.soundSpeed(tempC)) +
                             " м/с",
                         color = GrapeCyan,
-                        fontSize = Metro.Type.caption
+                        fontSize = Gioui.Type.caption
                     )
                 }
                 Text(
                     text = String.format(Locale.US, "%.1f", Echo.cmPerMilli(tempC)) + " см/мс",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -166,7 +166,7 @@ fun EchoRulerScreen(onBack: () -> Unit) {
             Text(
                 text = "Температура редко кто учитывает, а на 3 метрах разница между 0 и 30 градусами — 17 см.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
 
@@ -181,7 +181,7 @@ fun EchoRulerScreen(onBack: () -> Unit) {
         if (envelope.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             SurfaceCard(borderColor = GrapeViolet.copy(alpha = 0.4f)) {
-                Text("что услышал микрофон", color = TextPrimary, fontSize = Metro.Type.body)
+                Text("что услышал микрофон", color = TextPrimary, fontSize = Gioui.Type.body)
                 Spacer(Modifier.height(6.dp))
                 Box(
                     Modifier
@@ -194,7 +194,7 @@ fun EchoRulerScreen(onBack: () -> Unit) {
                 Text(
                     text = "Первый горб — сам щелчок, второй — вернувшееся эхо. Разница между ними и есть задержка.",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
         }
@@ -203,11 +203,11 @@ fun EchoRulerScreen(onBack: () -> Unit) {
         if (found != null) {
             Spacer(Modifier.height(10.dp))
             SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.5f)) {
-                Text("расстояние", color = TextDim, fontSize = Metro.Type.caption)
+                Text("расстояние", color = TextDim, fontSize = Gioui.Type.caption)
                 Text(
                     text = String.format(Locale.US, "%.0f см", found.cm),
                     color = GrapeGreen,
-                    fontSize = Metro.Type.tileLive,
+                    fontSize = Gioui.Type.tileLive,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.height(6.dp))
@@ -218,14 +218,14 @@ fun EchoRulerScreen(onBack: () -> Unit) {
                     String.format(Locale.US, "%.0f см", Echo.distanceCm(found.delayMs.toFloat(), 0))
                 )
                 Spacer(Modifier.height(6.dp))
-                Text(note, color = GrapeAmber, fontSize = Metro.Type.caption)
+                Text(note, color = GrapeAmber, fontSize = Gioui.Type.caption)
             }
         } else if (note.isNotBlank() && !running) {
             Spacer(Modifier.height(10.dp))
             SurfaceCard(borderColor = GrapePink.copy(alpha = 0.45f)) {
-                Text("что получилось", color = TextPrimary, fontSize = Metro.Type.body)
+                Text("что получилось", color = TextPrimary, fontSize = Gioui.Type.body)
                 Spacer(Modifier.height(4.dp))
-                Text(note, color = GrapePink, fontSize = Metro.Type.caption)
+                Text(note, color = GrapePink, fontSize = Gioui.Type.caption)
             }
         }
 
@@ -241,14 +241,14 @@ fun EchoRulerScreen(onBack: () -> Unit) {
                     text = "среднее: " + String.format(Locale.US, "%.0f", history.average()) + " см — " +
                         "по нему видно, насколько замеры повторяются",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
         }
 
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = ChipBorder) {
-            Text("честно о точности", color = GrapeAmber, fontSize = Metro.Type.body)
+            Text("честно о точности", color = GrapeAmber, fontSize = Gioui.Type.body)
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Динамик и микрофон разнесены на несколько сантиметров, поэтому путь у эха " +
@@ -256,7 +256,7 @@ fun EchoRulerScreen(onBack: () -> Unit) {
                     "приложение прямо скажет, что верить нельзя. Лучше всего работает от 0,5 до 4 м " +
                     "по ровной стене или столу.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -264,7 +264,7 @@ fun EchoRulerScreen(onBack: () -> Unit) {
                 Text(
                     text = "масштаб записи: " + Echo.RECORD_MS.toString() + " мс, это больше 30 метров пути",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
         }

@@ -39,7 +39,7 @@ import com.gsynk.app.ui.theme.GrapePink
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
-import com.gsynk.app.ui.theme.TileBrush
+import com.gsynk.app.ui.theme.GioBrush
 
 /**
  * Панель обновлений: сама выезжает, когда вышла новая версия, и показывает
@@ -70,13 +70,13 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                 androidx.compose.material3.Text(
                     text = "Обновление передано вам",
                     color = com.gsynk.app.ui.theme.GrapeCyan,
-                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
                 )
                 Spacer(Modifier.height(4.dp))
                 androidx.compose.material3.Text(
                     text = com.gsynk.app.core.UpdateShare.describe(carried),
                     color = com.gsynk.app.ui.theme.TextDim,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -102,7 +102,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         androidx.compose.material3.Text(
                             "Скачать APK",
                             color = com.gsynk.app.ui.theme.GrapeGreen,
-                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                     Box(
@@ -118,7 +118,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         androidx.compose.material3.Text(
                             "Проверить",
                             color = com.gsynk.app.ui.theme.GrapeCyan,
-                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                            style = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -126,7 +126,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                 androidx.compose.material3.Text(
                     text = "Забыть это предложение",
                     color = com.gsynk.app.ui.theme.TextDim,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal),
                     modifier = Modifier.clickable {
                         com.gsynk.app.core.UpdateShare.clearLast()
                         shared = null
@@ -142,14 +142,14 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                 androidx.compose.material3.Text(
                     text = "Передать обновление другу",
                     color = com.gsynk.app.ui.theme.GrapeVioletSoft,
-                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
                 )
                 Spacer(Modifier.height(4.dp))
                 androidx.compose.material3.Text(
                     text = "Приложите телефоны (касание NFC) — в метке уедут версия и ссылка на APK, " +
                         "а друг скачает файл сам. Или свяжитесь по Bluetooth/Wi-Fi в разделе «GSYNK рядом».",
                     color = com.gsynk.app.ui.theme.TextDim,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -162,13 +162,13 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                     Text(
                         text = if (checking) "проверяю версию…" else status.ifBlank { "готов к проверке" },
                         color = TextDim,
-                        fontSize = Metro.Type.caption
+                        fontSize = Gioui.Type.caption
                     )
                     if (update?.unchanged == true) {
                         Text(
                             text = "Ответ GitHub «ничего не изменилось» — лимит обращений не потрачен",
                             color = TextDim,
-                            fontSize = Metro.Type.caption
+                            fontSize = Gioui.Type.caption
                         )
                     }
                 }
@@ -177,27 +177,27 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
             Spacer(Modifier.height(10.dp))
             when {
                 update == null -> {
-                    Text("Проверяю наличие новой версии…", color = TextSecondary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                    Text("Проверяю наличие новой версии…", color = TextSecondary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
                 }
 
                 update!!.updateAvailable -> {
                     Text(
                         text = "Вышла версия ${update!!.latestTag}",
                         color = TextPrimary,
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "Установлено: ${BuildConfig.VERSION_NAME}",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
                     Spacer(Modifier.height(14.dp))
 
                     if (downloading) {
-                        Text("Скачиваю: $progress%", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                        Text("Скачиваю: $progress%", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                         Spacer(Modifier.height(8.dp))
-                        BarIndicator(percent = progress, brush = TileBrush.Green)
+                        BarIndicator(percent = progress, brush = GioBrush.Green)
                     } else {
                         PrimaryButton(
                             text = if (update!!.webOnly) "Открыть страницу релиза" else "Скачать и обновить",
@@ -222,7 +222,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                             text = "Установка «поверх» сохранит все правила, настройки и игры — " +
                                 "подпись та же, данные не теряются.",
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -231,14 +231,14 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                     Text(
                         text = if (update!!.ok) "Обновлений нет" else "Проверка не прошла",
                         color = if (update!!.ok) TextPrimary else GrapePink,
-                        fontSize = Metro.Type.tileLive,
+                        fontSize = Gioui.Type.tileLive,
                         fontWeight = FontWeight.Light
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = update!!.message,
                         color = if (update!!.ok) TextDim else GrapePink,
-                        fontSize = Metro.Type.caption
+                        fontSize = Gioui.Type.caption
                     )
                     if (update!!.rateLimitedUntil > 0L) {
                         Spacer(Modifier.height(6.dp))
@@ -246,7 +246,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                             text = "GitHub ограничил частоту обращений. Приложение подождёт и " +
                                 "проверит само — вручную жать не нужно.",
                             color = TextDim,
-                            fontSize = Metro.Type.caption
+                            fontSize = Gioui.Type.caption
                         )
                     }
                     Spacer(Modifier.height(12.dp))
@@ -268,7 +268,7 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         Text(
                             text = "Версия " + settings.seenVersion + " отмечена как пропущенная.",
                             color = TextDim,
-                            fontSize = Metro.Type.caption
+                            fontSize = Gioui.Type.caption
                         )
                         Spacer(Modifier.height(6.dp))
                         SecondaryButton(
@@ -290,12 +290,12 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                     Text(
                         text = if (settings.updateAuto) "Проверять автоматически" else "Проверять вручную",
                         color = TextPrimary,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
                     )
                     Text(
                         text = "Раз в минуту, с токеном и меткой ETag — лимит GitHub не тратится",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
                 ToggleDot(settings.updateAuto) { vm.setUpdateAuto(!settings.updateAuto) }
@@ -322,14 +322,14 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
 
         Spacer(Modifier.height(14.dp))
         SurfaceCard {
-            Text("Что нового", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Что нового", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = update?.notes?.takeIf { it.isNotBlank() }
                     ?: "2.1 — живые плитки и сортировка, компактный остров с новыми позициями, " +
                     "локальная модель с чатом, новый Grape Link, сцены и «хакерский набор» инструментов.",
                 color = TextDim,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -343,7 +343,7 @@ fun ToggleDot(checked: Boolean, onChange: () -> Unit) {
             .width(52.dp)
             .height(30.dp)
             .clip(RectangleShape)
-            .background(if (checked) TileBrush.Green else TileBrush.Ink)
+            .background(if (checked) GioBrush.Green else GioBrush.Ink)
             .border(1.dp, if (checked) GrapeGreen else ChipBorder, RectangleShape)
             .clickable { onChange() }
             .padding(3.dp),

@@ -30,7 +30,7 @@ import com.gsynk.app.ui.theme.GrapeGreen
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
-import com.gsynk.app.ui.theme.TileBrush
+import com.gsynk.app.ui.theme.GioBrush
 
 /**
  * Мультитул 2.1: живые плитки вместо длинных списков.
@@ -207,7 +207,7 @@ fun ToolsScreen(
                 title = "Вибрация",
                 subtitle = "проверка мотора",
                 iconRes = R.drawable.ic_bolt,
-                brush = TileBrush.Pink,
+                brush = GioBrush.Pink,
                 liveText = "разок",
                 modifier = Modifier.weight(1f)
             ) { tools.vibrate() }
@@ -221,7 +221,7 @@ fun ToolsScreen(
                 title = "Grape Link",
                 subtitle = "NFC-обмен",
                 iconRes = R.drawable.ic_bolt,
-                brush = TileBrush.Cyan,
+                brush = GioBrush.Cyan,
                 liveText = "касаний: ${settings.nfcTouches}",
                 modifier = Modifier.weight(1f),
                 onClick = onOpenNfc
@@ -230,7 +230,7 @@ fun ToolsScreen(
                 title = "GSYNK рядом",
                 subtitle = "Bluetooth и Wi-Fi Direct",
                 iconRes = R.drawable.ic_bolt,
-                brush = TileBrush.Blue,
+                brush = GioBrush.Blue,
                 liveText = if (com.gsynk.app.core.Nearby.isConnected()) "связь есть" else "связаться",
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "nearby" }
@@ -242,7 +242,7 @@ fun ToolsScreen(
                 title = "Локальный ИИ",
                 subtitle = "чат офлайн",
                 iconRes = R.drawable.ic_shield,
-                brush = TileBrush.Violet,
+                brush = GioBrush.Violet,
                 modifier = Modifier.weight(1f),
                 onClick = { showChat = true }
             )
@@ -250,7 +250,7 @@ fun ToolsScreen(
                 title = "Скринсейвер",
                 subtitle = "полка с часами",
                 iconRes = R.drawable.ic_schedule,
-                brush = TileBrush.Ink,
+                brush = GioBrush.Ink,
                 modifier = Modifier.weight(1f),
                 onClick = { showScreensaver = true }
             )
@@ -261,7 +261,7 @@ fun ToolsScreen(
                 title = "Обновления",
                 subtitle = "версия ${com.gsynk.app.BuildConfig.VERSION_NAME}",
                 iconRes = R.drawable.ic_bolt,
-                brush = if (updateAvailable) TileBrush.Green else TileBrush.Ink,
+                brush = if (updateAvailable) GioBrush.Green else GioBrush.Ink,
                 badge = if (updateAvailable) "новое" else null,
                 liveText = if (updateAvailable) "Обновить" else "Проверить",
                 modifier = Modifier.weight(1f),
@@ -280,13 +280,13 @@ fun ToolsScreen(
             text = "Мигание экраном, AMOLED и ШИМ, все датчики, катушки вибромотора, " +
                 "индукция, ИК-пульт, скрытые экраны Android и HyperOS — без root и без риска.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(9.dp))
         LiveTile(
             title = "Лаборатория",
             subtitle = "то, чего нет в магазинах приложений",
-            brush = TileBrush.Violet,
+            brush = GioBrush.Violet,
             iconRes = R.drawable.ic_tune,
             liveText = "строб · экран · датчики · катушки · HyperOS",
             height = 108.dp,
@@ -301,7 +301,7 @@ fun ToolsScreen(
         Text(
             text = "Измерения, кодирование, радиочастоты — всё офлайн, без интернета",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(9.dp))
         TileRow {
@@ -309,7 +309,7 @@ fun ToolsScreen(
                 title = "Пароль",
                 subtitle = "и QR-код",
                 iconRes = R.drawable.ic_shield,
-                brush = TileBrush.Amber,
+                brush = GioBrush.Amber,
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "password" }
             )
@@ -317,7 +317,7 @@ fun ToolsScreen(
                 title = "Морзянка",
                 subtitle = "мигание фонариком",
                 iconRes = R.drawable.ic_bolt,
-                brush = TileBrush.Violet,
+                brush = GioBrush.Violet,
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "morse" }
             )
@@ -328,7 +328,7 @@ fun ToolsScreen(
                 title = "Металл",
                 subtitle = "магнитометр",
                 iconRes = R.drawable.ic_shield,
-                brush = TileBrush.Blue,
+                brush = GioBrush.Blue,
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "metal" }
             )
@@ -336,7 +336,7 @@ fun ToolsScreen(
                 title = "Уровень",
                 subtitle = "наклон в градусах",
                 iconRes = R.drawable.ic_tune,
-                brush = TileBrush.Green,
+                brush = GioBrush.Green,
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "level" }
             )
@@ -347,7 +347,7 @@ fun ToolsScreen(
                 title = "Шумомер",
                 subtitle = "уровень в дБ",
                 iconRes = R.drawable.ic_volume,
-                brush = TileBrush.Red,
+                brush = GioBrush.Red,
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "sound" }
             )
@@ -355,7 +355,7 @@ fun ToolsScreen(
                 title = "Система",
                 subtitle = "живой дашборд",
                 iconRes = R.drawable.ic_schedule,
-                brush = TileBrush.Ink,
+                brush = GioBrush.Ink,
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "sysinfo" }
             )
@@ -366,7 +366,7 @@ fun ToolsScreen(
                 title = "Кодер",
                 subtitle = "base64, URL, hex",
                 iconRes = R.drawable.ic_copy,
-                brush = TileBrush.Violet,
+                brush = GioBrush.Violet,
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "coder" }
             )
@@ -374,7 +374,7 @@ fun ToolsScreen(
                 title = "Подсети",
                 subtitle = "калькулятор IP",
                 iconRes = R.drawable.ic_bolt,
-                brush = TileBrush.Cyan,
+                brush = GioBrush.Cyan,
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "subnet" }
             )
@@ -410,13 +410,13 @@ fun ToolsScreen(
                     Text(
                         text = if (settings.islandPersistent) "Постоянный остров включён" else "Только вспышки",
                         color = TextPrimary,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
                     )
                     Text(
                         text = "Позиция: " + com.gsynk.app.core.IslandPosition.label(settings.islandPosition) +
                             if (settings.islandCompact) " • компактный" else " • обычный",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
                 PrimaryButton(
@@ -425,7 +425,7 @@ fun ToolsScreen(
                 )
             }
             Spacer(Modifier.height(12.dp))
-            Text("Показывать:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Показывать:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 IslandWidget.ALL.forEach { widget ->
@@ -436,7 +436,7 @@ fun ToolsScreen(
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text("Расположение:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Расположение:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 com.gsynk.app.core.IslandPosition.ALL.forEach { position ->
@@ -457,7 +457,7 @@ fun ToolsScreen(
             Text(
                 text = "Сдвиг по вертикали: ${settings.islandOffsetY} точек",
                 color = TextSecondary,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(7.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -482,7 +482,7 @@ fun ToolsScreen(
                 title = "Нагрузка",
                 subtitle = "все ядра и ускоритель",
                 iconRes = R.drawable.ic_bolt,
-                brush = TileBrush.Cyan,
+                brush = GioBrush.Cyan,
                 badge = if (turboActive) "идёт" else null,
                 liveText = if (turboActive) "%.1f млрд оп/с".format(turboSpeed) else "выключено",
                 modifier = Modifier.weight(1f),
@@ -492,7 +492,7 @@ fun ToolsScreen(
                 title = "Хроника",
                 subtitle = "что было за день",
                 iconRes = R.drawable.ic_schedule,
-                brush = TileBrush.Violet,
+                brush = GioBrush.Violet,
                 liveText = "события",
                 modifier = Modifier.weight(1f),
                 onClick = { showChronicle = true }
@@ -508,7 +508,7 @@ fun ToolsScreen(
                 title = "Диагностика",
                 subtitle = "отчёты и журнал",
                 iconRes = R.drawable.ic_tune,
-                brush = TileBrush.Ink,
+                brush = GioBrush.Ink,
                 badge = if (vm.crashCountNow() > 0) vm.crashCountNow().toString() else null,
                 liveText = "Сбоев: ${vm.crashCountNow()}",
                 modifier = Modifier.weight(1f),
@@ -518,7 +518,7 @@ fun ToolsScreen(
                 title = "Собрать отчёт",
                 subtitle = "состояние телефона",
                 iconRes = R.drawable.ic_copy,
-                brush = TileBrush.Violet,
+                brush = GioBrush.Violet,
                 liveText = "Сейчас",
                 modifier = Modifier.weight(1f),
                 onClick = { vm.collectReport("Отчёт по кнопке из мультитула") }
@@ -533,9 +533,9 @@ fun ToolsScreen(
             Text(
                 text = profile.model,
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
             )
-            Text(profile.summary, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text(profile.summary, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(12.dp))
             InfoRow("Набор функций", if (profile.isFull) "полный" else "базовый")
             InfoRow("Android", profile.androidLabel)
@@ -544,7 +544,7 @@ fun ToolsScreen(
             Text(
                 text = "Определяется автоматически по модели и системе — переключать вручную не нужно.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
 
@@ -555,13 +555,13 @@ fun ToolsScreen(
         SurfaceCard {
             val snapshot = stats
             if (snapshot == null) {
-                Text("Считываю показатели…", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                Text("Считываю показатели…", color = TextDim, style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             } else {
                 InfoRow("Память", "${snapshot.ramUsedMb} / ${snapshot.ramTotalMb} МБ")
-                BarIndicator(percent = snapshot.ramPercent, brush = TileBrush.Violet)
+                BarIndicator(percent = snapshot.ramPercent, brush = GioBrush.Violet)
                 Spacer(Modifier.height(10.dp))
                 InfoRow("Накопитель", "свободно %.1f ГБ".format(snapshot.storageFreeGb))
-                BarIndicator(percent = 100 - snapshot.storageUsedPercent, brush = TileBrush.Cyan)
+                BarIndicator(percent = 100 - snapshot.storageUsedPercent, brush = GioBrush.Cyan)
                 Spacer(Modifier.height(10.dp))
                 // процент и форматирование разделены: «%» рядом со «•» валил приложение
                 InfoRow(
@@ -569,7 +569,7 @@ fun ToolsScreen(
                     snapshot.batteryPercent.toString() + "% • " +
                         "%.1f".format(snapshot.batteryTempC) + "°C"
                 )
-                BarIndicator(percent = snapshot.batteryPercent, brush = TileBrush.Green)
+                BarIndicator(percent = snapshot.batteryPercent, brush = GioBrush.Green)
                 Spacer(Modifier.height(12.dp))
                 InfoRow("Ядер", snapshot.cores.toString())
                 InfoRow("Включён", "${snapshot.uptimeHours} ч")

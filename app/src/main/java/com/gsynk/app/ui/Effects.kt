@@ -35,9 +35,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Эффекты GSUI V4 — «стёкла» из одного набора правил.
+ * Эффекты GIOUI — «стёкла» из одного набора правил.
  *
- * Идея простая: интерфейс собран из плиток Metro без скруглений, а объём и глубину
+ * Идея простая: интерфейс собран из плиток GIOUI без скруглений, а объём и глубину
  * дают четыре вещи — матовое стекло под панелями, живое размытие фона, световые лучи
  * и трассировка теней. Всё считается средствами Compose (RuntimeShader/GpuField —
  * отдельно, для шейдерного поля), поэтому одинаково работает и на слабом телефоне:
@@ -62,12 +62,12 @@ object Glass {
         val blur: Dp
     )
 
-    fun recipe(kind: Kind, accent: Color = Metro.Palette.Purple, radius: Dp = Metro.Radius.card): Recipe =
+    fun recipe(kind: Kind, accent: Color = Gioui.Palette.Purple, radius: Dp = Gioui.Radius.card): Recipe =
         when (kind) {
             Kind.MATTE -> Recipe(accent, 0.16f, Color.White.copy(alpha = 0.14f), radius, 0.dp)
             Kind.LIQUID -> Recipe(accent, 0.22f, Color.White.copy(alpha = 0.22f), radius, 6.dp)
             Kind.FROST -> Recipe(Color.White, 0.10f, Color.White.copy(alpha = 0.30f), radius, 10.dp)
-            Kind.AQUA -> Recipe(Metro.Palette.Teal, 0.24f, Metro.Palette.Cyan.copy(alpha = 0.35f), radius, 8.dp)
+            Kind.AQUA -> Recipe(Gioui.Palette.Teal, 0.24f, Gioui.Palette.Cyan.copy(alpha = 0.35f), radius, 8.dp)
         }
 }
 
@@ -79,17 +79,17 @@ object Glass {
 fun GlassPanel(
     modifier: Modifier = Modifier,
     kind: Glass.Kind = Glass.Kind.MATTE,
-    accent: Color = Metro.Palette.Purple,
-    shape: Shape = Metro.Shapes.card,
-    contentPadding: Dp = Metro.unit * 1.5f,
+    accent: Color = Gioui.Palette.Purple,
+    shape: Shape = Gioui.Shapes.card,
+    contentPadding: Dp = Gioui.unit * 1.5f,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val effects = LocalMetroEffects.current
-    val recipe = Glass.recipe(kind, accent, Metro.Radius.card)
+    val effects = LocalGiouiEffects.current
+    val recipe = Glass.recipe(kind, accent, Gioui.Radius.card)
     val blurAmount = when (effects) {
-        Metro.Effects.FULL -> recipe.blur
-        Metro.Effects.LIGHT -> if (Build.VERSION.SDK_INT >= 31) recipe.blur / 2 else 0.dp
-        Metro.Effects.PLAIN -> 0.dp
+        Gioui.Effects.FULL -> recipe.blur
+        Gioui.Effects.LIGHT -> if (Build.VERSION.SDK_INT >= 31) recipe.blur / 2 else 0.dp
+        Gioui.Effects.PLAIN -> 0.dp
     }
     Box(modifier) {
         Box(Modifier.fillMaxSize().clip(shape).let {
@@ -120,36 +120,36 @@ fun GlassPanel(
 @Composable
 fun GlassChip(
     modifier: Modifier = Modifier,
-    accent: Color = Metro.Palette.Cyan,
+    accent: Color = Gioui.Palette.Cyan,
     selected: Boolean = false
 ) {
     Box(
         modifier
-            .clip(Metro.Shapes.toggle)
+            .clip(Gioui.Shapes.toggle)
             .background(accent.copy(alpha = if (selected) 0.34f else 0.12f))
-            .border(1.dp, accent.copy(alpha = if (selected) 0.55f else 0.20f), Metro.Shapes.toggle)
+            .border(1.dp, accent.copy(alpha = if (selected) 0.55f else 0.20f), Gioui.Shapes.toggle)
     )
 }
 
 /**
- * Лучи и растр — «сетка» Metro: рисуются поверх фона и дают ощущение глубины.
+ * Лучи и растр — «сетка» GIOUI: рисуются поверх фона и дают ощущение глубины.
  * Трассировка теней: под каждым лучом мягкое затемнение со смещением.
  */
 @Composable
 fun LightRays(
     modifier: Modifier = Modifier,
-    accent: Color = Metro.Palette.Purple,
+    accent: Color = Gioui.Palette.Purple,
     rays: Int = 5,
     intensity: Float = 1f
 ) {
-    val effects = LocalMetroEffects.current
-    if (effects == Metro.Effects.PLAIN) return
+    val effects = LocalGiouiEffects.current
+    if (effects == Gioui.Effects.PLAIN) return
     val transition = rememberInfiniteTransition(label = "rays")
     val phase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(if (effects == Metro.Effects.FULL) 14_000 else 24_000, easing = LinearEasing),
+            animation = tween(if (effects == Gioui.Effects.FULL) 14_000 else 24_000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "raysPhase"
@@ -193,16 +193,16 @@ private fun step(rays: Int, intensity: Float): Float = (1f / rays) * 3f * intens
 
 /**
  * Мягкая тень по периметру блока — вместо elevation из Material: у нас свои правила,
- * Metro не признаёт тени в качестве украшения, поэтому они только «трассируют» края.
+ * GIOUI не признаёт тени в качестве украшения, поэтому они только «трассируют» края.
  */
 @Composable
 fun TraceShadow(
     modifier: Modifier = Modifier,
     color: Color = Color.Black,
     strength: Float = 0.35f,
-    shape: Shape = Metro.Shapes.card
+    shape: Shape = Gioui.Shapes.card
 ) {
-    if (LocalMetroEffects.current == Metro.Effects.PLAIN) return
+    if (LocalGiouiEffects.current == Gioui.Effects.PLAIN) return
     Box(
         modifier
             .clip(shape)
@@ -215,17 +215,17 @@ fun TraceShadow(
 }
 
 /**
- * Живой фон: сетка Metro плюс плавающие пятна акцента. Рисуется одним полотном,
+ * Живой фон: сетка GIOUI плюс плавающие пятна акцента. Рисуется одним полотном,
  * поэтому не мешает содержимому и не перекрывает интерфейс.
  */
 @Composable
 fun GrainField(
     modifier: Modifier = Modifier,
-    accent: Color = Metro.Palette.Purple,
-    second: Color = Metro.Palette.Cyan,
+    accent: Color = Gioui.Palette.Purple,
+    second: Color = Gioui.Palette.Cyan,
     speed: Float = 1f
 ) {
-    val effects = LocalMetroEffects.current
+    val effects = LocalGiouiEffects.current
     val transition = rememberInfiniteTransition(label = "grain")
     val t by transition.animateFloat(
         initialValue = 0f,
@@ -243,7 +243,7 @@ fun GrainField(
         modifier.drawWithCacheCompat { size ->
             val w = size.width
             val h = size.height
-            // Плитки-ориентиры: тонкая сетка 20 px, как в исходниках Metro.
+            // Плитки-ориентиры: тонкая сетка 20 px, как в исходниках Gioui.
             val cell = 20f
             var x = 0f
             while (x < w) {
@@ -255,7 +255,7 @@ fun GrainField(
                 drawLine(Color.White.copy(alpha = 0.03f), Offset(0f, y), Offset(w, y), 1f)
                 y += cell
             }
-            if (effects != Metro.Effects.PLAIN) {
+            if (effects != Gioui.Effects.PLAIN) {
                 val angle = t * 6.283f
                 val cx = w * (0.5f + 0.32f * cos(angle))
                 val cy = h * (0.35f + 0.22f * sin(angle * 1.3f))
@@ -289,7 +289,7 @@ fun GrainField(
 @Composable
 fun FocusRing(
     modifier: Modifier = Modifier,
-    color: Color = Metro.Palette.Cyan,
+    color: Color = Gioui.Palette.Cyan,
     active: Boolean = true
 ) {
     if (!active) return
@@ -328,8 +328,8 @@ private fun Modifier.drawWithCacheCompat(
 /** Прозрачность для слоёв: чтобы не плодить состояния в каждом экране. */
 @Composable
 fun veil(alpha: Float): Modifier {
-    val effects = LocalMetroEffects.current
-    val value = if (effects == Metro.Effects.FULL) alpha else (alpha * 0.7f).coerceAtMost(1f)
+    val effects = LocalGiouiEffects.current
+    val value = if (effects == Gioui.Effects.FULL) alpha else (alpha * 0.7f).coerceAtMost(1f)
     return Modifier.alpha(value)
 }
 
@@ -337,16 +337,16 @@ fun veil(alpha: Float): Modifier {
 @Composable
 fun gsynkAccent(): Color = UiTweaks.accentStart
 
-/** Скругление по назначению — «везде своё», как в GSUI V4. */
+/** Скругление по назначению — «везде своё», как в GIOUI. */
 fun radiusOf(kind: String): Dp = when (kind) {
-    "tile" -> Metro.Radius.tile
-    "card" -> Metro.Radius.card
-    "sheet" -> Metro.Radius.sheet
-    "button" -> Metro.Radius.button
-    "toggle" -> Metro.Radius.switch
-    "island" -> Metro.Radius.island
-    "panel" -> Metro.Radius.panel
-    else -> Metro.Radius.card
+    "tile" -> Gioui.Radius.tile
+    "card" -> Gioui.Radius.card
+    "sheet" -> Gioui.Radius.sheet
+    "button" -> Gioui.Radius.button
+    "toggle" -> Gioui.Radius.switch
+    "island" -> Gioui.Radius.island
+    "panel" -> Gioui.Radius.panel
+    else -> Gioui.Radius.card
 }
 
 /** Форма по назначению. */

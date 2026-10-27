@@ -56,7 +56,7 @@ import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
-import com.gsynk.app.ui.theme.TileBrush
+import com.gsynk.app.ui.theme.GioBrush
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -103,7 +103,7 @@ fun GamesScreen(
         LiveTile(
             title = "Подземелье GSYNK",
             subtitle = "комнаты, враги и босс — поле у камеры",
-            brush = TileBrush.Red,
+            brush = GioBrush.Red,
             iconRes = R.drawable.ic_bolt,
             liveText = "играть одному или на два телефона",
             height = 112.dp,
@@ -114,7 +114,7 @@ fun GamesScreen(
         LiveTile(
             title = "Два телефона по Wi-Fi",
             subtitle = "NFC — знакомство, игра — по сети",
-            brush = TileBrush.Green,
+            brush = GioBrush.Green,
             iconRes = R.drawable.ic_devices,
             liveText = "каждый ведёт своего героя",
             height = 112.dp,
@@ -125,7 +125,7 @@ fun GamesScreen(
         LiveTile(
             title = "Реакция",
             subtitle = "насколько быстрая рука",
-            brush = TileBrush.Cyan,
+            brush = GioBrush.Cyan,
             iconRes = R.drawable.ic_bolt,
             liveText = if (bestReaction > 0) "рекорд $bestReaction мс" else "ещё не играли",
             height = 104.dp,
@@ -136,7 +136,7 @@ fun GamesScreen(
         LiveTile(
             title = "Память",
             subtitle = "повтори последовательность",
-            brush = TileBrush.Violet,
+            brush = GioBrush.Violet,
             iconRes = R.drawable.ic_shield,
             liveText = if (bestMemory > 0) "уровень $bestMemory" else "ещё не играли",
             height = 104.dp,
@@ -147,7 +147,7 @@ fun GamesScreen(
         LiveTile(
             title = "2048",
             subtitle = "складывайте плитки свайпами",
-            brush = TileBrush.Amber,
+            brush = GioBrush.Amber,
             iconRes = R.drawable.ic_schedule,
             liveText = if (bestTiles > 0) "рекорд $bestTiles" else "ещё не играли",
             height = 104.dp,
@@ -163,7 +163,7 @@ fun GamesScreen(
                 text = "Рекорды хранятся на телефоне и показываются на острове. " +
                     "Вызвать друга на дуэль можно касанием в Grape Link.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -230,9 +230,9 @@ private fun ReactionGame(scores: GameScores, onBack: () -> Unit) {
                 .clip(RectangleShape)
                 .background(
                     when {
-                        lit -> TileBrush.Green
-                        waiting -> TileBrush.Ink
-                        else -> TileBrush.Violet
+                        lit -> GioBrush.Green
+                        waiting -> GioBrush.Ink
+                        else -> GioBrush.Violet
                     }
                 )
                 .border(1.dp, ChipBorder, RectangleShape)
@@ -248,7 +248,7 @@ private fun ReactionGame(scores: GameScores, onBack: () -> Unit) {
                         else -> "СТАРТ"
                     },
                     color = TextPrimary,
-                    style = MaterialTheme.typography.displaySmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+                    style = MaterialTheme.typography.displaySmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light),
                     fontWeight = FontWeight.Light,
                     textAlign = TextAlign.Center
                 )
@@ -256,7 +256,7 @@ private fun ReactionGame(scores: GameScores, onBack: () -> Unit) {
                 Text(
                     text = if (waiting && !lit) "появится цвет — и сразу касание" else message,
                     color = TextPrimary.copy(alpha = 0.8f),
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal),
                     textAlign = TextAlign.Center
                 )
             }
@@ -277,7 +277,7 @@ private fun ReactionGame(scores: GameScores, onBack: () -> Unit) {
 private fun MemoryGame(scores: GameScores, onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
-    val palette = listOf(TileBrush.Violet, TileBrush.Cyan, TileBrush.Green, TileBrush.Amber)
+    val palette = listOf(GioBrush.Violet, GioBrush.Cyan, GioBrush.Green, GioBrush.Amber)
 
     var sequence by remember { mutableStateOf(listOf<Int>()) }
     var inputIndex by remember { mutableIntStateOf(0) }
@@ -341,7 +341,7 @@ private fun MemoryGame(scores: GameScores, onBack: () -> Unit) {
     }
 
     GrapeScreen(title = "Память", subtitle = "уровень $level", onBack = onBack) {
-        Text(status, color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+        Text(status, color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             repeat(2) { row ->
@@ -354,7 +354,7 @@ private fun MemoryGame(scores: GameScores, onBack: () -> Unit) {
                                 .weight(1f)
                                 .aspectRatio(1f)
                                 .clip(RectangleShape)
-                                .background(if (active) palette[pad] else TileBrush.Ink)
+                                .background(if (active) palette[pad] else GioBrush.Ink)
                                 .border(
                                     1.dp,
                                     if (active) Color.White.copy(alpha = 0.5f) else ChipBorder,
@@ -419,12 +419,12 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
     }
 
     fun tileColor(value: Int): Brush = when {
-        value == 0 -> TileBrush.Ink
-        value <= 4 -> TileBrush.Blue
-        value <= 16 -> TileBrush.Cyan
-        value <= 64 -> TileBrush.Green
-        value <= 256 -> TileBrush.Amber
-        else -> TileBrush.Pink
+        value == 0 -> GioBrush.Ink
+        value <= 4 -> GioBrush.Blue
+        value <= 16 -> GioBrush.Cyan
+        value <= 64 -> GioBrush.Green
+        value <= 256 -> GioBrush.Amber
+        else -> GioBrush.Pink
     }
 
     GrapeScreen(title = "2048", subtitle = "счёт $score • рекорд $best", onBack = onBack) {
@@ -511,9 +511,9 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Ходов нет", color = TextPrimary, style = MaterialTheme.typography.titleLarge.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
+                    Text("Ходов нет", color = TextPrimary, style = MaterialTheme.typography.titleLarge.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light))
                     Spacer(Modifier.height(6.dp))
-                    Text("Счёт $score • нажмите для новой игры", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                    Text("Счёт $score • нажмите для новой игры", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
                 }
             }
         }
@@ -545,7 +545,7 @@ private fun TilesGame(scores: GameScores, onBack: () -> Unit) {
         Text(
             text = "Свайпайте по полю или пользуйтесь кнопками. Одинаковые плитки соединяются.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
     }
 }

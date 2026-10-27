@@ -88,22 +88,22 @@ fun SettingsSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
-                    // Заголовок Metro: 42 pt Light, без градиента — плитка сама кричит цветом.
+                    // Заголовок GIOUI: 42 pt Light, без градиента — плитка сама кричит цветом.
                     Text(
                         text = "Настройки",
                         color = TextPrimary,
-                        fontSize = Metro.Type.pageTitle,
+                        fontSize = Gioui.Type.pageTitle,
                         fontWeight = FontWeight.Light,
                         letterSpacing = (-1).sp
                     )
                     Text(
                         text = "GSYNK ${BuildConfig.VERSION_NAME}",
                         color = TextDim,
-                        fontSize = Metro.Type.caption,
+                        fontSize = Gioui.Type.caption,
                         letterSpacing = 1.2.sp
                     )
                 }
-                // Закрытие — как «назад» в Metro: 44×44, без заливки, в правом верхнем углу.
+                // Закрытие — как «назад» в GIOUI: 44×44, без заливки, в правом верхнем углу.
                 Box(
                     Modifier
                         .size(44.dp)
@@ -170,7 +170,7 @@ fun SettingsSheet(
             }
 
             Spacer(Modifier.height(12.dp))
-            Text("Расположение", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Расположение", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 IslandPosition.ALL.forEach { position ->
@@ -182,7 +182,7 @@ fun SettingsSheet(
             }
 
             Spacer(Modifier.height(12.dp))
-            Text("Что показывать", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text("Что показывать", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(7.dp))
             ChipFlow {
                 IslandWidget.ALL.forEach { widget ->
@@ -235,7 +235,7 @@ fun SettingsSheet(
             SectionTitle("Кастомизация")
             Spacer(Modifier.height(8.dp))
             SurfaceCard(borderColor = CardBorder) {
-                Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     UiTweaks.ACCENTS.forEachIndexed { index, (name, _) ->
@@ -245,7 +245,7 @@ fun SettingsSheet(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Переливание фона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Переливание фона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     listOf("спокойно", "обычно", "быстро").forEachIndexed { index, name ->
@@ -255,7 +255,7 @@ fun SettingsSheet(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Плитки", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Плитки", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     listOf("мелкие", "обычные", "крупные").forEachIndexed { index, name ->
@@ -311,13 +311,13 @@ fun SettingsSheet(
                     Text(
                         text = item.title,
                         color = if (item.granted) TextSecondary else TextPrimary,
-                        fontSize = Metro.Type.body,
+                        fontSize = Gioui.Type.body,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
                         text = if (item.granted) "выдано" else "выдать →",
                         color = if (item.granted) TextDim else GrapeVioletSoft,
-                        fontSize = Metro.Type.caption
+                        fontSize = Gioui.Type.caption
                     )
                 }
             }
@@ -341,7 +341,7 @@ fun SettingsSheet(
                 text = "Правил в расписании: " + (vm.rules.collectAsStateWithLifecycle().value.size) +
                     " • вся работа идёт на телефоне, интернет нужен только для проверки обновлений",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
             Spacer(Modifier.height(24.dp))
         }
@@ -367,10 +367,10 @@ fun SettingRow(
             Text(
                 title,
                 color = TextPrimary,
-                fontSize = Metro.Type.body,
+                fontSize = Gioui.Type.body,
                 fontWeight = FontWeight.Normal
             )
-            Text(subtitle, color = TextDim, fontSize = Metro.Type.caption)
+            Text(subtitle, color = TextDim, fontSize = Gioui.Type.caption)
         }
         ToggleDot(checked = checked) { onChange(!checked) }
     }

@@ -86,7 +86,7 @@ fun AgentMailScreen(onBack: () -> Unit) {
             Text(
                 text = "Пиши как в мессенджере — но ответ придёт не сразу",
                 color = TextPrimary,
-                fontSize = Metro.Type.body,
+                fontSize = Gioui.Type.body,
                 fontWeight = FontWeight.Medium
             )
             Spacer(Modifier.height(6.dp))
@@ -95,7 +95,7 @@ fun AgentMailScreen(onBack: () -> Unit) {
                     "работу над проектом, и отвечает туда же. Приложение забирает ответ само — " +
                     "на экране «Нагрузка» или при следующем заходе сюда появится капсула «агент ответил».",
                 color = TextSecondary,
-                fontSize = Metro.Type.body
+                fontSize = Gioui.Type.body
             )
             Spacer(Modifier.height(8.dp))
             Text(
@@ -103,7 +103,7 @@ fun AgentMailScreen(onBack: () -> Unit) {
                     "токены, адреса почты и длинные числа вырезаются санитайзером — но пароли и " +
                     "личные данные лучше не писать вовсе.",
                 color = GrapePink,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
             if (Keys.ready() && AgentMail.cached(context).isEmpty()) {
                 Spacer(Modifier.height(6.dp))
@@ -111,7 +111,7 @@ fun AgentMailScreen(onBack: () -> Unit) {
                     text = "Чего не хватает? Что сломалось? Что добавить? Пиши своими словами — " +
                         "агент читает всё.",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
         }
@@ -127,13 +127,13 @@ fun AgentMailScreen(onBack: () -> Unit) {
                         } else {
                             TextSecondary
                         },
-                        fontSize = Metro.Type.body
+                        fontSize = Gioui.Type.body
                     )
                     Text(
                         text = "сообщений в переписке: " + messages.size +
                             " · моих: " + messages.count { it.mine },
                         color = TextDim,
-                        fontSize = Metro.Type.caption
+                        fontSize = Gioui.Type.caption
                     )
                 }
                 if (issue > 0) {
@@ -154,7 +154,7 @@ fun AgentMailScreen(onBack: () -> Unit) {
                             }
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
-                        Text("в браузере", color = GrapeCyan, fontSize = Metro.Type.caption)
+                        Text("в браузере", color = GrapeCyan, fontSize = Gioui.Type.caption)
                     }
                 }
             }
@@ -184,7 +184,7 @@ fun AgentMailScreen(onBack: () -> Unit) {
                 Text(
                     text = "Пока пусто. Первое сообщение — за тобой: напиши, что не так или чего не хватает.",
                     color = TextSecondary,
-                    fontSize = Metro.Type.body
+                    fontSize = Gioui.Type.body
                 )
             }
         } else {
@@ -197,7 +197,7 @@ fun AgentMailScreen(onBack: () -> Unit) {
                     text = "Показаны последние 40 сообщений из " + messages.size +
                         " · остальное — по кнопке «в браузере»",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
         }
@@ -216,7 +216,7 @@ fun AgentMailScreen(onBack: () -> Unit) {
         Text(
             text = input.trim().length.toString() + " знаков" + if (AgentMail.tooLong(input)) " — длинновато, сократи" else "",
             color = if (AgentMail.tooLong(input)) GrapePink else TextDim,
-            fontSize = Metro.Type.caption
+            fontSize = Gioui.Type.caption
         )
         Spacer(Modifier.height(8.dp))
         PrimaryButton(
@@ -241,7 +241,7 @@ fun AgentMailScreen(onBack: () -> Unit) {
                 "не отдаёт /sys — сделай запасной путь через /proc». Чем конкретнее, тем быстрее " +
                 "агент поправит дело.",
             color = TextDim,
-            fontSize = Metro.Type.caption
+            fontSize = Gioui.Type.caption
         )
     }
 }
@@ -269,20 +269,20 @@ private fun MailBubble(message: AgentMail.Msg) {
             Text(
                 text = if (mine) "ты" else "агент",
                 color = if (mine) GrapeCyan else GrapeVioletSoft,
-                fontSize = Metro.Type.caption,
+                fontSize = Gioui.Type.caption,
                 fontWeight = FontWeight.Medium
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = message.text,
                 color = TextPrimary,
-                fontSize = Metro.Type.body
+                fontSize = Gioui.Type.body
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = AgentMail.prettyStamp(message.createdAt),
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
     }
@@ -301,16 +301,16 @@ fun AgentMailBanner(unseen: Int, onClick: () -> Unit) {
                 Text(
                     text = "Агент ответил",
                     color = GrapeGreen,
-                    fontSize = Metro.Type.body,
+                    fontSize = Gioui.Type.body,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
                     text = "новых сообщений: " + unseen + " · открыть переписку",
                     color = TextSecondary,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
-            Text("→", color = GrapeGreen, fontSize = Metro.Type.body)
+            Text("→", color = GrapeGreen, fontSize = Gioui.Type.body)
         }
     }
 }

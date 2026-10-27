@@ -31,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -52,45 +51,41 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
- * Метро-раскладка GSYNK (GSUI V4).
+ * GIOUI — GSYNK INTELLIGENT OUR UI (5.0).
  *
- * Взято из исходников Metro:
- *  * **сетка 20×20** — все размеры кратны ей;
- *  * **размеры плиток** как в Windows 8: малая 1×1, средняя 2×2, широкая 4×2, большая 4×4;
- *  * **зазор между плитками** — один юнит сетки (в телефоне это 10 px при 720p, у нас 6 dp);
- *  * **типографика Segoe-стиля**: заголовки Light, только четыре размера;
- *  * **плитки строго квадратные**, цвет — акцентная заливка.
- *
- * Числа не выдуманы: это опубликованные Microsoft размеры (малая 159, средняя 336,
- * широкая 691×336 при 720p; поля 120 px слева и 140 px сверху; заголовки Segoe UI Light
- * 11/20/42 pt).
+ * Единая дизайн-система вместо старого интерфейса:
+ *  * один язык форм: карточки и плитки 24 dp, контролы 16 dp, листы 28 dp, чипы и остров — капсулы;
+ *  * одна сетка карточек: функции лежат по категориям, а не свалены одной лентой;
+ *  * одна типографика: компактные заголовки без огромных «плакатов»;
+ *  * одна виноградная палитра акцентов на тёмном фирменном фоне;
+ *  * эффекты (стекло/аврора) — по силам железа: слабому телефону честно даётся облегчённый уровень.
  */
-object Metro {
+object Gioui {
 
-    /** Юнит сетки Metro: 20 px в исходнике, у нас — 8 dp, чтобы попадать в экран. */
+    /** Юнит сетки GIOUI: 20 px в исходнике, у нас — 8 dp, чтобы попадать в экран. */
     val unit: Dp = 8.dp
 
     /** Зазор между плитками: один юнит (в исходнике 10 px на 720p). */
-    val gutter: Dp = 6.dp
+    val gutter: Dp = 10.dp
 
-    /** Сколько маленьких клеток в строке: 4 — как у широкой плитки Windows 8. */
+    /** Внутренняя сетка карточек: 4 колонки-единицы для размеров SMALL…LARGE. */
     const val COLUMNS = 4
 
     /** Панели больше не прячут функции глубже второго уровня — всё плитками. */
     val radius = Radius
 
-    /** Округления GSUI V4: плитки квадратные, важное — скруглено. */
+    /** Скругления GIOUI: единый язык форм. */
     object Radius {
-        /** Плитки Metro — строго прямые углы. */
-        val tile: Dp = 0.dp
-        /** Карточки и списки — мягкие, но не «капсулы». */
-        val card: Dp = 14.dp
-        /** Листы и диалоги — заметно скруглённые. */
-        val sheet: Dp = 22.dp
-        /** Кнопки — почти прямые, чтобы не спорить с плитками. */
-        val button: Dp = 8.dp
-        /** Переключатели и чипы — посередине. */
-        val switch: Dp = 10.dp
+        /** Карточки-функции: единый мягкий угол GIOUI. */
+        val tile: Dp = 24.dp
+        /** Карточки и списки — тот же угол, что у плиток. */
+        val card: Dp = 24.dp
+        /** Листы и диалоги — чуть круглее. */
+        val sheet: Dp = 28.dp
+        /** Кнопки и поля — единый контрольный угол. */
+        val button: Dp = 16.dp
+        /** Переключатели и чипы — как контролы. */
+        val switch: Dp = 16.dp
         /** Остров — самый скруглённый элемент приложения. */
         val island: Dp = 28.dp
         /** Панель обновления — как лист. */
@@ -98,7 +93,7 @@ object Metro {
     }
 
     object Shapes {
-        val tile = RectangleShape
+        val tile = RoundedCornerShape(Radius.tile)
         val card = RoundedCornerShape(Radius.card)
         val sheet = RoundedCornerShape(Radius.sheet)
         val button = RoundedCornerShape(Radius.button)
@@ -107,59 +102,57 @@ object Metro {
         val panel = RoundedCornerShape(Radius.panel)
     }
 
-    /** Типографика Metro: четыре размера, разные начертания, ничего лишнего. */
+    /** Типографика GIOUI: четыре размера, разные начертания, ничего лишнего. */
     object Type {
-        val pageTitle = 42.sp       // 42 pt Segoe UI Light — заголовок страницы
-        val pageSubtitle = 20.sp    // 20 pt Segoe UI Light — подзаголовок
-        val groupHeader = 15.sp     // заголовок группы: 11 pt Semilight + разрядка
-        val tileTitle = 13.sp       // подпись плитки: 11 pt Semilight
-        val tileLive = 24.sp        // живое число на плитке: 20 pt Light
-        val body = 14.sp            // текст: 11 pt
-        val caption = 11.sp         // подписи: 9 pt
+        val pageTitle = 30.sp       // заголовок страницы: крупный, но без «плаката»
+        val pageSubtitle = 17.sp    // подзаголовок страницы
+        val groupHeader = 16.sp     // заголовок категории
+        val tileTitle = 14.sp       // название на карточке-функции
+        val tileLive = 22.sp        // живое число на карточке
+        val body = 15.sp            // основной текст
+        val caption = 12.sp         // подписи
     }
 
     /**
-     * Палитра Metro. Первая половина — цвета Windows Phone 8, вторая — цвета
-     * Windows 8 (их Microsoft показывала на презентации Metro как основные).
+     * Палитра GIOUI: виноградные акценты GSYNK. Цвета достаточно насыщенные для белого
+     * текста на карточках, но не кислотные — единый набор на всё приложение.
      */
     object Palette {
-        // Windows Phone 8
-        val Cobalt = Color(0xFF0050EF)
-        val Indigo = Color(0xFF6A00FF)
-        val Violet = Color(0xFFAA00FF)
-        val Purple = Color(0xFFA200FF)
-        val Magenta = Color(0xFFD80073)
-        val Crimson = Color(0xFFA20025)
-        val Red = Color(0xFFE51400)
-        val Orange = Color(0xFFFA6800)
-        val Amber = Color(0xFFF0A30A)
-        val Yellow = Color(0xFFD8C100)
-        val Brown = Color(0xFF825A2C)
-        val Olive = Color(0xFF6D8764)
-        val Steel = Color(0xFF647687)
-        val Mauve = Color(0xFF76608A)
-        val Taupe = Color(0xFF87794E)
-        val Sienna = Color(0xFFA0522D)
+        val Cobalt = Color(0xFF3B82F6)
+        val Indigo = Color(0xFF6366F1)
+        val Violet = Color(0xFF8B5CF6)
+        val Purple = Color(0xFF7C3AED)
+        val Magenta = Color(0xFFD946EF)
+        val Crimson = Color(0xFFBE123C)
+        val Red = Color(0xFFEF4444)
+        val Orange = Color(0xFFF97316)
+        val Amber = Color(0xFFF59E0B)
+        val Yellow = Color(0xFFEAB308)
+        val Brown = Color(0xFF92400E)
+        val Olive = Color(0xFF65A30D)
+        val Steel = Color(0xFF64748B)
+        val Mauve = Color(0xFF9D7BD8)
+        val Taupe = Color(0xFFA08C5B)
+        val Sienna = Color(0xFFB45309)
 
-        // Windows Phone 8, вторая десятка
-        val Lime = Color(0xFFA4C400)
-        val Green = Color(0xFF60A917)
-        val Emerald = Color(0xFF008A00)
-        val Teal = Color(0xFF00ABA9)
-        val Cyan = Color(0xFF1BA1E2)
-        val Blue = Color(0xFF3A87AD)
-        val Pink = Color(0xFFF472D0)
-        val Mango = Color(0xFFF09609)
-        val Gray = Color(0xFF333333)
+        val Lime = Color(0xFF84CC16)
+        val Green = Color(0xFF22C55E)
+        val Emerald = Color(0xFF10B981)
+        val Teal = Color(0xFF14B8A6)
+        val Cyan = Color(0xFF06B6D4)
+        val Blue = Color(0xFF0EA5E9)
+        val Pink = Color(0xFFEC4899)
+        val Mango = Color(0xFFFB923C)
+        val Gray = Color(0xFF475569)
         val White = Color(0xFFFFFFFF)
 
-        /** Порядок для плиток приложения — от холодного к тёплому. */
+        /** Порядок акцентов карточек — от холодного к тёплому. */
         val tiles = listOf(
             Cobalt, Emerald, Purple, Amber, Magenta, Teal, Orange, Indigo,
             Green, Crimson, Cyan, Violet, Olive, Red, Steel, Lime, Mauve, Sienna, Yellow, Mango
         )
 
-        /** Акцент по имени — тот же список, что в настройках кастомизации. */
+        /** Акцент по имени — тот же список, что в настройках внешнего вида. */
         fun byName(name: String): Color = when (name) {
             "лёд" -> Cyan
             "янтарь" -> Amber
@@ -225,7 +218,7 @@ object Metro {
         }
     }
 
-    /** Раскладывает плитки и отдаёт их места — этим пользуется [MetroGrid]. */
+    /** Раскладывает плитки и отдаёт их места — этим пользуется [GioGrid]. */
     fun plan(tiles: List<Size>, columns: Int = COLUMNS): List<Pair<Int, Int>> {
         val grid = ArrayList<BooleanArray>()
         return tiles.map { tile ->
@@ -258,11 +251,11 @@ object Metro {
     }
 
     /** Текущая метка интерфейса — показывается в настройках и отчётах. */
-    const val UI_VERSION = "GSUI V4"
+    const val UI_VERSION = "GIOUI 1.0"
 }
 
 /** Уровень эффектов, доступный всему интерфейсу без лишних вызовов. */
-val LocalMetroEffects = compositionLocalOf { Metro.Effects.LIGHT }
+val LocalGiouiEffects = compositionLocalOf { Gioui.Effects.LIGHT }
 
 /** Текущая кожа (скругления и стекло) для всех компонентов: один подписчик на всё дерево. */
 val LocalSkinValues = compositionLocalOf { Skin.Values() }
@@ -297,31 +290,31 @@ fun skinGlass(): Glass.Kind = when (LocalSkinValues.current.glass) {
 }
 
 /** Ширина сетки: на большом экране плитки не растягиваются в блин. */
-val LocalMetroColumns = compositionLocalOf { Metro.COLUMNS }
+val LocalGiouiColumns = compositionLocalOf { Gioui.COLUMNS }
 
 /**
- * Сетка плиток Metro.
+ * Сетка плиток Gioui.
  *
- * Каждая плитка помечается `Modifier.metroSpan(Metro.Size.MEDIUM)` — раскладка сама
- * находит ей место, как это делает начальный экран Windows 8: без дыр и без вложенных
+ * Каждая плитка помечается `Modifier.gioSpan(Gioui.Size.MEDIUM)` — раскладка сама
+ * находит ей место без дыр и без вложенных
  * меню. Всё, что нужно человеку, лежит плиткой на одном уровне.
  */
 @LayoutScopeMarker
 @Composable
-fun MetroGrid(
+fun GioGrid(
     modifier: Modifier = Modifier,
-    columns: Int = LocalMetroColumns.current,
+    columns: Int = LocalGiouiColumns.current,
     content: @Composable () -> Unit
 ) {
-    val gutters = Metro.gutter.value * (columns - 1)
+    val gutters = Gioui.gutter.value * (columns - 1)
     Layout(content = content, modifier = modifier) { measurables, constraints ->
         val width = constraints.maxWidth
         val cell = ((width - gutters) / columns).coerceAtLeast(24f)
-        val spans = measurables.map { it.layoutId?.toString() ?: Metro.Size.MEDIUM.id }
-        val sizes = spans.map { Metro.Size.of(it) }
-        val places = Metro.plan(sizes, columns)
+        val spans = measurables.map { it.layoutId?.toString() ?: Gioui.Size.MEDIUM.id }
+        val sizes = spans.map { Gioui.Size.of(it) }
+        val places = Gioui.plan(sizes, columns)
         val cellPx = cell
-        val gutterPx = Metro.gutter.value * (if (density > 0) density else 1f)
+        val gutterPx = Gioui.gutter.value * (if (density > 0) density else 1f)
 
         val placeables = measurables.mapIndexed { index, measurable ->
             val size = sizes[index]
@@ -347,18 +340,18 @@ fun MetroGrid(
     }
 }
 
-/** Помечает плитку размером Metro: 1×1, 2×2, 4×2, 4×4. */
-fun Modifier.metroSpan(size: Metro.Size): Modifier = this.layoutId(size.id)
+/** Помечает карточку размером GIOUI: 1×1, 2×2, 4×2, 4×4. */
+fun Modifier.gioSpan(size: Gioui.Size): Modifier = this.layoutId(size.id)
 
 /**
- * Плитка начального экрана Windows 8: заливка акцентом, прямые углы, подпись внизу слева. Внутри могут жить живые значения — они приходят из состояния приложения.
+ * Карточка-функция GIOUI: градиент акцента, единый угол 24 dp, подпись внизу слева. Внутри могут жить живые значения из состояния приложения.
  */
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-fun Tile8(
+fun GioCard(
     title: String,
     subtitle: String,
-    size: Metro.Size,
+    size: Gioui.Size,
     color: Color,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
@@ -369,20 +362,20 @@ fun Tile8(
     onLongClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val effects = LocalMetroEffects.current
+    val effects = LocalGiouiEffects.current
     val titleSize = when (size) {
-        Metro.Size.SMALL -> 12.sp
-        Metro.Size.MEDIUM, Metro.Size.TALL -> Metro.Type.tileTitle
-        Metro.Size.WIDE, Metro.Size.LARGE -> 15.sp
+        Gioui.Size.SMALL -> 12.sp
+        Gioui.Size.MEDIUM, Gioui.Size.TALL -> Gioui.Type.tileTitle
+        Gioui.Size.WIDE, Gioui.Size.LARGE -> 15.sp
     }
     val textColor = if (dark) Color.White else Color(0xFF101018)
 
     Box(
         modifier
-            .metroSpan(size)
-            .clip(Metro.Shapes.tile)
-            .background(color)
-            .border(1.dp, Color.White.copy(alpha = 0.10f), Metro.Shapes.tile)
+            .gioSpan(size)
+            .clip(Gioui.Shapes.tile)
+            .background(Brush.linearGradient(listOf(color, color.copy(alpha = 0.68f))))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), Gioui.Shapes.tile)
             .then(
                 if (onLongClick != null) {
                     Modifier.combinedClickable(
@@ -409,13 +402,13 @@ fun Tile8(
             )
     ) {
         // Живое переливание: только там, где телефон это вытянет.
-        if (effects != Metro.Effects.PLAIN) {
-            MetroSheen(color = color, strong = effects == Metro.Effects.FULL)
+        if (effects != Gioui.Effects.PLAIN) {
+            GioSheen(color = color, strong = effects == Gioui.Effects.FULL)
         }
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(Metro.unit * 1.5f),
+                .padding(Gioui.unit * 1.5f),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -425,30 +418,30 @@ fun Tile8(
                         contentDescription = null,
                         tint = textColor,
                         modifier = Modifier
-                            .width(Metro.unit * 2.5f)
-                            .height(Metro.unit * 2.5f)
+                            .width(Gioui.unit * 2.5f)
+                            .height(Gioui.unit * 2.5f)
                     )
-                    Spacer(Modifier.width(Metro.unit))
+                    Spacer(Modifier.width(Gioui.unit))
                 }
                 Spacer(Modifier.weight(1f))
                 if (badge != null) {
                     Box(
                         Modifier
-                            .clip(Metro.Shapes.tile)
+                            .clip(RoundedCornerShape(percent = 50))
                             .background(Color.Black.copy(alpha = 0.28f))
-                            .padding(horizontal = Metro.unit, vertical = 2.dp)
+                            .padding(horizontal = Gioui.unit, vertical = 2.dp)
                     ) {
-                        Text(badge, color = textColor, fontSize = Metro.Type.caption, fontWeight = FontWeight.SemiBold)
+                        Text(badge, color = textColor, fontSize = Gioui.Type.caption, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
 
             Column {
-                if (live != null && size != Metro.Size.SMALL) {
+                if (live != null && size != Gioui.Size.SMALL) {
                     Text(
                         text = live,
                         color = textColor,
-                        fontSize = Metro.Type.tileLive,
+                        fontSize = Gioui.Type.tileLive,
                         fontWeight = FontWeight.Light,
                         maxLines = 1
                     )
@@ -459,13 +452,13 @@ fun Tile8(
                     color = textColor,
                     fontSize = titleSize,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = if (size == Metro.Size.SMALL) 2 else 1
+                    maxLines = if (size == Gioui.Size.SMALL) 2 else 1
                 )
-                if (size != Metro.Size.SMALL && subtitle.isNotBlank()) {
+                if (size != Gioui.Size.SMALL && subtitle.isNotBlank()) {
                     Text(
                         text = subtitle,
                         color = textColor.copy(alpha = 0.78f),
-                        fontSize = Metro.Type.caption,
+                        fontSize = Gioui.Type.caption,
                         fontWeight = FontWeight.Normal,
                         maxLines = 1
                     )
@@ -475,9 +468,9 @@ fun Tile8(
     }
 }
 
-/** Заголовок страницы Metro: крупный Light-текст и подпись под ним. */
+/** Заголовок страницы GIOUI: крупный Light-текст и подпись под ним. */
 @Composable
-fun MetroHeader(
+fun GioHeader(
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier,
@@ -486,21 +479,21 @@ fun MetroHeader(
     Row(
         modifier
             .fillMaxWidth()
-            .padding(top = Metro.unit * 2f, bottom = Metro.unit * 1.5f),
+            .padding(top = Gioui.unit * 2f, bottom = Gioui.unit * 1.5f),
         verticalAlignment = Alignment.Bottom
     ) {
         Column(Modifier.weight(1f)) {
             Text(
                 text = title,
                 color = TextPrimary,
-                fontSize = Metro.Type.pageTitle,
-                fontWeight = FontWeight.Light,
+                fontSize = Gioui.Type.pageTitle,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1
             )
             Text(
                 text = subtitle,
                 color = TextDim,
-                fontSize = Metro.Type.pageSubtitle,
+                fontSize = Gioui.Type.pageSubtitle,
                 fontWeight = FontWeight.Light,
                 maxLines = 2
             )
@@ -509,22 +502,22 @@ fun MetroHeader(
     }
 }
 
-/** Заголовок группы: как «Рабочий стол» в Windows 8 — строчные буквы и разрядка. */
+/** Заголовок группы GIOUI: строчные буквы и лёгкая разрядка. */
 @Composable
-fun MetroGroup(header: String, modifier: Modifier = Modifier) {
+fun GioGroup(header: String, modifier: Modifier = Modifier) {
     Text(
         text = header,
         color = TextPrimary.copy(alpha = 0.86f),
-        fontSize = Metro.Type.groupHeader,
+        fontSize = Gioui.Type.groupHeader,
         fontWeight = FontWeight.SemiBold,
-        modifier = modifier.padding(top = Metro.unit * 1.5f, bottom = Metro.unit),
+        modifier = modifier.padding(top = Gioui.unit * 1.5f, bottom = Gioui.unit),
         letterSpacing = 1.6.sp
     )
 }
 
-/** Плавный блик по плитке — «живая плитка» из Metro, но без лишних кадров. */
+/** Плавный блик по плитке — «живая плитка» из GIOUI, но без лишних кадров. */
 @Composable
-fun MetroSheen(color: Color, strong: Boolean) {
+fun GioSheen(color: Color, strong: Boolean) {
     val light = if (strong) 0.22f else 0.12f
     Box(
         Modifier
@@ -543,7 +536,7 @@ fun MetroSheen(color: Color, strong: Boolean) {
 
 /** Общая тема оформления: сетка и уровень эффектов для всего дерева. */
 @Composable
-fun ProvideMetro(
+fun ProvideGioui(
     context: android.content.Context,
     content: @Composable () -> Unit
 ) {
@@ -552,16 +545,16 @@ fun ProvideMetro(
     // Уровень эффектов берём по худшему из двух: что просит кожа и что тянет железо.
     val effects = remember(profile, skin.level) {
         when (minOf(skin.level, Skin.effectiveLevel(profile, skin.level))) {
-            0 -> Metro.Effects.PLAIN
-            1 -> Metro.Effects.LIGHT
-            else -> Metro.Effects.FULL
+            0 -> Gioui.Effects.PLAIN
+            1 -> Gioui.Effects.LIGHT
+            else -> Gioui.Effects.FULL
         }
     }
-    // На большом экране плиток в строке больше: так задумано в Metro для широких экранов.
-    val columns = remember(profile) { if (profile.width >= 1440) 6 else Metro.COLUMNS }
+    // На большом экране плиток в строке больше: так задумано в GIOUI для широких экранов.
+    val columns = remember(profile) { if (profile.width >= 1440) 6 else Gioui.COLUMNS }
     CompositionLocalProvider(
-        LocalMetroEffects provides effects,
-        LocalMetroColumns provides columns,
+        LocalGiouiEffects provides effects,
+        LocalGiouiColumns provides columns,
         LocalSkinValues provides skin,
         content = content
     )
@@ -569,4 +562,4 @@ fun ProvideMetro(
 
 /** Расшифровка уровня эффектов для интерфейса и отчётов. */
 fun effectsLabel(context: android.content.Context): String =
-    Metro.effectsFor(context).title + " (" + Metro.UI_VERSION + ")"
+    Gioui.effectsFor(context).title + " (" + Gioui.UI_VERSION + ")"

@@ -41,6 +41,6 @@ object CatalogGuards {
     fun everyRouteHasReceiver(routes: List<String>, sources: List<String>): Boolean =
         routes.all { routeHasReceiver(it, sources) }
 
-    /** Размер плитки должен быть одним из четырёх Metro. */
+    /** Размер плитки должен быть одним из четырёх Gioui. */
     fun knownSizes(): List<String> = listOf("1x1", "2x2", "4x2", "2x4", "4x4")
 }

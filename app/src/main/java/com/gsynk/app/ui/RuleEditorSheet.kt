@@ -110,7 +110,7 @@ fun RuleEditorSheet(
                         Text(
                             text = if (initial == null) "Новое правило" else "Правило",
                             color = TextPrimary,
-                            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light)
+                            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
                         )
                         Text(
                             text = buildString {
@@ -119,7 +119,7 @@ fun RuleEditorSheet(
                                 append(" • ${draft.daysLabel()}")
                             },
                             color = TextSecondary,
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                         )
                     }
                     Box(
@@ -178,11 +178,11 @@ fun RuleEditorSheet(
                         Spacer(Modifier.width(12.dp))
                         GradientText(
                             text = draft.timeLabel,
-                            style = MaterialTheme.typography.headlineMedium.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light),
+                            style = MaterialTheme.typography.headlineMedium.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light),
                             brush = GrapeGradientSoft
                         )
                         Spacer(Modifier.weight(1f))
-                        Text("▾", color = TextDim, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                        Text("▾", color = TextDim, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                     }
                 }
 
@@ -195,7 +195,7 @@ fun RuleEditorSheet(
                     Text(
                         text = "точный выбор",
                         color = GrapeVioletSoft,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal),
                         modifier = Modifier
                             .clip(RectangleShape)
                             .clickable { weekGridOpen = true }
@@ -233,7 +233,7 @@ fun RuleEditorSheet(
                         Text(
                             text = "очистить",
                             color = GrapeVioletSoft,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal),
                             modifier = Modifier
                                 .clip(RectangleShape)
                                 .clickable { draft = draft.withDates(emptyList()) }
@@ -258,7 +258,7 @@ fun RuleEditorSheet(
                     Text(
                         text = "После срабатывания разовое правило выключится само",
                         color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
 
@@ -275,11 +275,11 @@ fun RuleEditorSheet(
                         )
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("Повторять в течение дня", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                            Text("Повторять в течение дня", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                             Text(
                                 text = if (draft.useInterval) draft.intervalLabel else "выключено",
                                 color = TextDim,
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                             )
                         }
                         ToggleDot(
@@ -292,17 +292,17 @@ fun RuleEditorSheet(
                         Spacer(Modifier.height(12.dp))
                         SurfaceCard(corner = 16.dp, contentPadding = PaddingValues(12.dp), onClick = { timePickerFor = PickerTarget.INTERVAL_START }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Первый раз в", color = TextSecondary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                                Text("Первый раз в", color = TextSecondary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
                                 Spacer(Modifier.weight(1f))
                                 GradientText(
                                     text = draft.intervalStartLabel,
-                                    style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
                                     brush = GrapeGradientSoft
                                 )
                             }
                         }
                         Spacer(Modifier.height(10.dp))
-                        Text("Каждые…", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                        Text("Каждые…", color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
                         Spacer(Modifier.height(6.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf(1, 2, 3, 4, 6, 8, 12).forEach { h ->
@@ -327,7 +327,7 @@ fun RuleEditorSheet(
                         Text(
                             text = "Правило повторится: ${draft.intervalStartLabel}, далее ${draft.intervalLabel}",
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -390,7 +390,7 @@ fun RuleEditorSheet(
                     Text(
                         text = "Выберите дни недели или точные даты",
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                     )
                 }
             }
@@ -493,7 +493,7 @@ private fun WeekPickerDialog(
                     Text(
                         text = MONTH_NAMES[month.monthValue - 1] + " " + month.year,
                         color = TextPrimary,
-                        style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                        style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
                         modifier = Modifier.weight(1f),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
@@ -503,7 +503,7 @@ private fun WeekPickerDialog(
                 Rule.DAY_FULL.forEachIndexed { index, dayName ->
                     val day = index + 1
                     Column(Modifier.padding(vertical = 4.dp)) {
-                        Text(dayName, color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                        Text(dayName, color = TextSecondary, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
                         Spacer(Modifier.height(4.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             val options = listOf(0 to "все", 1 to "1-я", 2 to "2-я", 3 to "3-я", 4 to "4-я", -1 to "посл.")
@@ -537,7 +537,7 @@ private fun WeekPickerDialog(
                         }
                     },
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         },
@@ -575,12 +575,12 @@ private fun ValueBlock(
             Text(
                 text = title,
                 color = TextPrimary,
-                style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
                 modifier = Modifier.weight(1f)
             )
             AnimatedPercent(
                 percent = value,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
                 color = if (enabled) TextPrimary else TextDim
             )
             Spacer(Modifier.width(10.dp))

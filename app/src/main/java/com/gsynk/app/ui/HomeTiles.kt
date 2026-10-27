@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -58,10 +57,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBorder
-import com.gsynk.app.ui.theme.TileBrush
+import com.gsynk.app.ui.theme.GioBrush
 
 /**
- * Живые плитки в духе Metro.
+ * Живые плитки в духе Gioui.
  *
  * Плитка «дышит»: по фону медленно едет градиент, содержимое (цифры, подписи)
  * меняется с анимацией, нажатие отдаёт пружиной и вибрацией. Именно это отличает
@@ -105,9 +104,9 @@ fun LiveTile(
         modifier
             .height(scaledHeight)
             .scale(scale)
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(brush)
-            .border(1.dp, Color.White.copy(alpha = 0.14f), RectangleShape)
+            .border(1.dp, Color.White.copy(alpha = 0.14f), skinShape("card"))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -153,20 +152,20 @@ fun LiveTile(
                 Text(
                     text = title,
                     color = Color.White,
-                    style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
                     modifier = Modifier.weight(1f)
                 )
                 if (badge != null) {
                     Box(
                         Modifier
-                            .clip(RectangleShape)
+                            .clip(skinShape("card"))
                             .background(Color.Black.copy(alpha = 0.22f))
                             .padding(horizontal = 7.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = badge,
                             color = Color.White,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -183,7 +182,7 @@ fun LiveTile(
                     Text(
                         text = text,
                         color = Color.White,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium),
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -191,7 +190,7 @@ fun LiveTile(
             Text(
                 text = subtitle,
                 color = Color.White.copy(alpha = 0.76f),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
     }
@@ -224,7 +223,7 @@ fun ToggleTile(
     LiveTile(
         title = title,
         subtitle = if (on) onText else offText,
-        brush = if (on) TileBrush.Green else TileBrush.Ink,
+        brush = if (on) GioBrush.Green else GioBrush.Ink,
         iconRes = iconRes,
         badge = if (on) "вкл" else null,
         liveText = if (on) "Активно" else "Выключено",
@@ -269,7 +268,7 @@ fun AutopilotTile(
     LiveTile(
         title = "Автопилот",
         subtitle = if (enabled) "правил: $rulesCount" else "выключен — нажмите",
-        brush = if (enabled) TileBrush.Violet else TileBrush.Ink,
+        brush = if (enabled) GioBrush.Violet else GioBrush.Ink,
         iconRes = com.gsynk.app.R.drawable.ic_bolt,
         badge = if (enabled) "работает" else null,
         liveText = if (enabled) countdown else "Пауза",
@@ -291,7 +290,7 @@ fun DeviceTile(
     LiveTile(
         title = model.take(18),
         subtitle = tierLabel,
-        brush = if (isFull) TileBrush.Cyan else TileBrush.Ink,
+        brush = if (isFull) GioBrush.Cyan else GioBrush.Ink,
         iconRes = com.gsynk.app.R.drawable.ic_shield,
         liveText = if (isFull) "Все функции" else "Базовый набор",
         modifier = modifier,
@@ -305,15 +304,15 @@ fun AddRuleTile(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier
             .height(96.dp)
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(CardBg)
-            .border(1.dp, CardBorder, RectangleShape)
+            .border(1.dp, CardBorder, skinShape("card"))
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("＋", color = com.gsynk.app.ui.theme.GrapeVioletSoft, style = MaterialTheme.typography.headlineSmall.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light))
-            Text("Новое правило", color = com.gsynk.app.ui.theme.TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text("＋", color = com.gsynk.app.ui.theme.GrapeVioletSoft, style = MaterialTheme.typography.headlineSmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light))
+            Text("Новое правило", color = com.gsynk.app.ui.theme.TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
         }
     }
 }
@@ -327,31 +326,31 @@ fun TilePanel(
     Box(
         modifier
             .fillMaxWidth()
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(CardBg)
-            .border(1.dp, CardBorder, RectangleShape)
+            .border(1.dp, CardBorder, skinShape("card"))
             .padding(16.dp),
         content = content
     )
 }
 
 // ————————————————————————————————————————————————
-//  Плитки в духе Windows Phone 8–10 (Metro): переменный размер,
+//  Карточки GIOUI переменного размера:
 //  плоский цвет, подпись снизу слева, живой оборот обратной стороны.
 // ————————————————————————————————————————————————
 
-/** Размер плитки по сетке Metro: 1×1, 2×2 и во всю ширину. */
+/** Размер плитки по сетке GIOUI: 1×1, 2×2 и во всю ширину. */
 enum class TileSize { Small, Medium, Wide }
 
 /**
- * Живая плитка Metro.
+ * Живая плитка Gioui.
  *
  * Лицевая сторона — иконка и подпись снизу слева (подписи строчными, как в WP).
  * Каждые несколько секунд плитка переворачивается вокруг вертикальной оси и
  * показывает обратную сторону с живым значением: это и есть «live tile».
  */
 @Composable
-fun MetroTile(
+fun GioHomeCard(
     title: String,
     brush: Brush,
     modifier: Modifier = Modifier,
@@ -368,7 +367,7 @@ fun MetroTile(
     val press by animateFloatAsState(
         targetValue = if (pressed) 0.95f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-        label = "metroPress"
+        label = "giouiPress"
     )
     val height = when (size) {
         TileSize.Small -> 60.dp
@@ -413,9 +412,9 @@ fun MetroTile(
                 rotationY = if (liveText == null) 0f else angle
                 cameraDistance = 24f * density
             }
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(brush)
-            .border(1.dp, Color.White.copy(alpha = 0.12f), RectangleShape)
+            .border(1.dp, Color.White.copy(alpha = 0.12f), skinShape("card"))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -448,7 +447,7 @@ fun MetroTile(
                                 .background(Color.Black.copy(alpha = 0.28f))
                                 .padding(horizontal = 6.dp, vertical = 1.dp)
                         ) {
-                            Text(badge, color = Color.White, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                            Text(badge, color = Color.White, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
                         }
                     }
                 }
@@ -468,7 +467,7 @@ fun MetroTile(
                     Text(
                         text = subtitle.lowercase(),
                         color = Color.White.copy(alpha = 0.72f),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal),
                         maxLines = 1
                     )
                 }
@@ -486,7 +485,7 @@ fun MetroTile(
                     Text(
                         text = liveLabel.lowercase(),
                         color = Color.White.copy(alpha = 0.72f),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
                 Text(
@@ -505,19 +504,19 @@ fun MetroTile(
     }
 }
 
-/** Плитка автопилота в стиле Metro: 2×2, обратная сторона — отсчёт до правила. */
+/** Плитка автопилота в стиле GIOUI: 2×2, обратная сторона — отсчёт до правила. */
 @Composable
-fun MetroAutopilotTile(
+fun GioAutopilotCard(
     enabled: Boolean,
     countdown: String,
     rulesCount: Int,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    MetroTile(
+    GioHomeCard(
         title = "автопилот",
         subtitle = if (enabled) "правил: $rulesCount" else "выключен",
-        brush = if (enabled) TileBrush.Violet else TileBrush.Ink,
+        brush = if (enabled) GioBrush.Violet else GioBrush.Ink,
         iconRes = com.gsynk.app.R.drawable.ic_bolt,
         badge = if (enabled) "вкл" else null,
         liveText = if (enabled) countdown else "пауза",

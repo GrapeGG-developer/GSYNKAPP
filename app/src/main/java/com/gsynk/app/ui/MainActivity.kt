@@ -45,8 +45,8 @@ class MainActivity : ComponentActivity() {
                     color = Color.Transparent
                 ) {
                     val vm: MainViewModel = viewModel()
-                    // GSUI V4: сетка, уровень эффектов и скругления приходят из одного места.
-                    ProvideMetro(this) {
+                    // GIOUI: сетка, уровень эффектов и скругления приходят из одного места.
+                    ProvideGioui(this) {
                         MainScreen(vm)
                     }
                 }

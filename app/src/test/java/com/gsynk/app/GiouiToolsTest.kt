@@ -5,7 +5,7 @@ import com.gsynk.app.core.Echo
 import com.gsynk.app.core.Probe
 import com.gsynk.app.core.Pulse
 import com.gsynk.app.ui.Catalog
-import com.gsynk.app.ui.Gsui4PageIds
+import com.gsynk.app.ui.GiouiPageIds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -23,7 +23,7 @@ import kotlin.math.sin
  * поиск эха в записи, автокорреляцию пульса, размеры знаков для проверки остроты и
  * геометрию цветных пластин. Всё это считается без телефона, поэтому и проверяется здесь.
  */
-class V4P2Test {
+class GiouiToolsTest {
 
     // ————— эхо-линейка: скорость звука —————
 
@@ -399,9 +399,9 @@ class V4P2Test {
 
     @Test
     fun newPagesAreInTheRouter() {
-        val source = File("src/main/java/com/gsynk/app/ui/Gsui4Screens.kt").readText()
+        val source = File("src/main/java/com/gsynk/app/ui/GiouiScreens.kt").readText()
         listOf("echo", "eyes", "pulse").forEach { id ->
-            assertTrue("страница " + id + " объявлена, но роутер её не знает", Gsui4PageIds.contains(id))
+            assertTrue("страница " + id + " объявлена, но роутер её не знает", GiouiPageIds.contains(id))
             assertTrue("в разборщике нет ветки для " + id, source.contains("\"" + id + "\" -> {"))
         }
     }

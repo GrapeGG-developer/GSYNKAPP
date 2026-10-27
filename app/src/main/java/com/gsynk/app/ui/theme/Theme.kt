@@ -2,6 +2,7 @@ package com.gsynk.app.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -9,15 +10,17 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gsynk.app.R
 
 /**
- * Единый шрифт приложения — Inter с тонкими начертаниями.
+ * Единый шрифт GIOUI — Inter с полноценной кириллицей.
  *
- * Это свободный аналог Segoe UI: тот же гуманистический гротеск, та же плотность
- * букв, но с полноценной кириллицей и открытой лицензией. Крупные заголовки идут
- * в Thin (как Segoe UI Thin), подписи — Light, текст — Regular/Medium.
+ * Характер у типографики новый: заголовки компактные и уверенные (Medium/SemiBold,
+ * без гигантских «плакатов»), текст спокойный Regular, подписи Medium с лёгкой
+ * разрядкой. Шкала совпадает с Gioui.Type, чтобы все экраны звучали одним голосом.
  */
 val GsynkFont = FontFamily(
     Font(R.font.inter_thin, FontWeight.Thin),
@@ -50,24 +53,24 @@ private val GsynkColors = darkColorScheme(
 
 private val GsynkTypography = Typography().let { base ->
     base.copy(
-        // крупные заголовки — тонкие, как в Segoe UI Thin
+        // заголовки GIOUI — компактные и уверенные
         displaySmall = TextStyle(
-            fontFamily = GsynkFont, fontWeight = FontWeight.Thin, fontSize = 42.sp, letterSpacing = (-0.8).sp
+            fontFamily = GsynkFont, fontWeight = FontWeight.SemiBold, fontSize = 30.sp, letterSpacing = (-0.8).sp
         ),
         displayMedium = TextStyle(
-            fontFamily = GsynkFont, fontWeight = FontWeight.Thin, fontSize = 54.sp, letterSpacing = (-1.2).sp
+            fontFamily = GsynkFont, fontWeight = FontWeight.SemiBold, fontSize = 36.sp, letterSpacing = (-1.2).sp
         ),
         headlineLarge = TextStyle(
-            fontFamily = GsynkFont, fontWeight = FontWeight.Thin, fontSize = 34.sp, letterSpacing = (-0.6).sp
+            fontFamily = GsynkFont, fontWeight = FontWeight.Medium, fontSize = 28.sp, letterSpacing = (-0.6).sp
         ),
         headlineMedium = TextStyle(
-            fontFamily = GsynkFont, fontWeight = FontWeight.Light, fontSize = 27.sp, letterSpacing = (-0.4).sp
+            fontFamily = GsynkFont, fontWeight = FontWeight.Medium, fontSize = 24.sp, letterSpacing = (-0.4).sp
         ),
         headlineSmall = TextStyle(
-            fontFamily = GsynkFont, fontWeight = FontWeight.Light, fontSize = 22.sp, letterSpacing = (-0.2).sp
+            fontFamily = GsynkFont, fontWeight = FontWeight.Medium, fontSize = 20.sp, letterSpacing = (-0.2).sp
         ),
         titleLarge = TextStyle(
-            fontFamily = GsynkFont, fontWeight = FontWeight.Light, fontSize = 19.sp, letterSpacing = 0.sp
+            fontFamily = GsynkFont, fontWeight = FontWeight.Medium, fontSize = 18.sp, letterSpacing = 0.sp
         ),
         titleMedium = TextStyle(
             fontFamily = GsynkFont, fontWeight = FontWeight.Medium, fontSize = 15.5.sp, letterSpacing = 0.1.sp
@@ -82,7 +85,7 @@ private val GsynkTypography = Typography().let { base ->
             fontFamily = GsynkFont, fontWeight = FontWeight.Normal, fontSize = 13.5.sp, lineHeight = 19.sp
         ),
         bodySmall = TextStyle(
-            fontFamily = GsynkFont, fontWeight = FontWeight.Light, fontSize = 12.sp, lineHeight = 16.sp
+            fontFamily = GsynkFont, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp
         ),
         labelLarge = TextStyle(
             fontFamily = GsynkFont, fontWeight = FontWeight.Medium, fontSize = 13.sp, letterSpacing = 0.4.sp
@@ -91,7 +94,7 @@ private val GsynkTypography = Typography().let { base ->
             fontFamily = GsynkFont, fontWeight = FontWeight.Medium, fontSize = 11.5.sp, letterSpacing = 0.5.sp
         ),
         labelSmall = TextStyle(
-            fontFamily = GsynkFont, fontWeight = FontWeight.Light, fontSize = 10.5.sp, letterSpacing = 0.6.sp
+            fontFamily = GsynkFont, fontWeight = FontWeight.Medium, fontSize = 11.sp, letterSpacing = 0.6.sp
         )
     )
 }
@@ -101,6 +104,13 @@ fun GSYNKTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = GsynkColors,
         typography = GsynkTypography,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(12.dp),
+            small = RoundedCornerShape(16.dp),
+            medium = RoundedCornerShape(24.dp),
+            large = RoundedCornerShape(28.dp),
+            extraLarge = RoundedCornerShape(32.dp)
+        ),
         content = content
     )
 }

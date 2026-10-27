@@ -295,16 +295,16 @@ fun SurfaceCard(
     contentPadding: PaddingValues = PaddingValues(18.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    // Скругление карточки берём из кожи: у каждого элемента своё, как в GSUI V4.
+    // Скругление карточки берём из кожи: у каждого элемента своё, как в GIOUI.
     val shape: androidx.compose.ui.graphics.Shape =
         if (corner > 0.dp) androidx.compose.foundation.shape.RoundedCornerShape(corner) else skinShape("card")
-    val effectsLevel = LocalMetroEffects.current
+    val effectsLevel = LocalGiouiEffects.current
     Column(
         modifier
             .fillMaxWidth()
             .let { base ->
                 // Тень дорога на слабом железе: там её нет, границу держит рамка.
-                if (effectsLevel == Metro.Effects.FULL) {
+                if (effectsLevel == Gioui.Effects.FULL) {
                     base.shadow(6.dp, shape, ambientColor = Color.Black, spotColor = Color.Black)
                 } else {
                     base
@@ -371,7 +371,7 @@ fun PrimaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
-    // Кнопка Metro: плотная заливка, своё скругление, отклик масштабом.
+    // Кнопка GIOUI: плотная заливка, своё скругление, отклик масштабом.
     val shape = skinShape("button")
     val scale by animateFloatAsState(
         targetValue = if (enabled) 1f else 0.99f,
@@ -401,7 +401,7 @@ fun PrimaryButton(
             Text(
                 text = text,
                 color = if (enabled) Color(0xFF120720) else TextDim,
-                fontSize = Metro.Type.body,
+                fontSize = Gioui.Type.body,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.6.sp
             )
@@ -433,7 +433,7 @@ fun SecondaryButton(
             Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
         }
-        Text(text, color = tint, fontSize = Metro.Type.body, fontWeight = FontWeight.Medium)
+        Text(text, color = tint, fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -516,14 +516,14 @@ fun NeoSlider(
             Modifier
                 .fillMaxWidth()
                 .height(14.dp)
-                .clip(RectangleShape)
+                .clip(skinShape("card"))
                 .background(TrackBg)
         ) {
             Box(
                 Modifier
                     .fillMaxWidth(animatedFill)
                     .fillMaxHeight()
-                    .clip(RectangleShape)
+                    .clip(skinShape("card"))
                     .background(
                         if (enabled) {
                             brush
@@ -538,9 +538,9 @@ fun NeoSlider(
             Modifier
                 .offset { IntOffset(((widthState.floatValue - thumbPx) * animatedFill).roundToInt(), 0) }
                 .size(thumbSize)
-                .clip(RectangleShape)
+                .clip(skinShape("card"))
                 .background(if (enabled) Color(0xFFF3ECFF) else Color(0xFF8E82A8))
-                .border(1.dp, if (enabled) GrapeViolet else ChipBorder, RectangleShape)
+                .border(1.dp, if (enabled) GrapeViolet else ChipBorder, skinShape("card"))
         )
     }
 }
@@ -586,7 +586,7 @@ fun DayChip(
         Text(
             text = label,
             color = if (selected) TextPrimary else TextSecondary,
-            style = MaterialTheme.typography.labelLarge.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal),
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal),
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
         )
     }
@@ -598,7 +598,7 @@ fun TagChip(
     selected: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
-    val shape = RectangleShape
+    val shape = skinShape("card")
     Box(
         Modifier
             .clip(shape)
@@ -610,7 +610,7 @@ fun TagChip(
         Text(
             text = text,
             color = if (selected) TextPrimary else TextSecondary,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal),
             fontWeight = FontWeight.Medium
         )
     }
@@ -651,14 +651,14 @@ fun ProgressLine(
         modifier
             .width(width)
             .height(8.dp)
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(TrackBg)
     ) {
         Box(
             Modifier
                 .fillMaxWidth(fraction)
                 .fillMaxHeight()
-                .clip(RectangleShape)
+                .clip(skinShape("card"))
                 .background(brush)
         )
     }
@@ -673,15 +673,15 @@ fun MetricPill(
 ) {
     Row(
         modifier
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(ChipBg)
-            .border(1.dp, ChipBorder, RectangleShape)
+            .border(1.dp, ChipBorder, skinShape("card"))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(6.dp))
-        Text(text, color = TextPrimary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+        Text(text, color = TextPrimary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
     }
 }
 
@@ -711,19 +711,19 @@ fun PulseDot(color: Color, modifier: Modifier = Modifier) {
         modifier
             .size(10.dp)
             .scale(scale)
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(color.copy(alpha = alpha))
     )
 }
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    // Metro: заголовок группы — строчными буквами, с разрядкой, без капса.
+    // GIOUI: заголовок группы — строчными буквами, с разрядкой, без капса.
     Text(
         text = text.lowercase(),
-        modifier = modifier.padding(top = Metro.unit, bottom = Metro.unit / 2f),
+        modifier = modifier.padding(top = Gioui.unit, bottom = Gioui.unit / 2f),
         color = TextPrimary.copy(alpha = 0.88f),
-        fontSize = Metro.Type.groupHeader,
+        fontSize = Gioui.Type.groupHeader,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 1.6.sp
     )
@@ -768,7 +768,7 @@ fun SheetGrabber(modifier: Modifier = Modifier) {
         modifier
             .width(44.dp)
             .height(5.dp)
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(ChipBorder)
     )
 }
@@ -798,7 +798,7 @@ fun GrapeTextField(
         } else {
             androidx.compose.ui.text.input.VisualTransformation.None
         },
-        shape = RectangleShape,
+        shape = skinShape("sheet"),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = GrapeViolet,
@@ -829,9 +829,9 @@ fun GrapeScreen(
     content: @Composable ColumnScope.() -> Unit
 ) {
     AnimatedGrapeBackground {
-        // GSUI V4p1: живое сияние поверх общего фона — на КАЖДОМ экране, а не только на главном.
+        // GIOUI: живое сияние поверх общего фона — на КАЖДОМ экране, а не только на главном.
         // На слабом железе слой не рисуется: там эффекты выключаются целиком.
-        if (LocalMetroEffects.current != Metro.Effects.PLAIN) {
+        if (LocalGiouiEffects.current != Gioui.Effects.PLAIN) {
             Box(Modifier.fillMaxSize()) { AuroraField(intensity = 0.5f, speedMillis = 26_000) }
         }
         Column(
@@ -847,7 +847,7 @@ fun GrapeScreen(
                     .padding(top = 12.dp, bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Кнопка возврата — как значок на панели приложения Metro: 44×44, без заливки.
+                // Кнопка возврата — как значок на панели приложения GIOUI: 44×44, без заливки.
                 Box(
                     Modifier
                         .size(44.dp)
@@ -861,13 +861,13 @@ fun GrapeScreen(
                 ) {
                     Text("←", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Light)
                 }
-                Spacer(Modifier.width(Metro.unit * 1.5f))
+                Spacer(Modifier.width(Gioui.unit * 1.5f))
                 Column(Modifier.weight(1f)) {
-                    // Тонкий крупный заголовок страницы: 42 pt в исходнике Metro.
+                    // Тонкий крупный заголовок страницы: 42 pt в исходнике Gioui.
                     GradientText(
                         text = title,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = Metro.Type.tileLive, fontWeight = FontWeight.Light).copy(
-                            fontSize = Metro.Type.pageTitle,
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(
+                            fontSize = Gioui.Type.pageTitle,
                             fontWeight = FontWeight.Light,
                             letterSpacing = (-0.6).sp
                         ),
@@ -877,7 +877,7 @@ fun GrapeScreen(
                         Text(
                             text = subtitle,
                             color = TextDim,
-                            fontSize = Metro.Type.pageSubtitle,
+                            fontSize = Gioui.Type.pageSubtitle,
                             fontWeight = FontWeight.Light
                         )
                     }
@@ -1003,7 +1003,7 @@ fun SortChip(
         Text(
             text = label,
             color = if (selected) TextPrimary else TextSecondary,
-            fontSize = Metro.Type.caption,
+            fontSize = Gioui.Type.caption,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             letterSpacing = 0.4.sp
         )
@@ -1022,13 +1022,13 @@ fun InfoRow(label: String, value: String, accent: Color = TextPrimary) {
         Text(
             text = label,
             color = TextDim,
-            fontSize = Metro.Type.caption,
+            fontSize = Gioui.Type.caption,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = value,
             color = accent,
-            fontSize = Metro.Type.body,
+            fontSize = Gioui.Type.body,
             fontWeight = FontWeight.Medium
         )
     }
@@ -1046,14 +1046,14 @@ fun BarIndicator(percent: Int, brush: Brush, modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .height(7.dp)
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(TrackBg)
     ) {
         Box(
             Modifier
                 .fillMaxHeight()
                 .fillMaxWidth(animated.coerceAtLeast(0.01f))
-                .clip(RectangleShape)
+                .clip(skinShape("card"))
                 .background(brush)
         )
     }
@@ -1070,9 +1070,9 @@ fun GlowIconButton(
     Box(
         modifier
             .size(40.dp)
-            .clip(RectangleShape)
+            .clip(skinShape("card"))
             .background(CardBg)
-            .border(1.dp, ChipBorder, RectangleShape)
+            .border(1.dp, ChipBorder, skinShape("card"))
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {

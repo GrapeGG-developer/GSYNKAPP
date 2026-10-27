@@ -48,7 +48,7 @@ import com.gsynk.app.ui.theme.TextPrimary
 import java.time.LocalDate
 
 /**
- * Страницы GSUI V4.
+ * Страницы GIOUI.
  *
  * Здесь живёт всё, что появилось в четвёртой версии интерфейса: живой остров 2.0,
  * ползунки эффектов и скруглений, «каждый день» с новым содержимым, пасхалки и
@@ -66,7 +66,7 @@ fun Island2Screen(vm: MainViewModel, onBack: () -> Unit) {
 
     GrapeScreen(title = "Остров 2.0", subtitle = "вплотную под камерой", onBack = onBack) {
         SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.45f)) {
-            Text("Где садится капсула", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Где садится капсула", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (cutout > 0) {
@@ -76,7 +76,7 @@ fun Island2Screen(vm: MainViewModel, onBack: () -> Unit) {
                     "Выреза под камеру нет: остров садится под строкой состояния."
                 },
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(10.dp))
             InfoRow("Позиция", com.gsynk.app.core.IslandPosition.label(settings.islandPosition))
@@ -139,14 +139,14 @@ fun Island2Screen(vm: MainViewModel, onBack: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text("Живое стекло", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Живое стекло", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Капсула не стоит на месте: два оттенка перетекают друг в друга " +
                     "в реальном времени, а не по картинке. На слабом телефоне это " +
                     "выключается вместе с уровнем эффектов.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
         }
         Spacer(Modifier.height(20.dp))
@@ -166,7 +166,7 @@ fun EffectsScreen(onBack: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .height(210.dp)
-                .clip(Metro.Shapes.card)
+                .clip(Gioui.Shapes.card)
         ) {
             GrainField(
                 modifier = Modifier.fillMaxSize(),
@@ -178,12 +178,12 @@ fun EffectsScreen(onBack: () -> Unit) {
             }
             GlassPanel(modifier = Modifier.fillMaxSize(), kind = glassKind(skin.glass)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.Bottom) {
-                    Text("живьём", color = Color.White, fontSize = Metro.Type.pageSubtitle)
+                    Text("живьём", color = Color.White, fontSize = Gioui.Type.pageSubtitle)
                     Text(
                         text = "стекло: " + Skin.glassTitle(skin.glass) + ", размытие " + skin.blur + " dp, " +
                             "лучей " + skin.rays + ", фон " + skin.speed + "%",
                         color = Color.White.copy(alpha = 0.8f),
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
             }
@@ -204,7 +204,7 @@ fun EffectsScreen(onBack: () -> Unit) {
             text = if (profile.isFull) "Телефон тянет полный набор." else
                 "Телефон слабее: полный набор ограничен, чтобы не терять плавность.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
 
         Spacer(Modifier.height(12.dp))
@@ -255,7 +255,7 @@ fun EffectsScreen(onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Сетка Metro и скорость фона")
+        SectionTitle("Сетка GIOUI и скорость фона")
         Spacer(Modifier.height(7.dp))
         ChipFlow {
             SortChip("сетка 20 px", skin.grid) { Skin.save(context, skin.copy(grid = true)) }
@@ -277,12 +277,12 @@ fun EffectsScreen(onBack: () -> Unit) {
             SurfaceCard(borderColor = if (values.glass == skin.glass) GrapeVioletSoft.copy(alpha = 0.5f) else CardBorder) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(title, color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                        Text(title, color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                         Text(
                             text = "стекло " + Skin.glassTitle(values.glass) + " · размытие " + values.blur +
                                 " · скругления " + values.card + "/" + values.toggle,
                             color = TextDim,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                     SortChip("взять", skin == values) {
@@ -296,20 +296,20 @@ fun EffectsScreen(onBack: () -> Unit) {
     }
 }
 
-/** Скругления: у каждого элемента своё. */
+/** Скругления GIOUI: единая система, настраивается вокруг канона. */
 @Composable
 fun RadiusScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val skin by Skin.values.collectAsStateWithLifecycle()
 
-    GrapeScreen(title = "Скругления", subtitle = "у каждого элемента своё", onBack = onBack) {
+    GrapeScreen(title = "Скругления", subtitle = "Единая система GIOUI", onBack = onBack) {
         Box(
             Modifier
                 .fillMaxWidth()
                 .height(150.dp)
-                .clip(Metro.Shapes.card)
+                .clip(Gioui.Shapes.card)
                 .background(CardBgAlt)
-                .border(1.dp, CardBorder, Metro.Shapes.card),
+                .border(1.dp, CardBorder, Gioui.Shapes.card),
             contentAlignment = Alignment.Center
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -318,70 +318,70 @@ fun RadiusScreen(onBack: () -> Unit) {
                         .width(64.dp)
                         .height(64.dp)
                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(skin.tile.dp))
-                        .background(Metro.Palette.Purple)
+                        .background(Gioui.Palette.Purple)
                 )
                 Box(
                     Modifier
                         .width(64.dp)
                         .height(64.dp)
-                        .clip(Metro.Shapes.card)
-                        .background(Metro.Palette.Teal)
+                        .clip(Gioui.Shapes.card)
+                        .background(Gioui.Palette.Teal)
                 )
                 Box(
                     Modifier
                         .width(64.dp)
                         .height(40.dp)
                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(skin.toggle.dp))
-                        .background(Metro.Palette.Amber)
+                        .background(Gioui.Palette.Amber)
                 )
                 Box(
                     Modifier
                         .width(64.dp)
                         .height(40.dp)
                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(skin.island.dp))
-                        .background(Metro.Palette.Cobalt)
+                        .background(Gioui.Palette.Cobalt)
                 )
             }
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Слева направо: плитка, карточка, переключатель, остров. Плитки Metro остаются " +
-                "прямыми по умолчанию — так задумано, но и их можно скруглить.",
+            text = "Слева направо: карточка-функция, карточка, переключатель, остров. В GIOUI это одна " +
+                "система: канон — карточки 24 dp, контролы 16 dp, листы 28 dp, остров — капсула.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
 
         Spacer(Modifier.height(14.dp))
-        radiusGroup("Плитки", skin.tile, listOf(0, 2, 6, 12)) { value ->
+        radiusGroup("Карточки-функции", skin.tile, listOf(16, 20, 24, 28)) { value ->
             Skin.save(context, skin.copy(tile = value))
         }
-        radiusGroup("Карточки", skin.card, listOf(0, 8, 14, 20)) { value ->
+        radiusGroup("Карточки", skin.card, listOf(16, 20, 24, 28)) { value ->
             Skin.save(context, skin.copy(card = value))
         }
-        radiusGroup("Кнопки", skin.button, listOf(0, 4, 8, 16)) { value ->
+        radiusGroup("Кнопки", skin.button, listOf(12, 14, 16, 20)) { value ->
             Skin.save(context, skin.copy(button = value))
         }
-        radiusGroup("Переключатели", skin.toggle, listOf(0, 6, 10, 16)) { value ->
+        radiusGroup("Переключатели", skin.toggle, listOf(12, 14, 16, 20)) { value ->
             Skin.save(context, skin.copy(toggle = value))
         }
-        radiusGroup("Листы и панели", skin.sheet, listOf(0, 12, 22, 32)) { value ->
+        radiusGroup("Листы и панели", skin.sheet, listOf(20, 24, 28, 32)) { value ->
             Skin.save(context, skin.copy(sheet = value))
         }
-        radiusGroup("Остров (самый скруглённый)", skin.island, listOf(16, 24, 32, 40)) { value ->
+        radiusGroup("Остров (капсула)", skin.island, listOf(24, 28, 32, 40)) { value ->
             Skin.save(context, skin.copy(island = value))
         }
 
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SecondaryButton(
-                text = "Всё прямое",
-                onClick = { Skin.save(context, skin.copy(tile = 0, card = 0, sheet = 0, button = 0, toggle = 0)) },
+                text = "Канон GIOUI",
+                onClick = { Skin.save(context, skin.copy(tile = 24, card = 24, sheet = 28, button = 16, toggle = 16, island = 32)) },
                 modifier = Modifier.weight(1f)
             )
             SecondaryButton(
                 text = "Всё скруглённое",
                 onClick = {
-                    Skin.save(context, skin.copy(tile = 6, card = 18, sheet = 28, button = 12, toggle = 16))
+                    Skin.save(context, skin.copy(tile = 30, card = 30, sheet = 34, button = 20, toggle = 20))
                     // Пасхалка «клавиатура из плиток»: всё скруглено до предела.
                     Eggs.unlock(context, "keyboard")
                 },
@@ -432,26 +432,26 @@ fun EverydayScreen(onBack: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .height(180.dp)
-                .clip(Metro.Shapes.card)
-                .background(Metro.Palette.tiles[day.tone % Metro.Palette.tiles.size])
+                .clip(Gioui.Shapes.card)
+                .background(Gioui.Palette.tiles[day.tone % Gioui.Palette.tiles.size])
         ) {
             GlassPanel(modifier = Modifier.fillMaxSize(), kind = Glass.Kind.FROST) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         text = day.title,
                         color = Color.White,
-                        fontSize = Metro.Type.pageTitle
+                        fontSize = Gioui.Type.pageTitle
                     )
                     Column {
                         Text(
                             text = "число дня: " + day.number + " · " + day.word,
                             color = Color.White.copy(alpha = 0.85f),
-                            style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                         )
                         Text(
                             text = "открыто дней: " + opened + " · " + Everyday.rewardFor(streak),
                             color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -462,19 +462,19 @@ fun EverydayScreen(onBack: () -> Unit) {
         SectionTitle("Факт о железе")
         Spacer(Modifier.height(6.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text(day.fact, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text(day.fact, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
         }
 
         Spacer(Modifier.height(12.dp))
         SectionTitle("Задание дня")
         Spacer(Modifier.height(6.dp))
         SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.4f)) {
-            Text(day.task, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text(day.task, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Выполнишь — отметь галочкой: счётчик заданий растёт, а серия не рвётся.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
             SortChip("сделано", false) {
@@ -492,7 +492,7 @@ fun EverydayScreen(onBack: () -> Unit) {
             Text(
                 text = if (taken) "Подарок на сегодня забран" else Everyday.rewardFor(streak),
                 color = TextPrimary,
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
             PrimaryButton(
@@ -512,7 +512,7 @@ fun EverydayScreen(onBack: () -> Unit) {
         SectionTitle("Прикол дня")
         Spacer(Modifier.height(6.dp))
         SurfaceCard(borderColor = CardBorder) {
-            Text(day.joke, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text(day.joke, color = TextPrimary, style = MaterialTheme.typography.bodyMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
         }
 
         Spacer(Modifier.height(12.dp))
@@ -521,13 +521,13 @@ fun EverydayScreen(onBack: () -> Unit) {
         SurfaceCard(borderColor = CardBorder) {
             val total = Eggs.ALL.size
             val foundNow = Eggs.found(context).size
-            Text("Найдено " + foundNow + " из " + total, color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+            Text("Найдено " + foundNow + " из " + total, color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Открывай их сама: секретных входов больше, чем кажется. " +
                     "Один из них — семь касаний значка на главной.",
                 color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )
             Spacer(Modifier.height(8.dp))
             SecondaryButton(
@@ -538,7 +538,7 @@ fun EverydayScreen(onBack: () -> Unit) {
         }
         if (eggFound != null) {
             Spacer(Modifier.height(8.dp))
-            Text(eggFound!!, color = GrapeGreen, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+            Text(eggFound!!, color = GrapeGreen, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(20.dp))
     }
@@ -573,20 +573,20 @@ fun EasterScreen(onBack: () -> Unit) {
         )
         message?.let {
             Spacer(Modifier.height(8.dp))
-            Text(it, color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+            Text(it, color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
         }
         // Все секреты найдены: набор кожи, которого нет в обычном списке эффектов.
         if (found.size >= Eggs.ALL.size - 1) {
             Spacer(Modifier.height(12.dp))
             Eggs.unlock(context, "all")
             SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.5f)) {
-                Text("Секретный набор кожи", color = GrapeGreen, style = MaterialTheme.typography.titleMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
+                Text("Секретный набор кожи", color = GrapeGreen, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "«Виноградовая ночь»: аква-стекло, размытие 18, лучи 9 и почти капсульные " +
                         "скругления у всего. Такого набора нет в списке эффектов — он только за пасхалки.",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                 )
                 Spacer(Modifier.height(8.dp))
                 PrimaryButton(
@@ -606,9 +606,9 @@ fun EasterScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         Eggs.ALL.filter { it.id in found }.forEach { egg ->
             SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.35f)) {
-                Text(egg.title, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Medium))
-                Text(egg.secret, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
-                Text("награда: " + egg.reward, color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal))
+                Text(egg.title, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Text(egg.secret, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
+                Text("награда: " + egg.reward, color = GrapeGreen, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -618,7 +618,7 @@ fun EasterScreen(onBack: () -> Unit) {
                     text = "Пока ничего не найдено. Начни со значка винограда на главной: " +
                         "семь касаний подряд откроют первую пасхалку.",
                     color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                 )
             }
         }
@@ -628,34 +628,34 @@ fun EasterScreen(onBack: () -> Unit) {
 
 @Composable
 private fun GridOfSecrets(items: List<Triple<String, String, Boolean>>) {
-    Column(verticalArrangement = Arrangement.spacedBy(Metro.gutter)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Gioui.gutter)) {
         items.chunked(4).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(Metro.gutter)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Gioui.gutter)) {
                 row.forEach { (title, hint, opened) ->
                     Box(
                         Modifier
                             .weight(1f)
                             .height(96.dp)
-                            .clip(Metro.Shapes.tile)
+                            .clip(Gioui.Shapes.tile)
                             .background(
-                                if (opened) Metro.Palette.Emerald
-                                else Metro.Palette.Gray.copy(alpha = 0.55f)
+                                if (opened) Gioui.Palette.Emerald
+                                else Gioui.Palette.Gray.copy(alpha = 0.55f)
                             )
-                            .border(1.dp, Color.White.copy(alpha = 0.12f), Metro.Shapes.tile)
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), Gioui.Shapes.tile)
                             .padding(8.dp)
                     ) {
                         Column(verticalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxSize()) {
                             Text(
                                 text = if (opened) "✓" else "?",
                                 color = Color.White,
-                                fontSize = Metro.Type.pageSubtitle
+                                fontSize = Gioui.Type.pageSubtitle
                             )
                             Column {
-                                Text(title, color = Color.White, style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal))
+                                Text(title, color = Color.White, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
                                 Text(
                                     hint,
                                     color = Color.White.copy(alpha = 0.75f),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal),
                                     maxLines = 2
                                 )
                             }
@@ -684,9 +684,9 @@ fun SurpriseScreen(onBack: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .height(190.dp)
-                .clip(Metro.Shapes.card)
+                .clip(Gioui.Shapes.card)
         ) {
-            GrainField(Modifier.fillMaxSize(), accent = Metro.Palette.Magenta, second = Metro.Palette.Amber, speed = 1.4f)
+            GrainField(Modifier.fillMaxSize(), accent = Gioui.Palette.Magenta, second = Gioui.Palette.Amber, speed = 1.4f)
             GlassPanel(modifier = Modifier.fillMaxSize(), kind = Glass.Kind.AQUA) {
                 Column(
                     Modifier
@@ -697,18 +697,18 @@ fun SurpriseScreen(onBack: () -> Unit) {
                     Text(
                         text = picked?.title ?: "крути",
                         color = Color.White,
-                        fontSize = Metro.Type.pageTitle
+                        fontSize = Gioui.Type.pageTitle
                     )
                     Column {
                         Text(
                             text = picked?.subtitle ?: "нажми — выпадет что-нибудь из приложения",
                             color = Color.White.copy(alpha = 0.85f),
-                            style = MaterialTheme.typography.labelMedium.copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.body, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                         )
                         Text(
                             text = "открыто раз: " + opened + " · " + daily.word,
                             color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                         )
                     }
                 }
@@ -750,26 +750,27 @@ fun SurpriseScreen(onBack: () -> Unit) {
             text = "Рулетка не повторяет предыдущую функцию и знает про железо: на слабом телефоне " +
                 "тяжёлые вещи не выпадают.",
             color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Metro.Type.caption, fontWeight = FontWeight.Normal)
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
         Spacer(Modifier.height(20.dp))
     }
 }
 
 /**
- * Экраны GSUI V4 наружу: роутер отдаёт сюда маршруты `page:…`.
+ * Экраны GIOUI наружу: роутер отдаёт сюда маршруты `page:…`.
  * Рядом — список идентификаторов: по нему тесты проверяют, что каждая страница
  * действительно разбирается в `when` ниже.
  */
 
-val Gsui4PageIds: List<String> = listOf(
+val GiouiPageIds: List<String> = listOf(
     "island", "effects", "radius", "everyday", "easter", "surprise", "ai", "bench",
-    // V4p2: добавка GSUI V4 — эхо-линейка, проверка глаз и пульс камерой
-    "echo", "eyes", "pulse"
+    "echo", "eyes", "pulse",
+    // GIOUI 5.0: шифраторы — один экран, разные стартовые пресеты
+    "ciphers", "cipherlock", "ciphergrape", "cipherauto"
 )
 
 @Composable
-fun Gsui4Page(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
+fun GiouiPage(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
     when (id) {
         "island" -> { Island2Screen(vm, onBack); return true }
         "effects" -> { EffectsScreen(onBack); return true }
@@ -782,6 +783,10 @@ fun Gsui4Page(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
         "echo" -> { EchoRulerScreen(onBack); return true }
         "eyes" -> { EyeScreen(onBack); return true }
         "pulse" -> { PulseScreen(onBack); return true }
+        "ciphers" -> { CipherScreen(onBack); return true }
+        "cipherlock" -> { CipherScreen(onBack, initialCipher = "lock"); return true }
+        "ciphergrape" -> { CipherScreen(onBack, initialCipher = "fruit"); return true }
+        "cipherauto" -> { CipherScreen(onBack, initialDecrypt = true); return true }
     }
     return false
 }

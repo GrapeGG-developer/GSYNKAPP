@@ -2,7 +2,7 @@ package com.gsynk.app
 
 import com.gsynk.app.core.ChipLab
 import com.gsynk.app.ui.Catalog
-import com.gsynk.app.ui.Gsui4PageIds
+import com.gsynk.app.ui.GiouiPageIds
 import com.gsynk.app.ui.PhaseIds
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,7 +18,7 @@ import org.junit.Test
  * имеет экран, и папки в каталоге ведут туда, куда написано. Тесты держат интерфейс
  * честным: если плитка есть, за ней обязана быть страница.
  */
-class V4P1Test {
+class GiouiExtraTest {
 
     // ————— hex: как читают узлы —————
 
@@ -180,7 +180,7 @@ class V4P1Test {
 
     @Test
     fun everyPhaseRouteIsKnownToTheRouter() {
-        val source = java.io.File("src/main/java/com/gsynk/app/ui/V4P1Screens.kt").readText()
+        val source = java.io.File("src/main/java/com/gsynk/app/ui/GiouiExtraScreens.kt").readText()
         PhaseIds.forEach { id ->
             assertTrue(
                 "роутер не знает фазу " + id,
@@ -194,7 +194,7 @@ class V4P1Test {
     @Test
     fun everyTileBelongsToAFolder() {
         val folders = Catalog.Group.entries
-        assertEquals(7, folders.size)
+        assertEquals(8, folders.size) // 5.0: добавлены «шифраторы»
         Catalog.ALL.forEach { entry ->
             assertTrue("плитка без папки: " + entry.id, entry.group in folders)
         }
@@ -247,10 +247,10 @@ class V4P1Test {
 
     @Test
     fun pageIdsAreUniqueAcrossBothScreenFiles() {
-        assertEquals(Gsui4PageIds.size, Gsui4PageIds.distinct().size)
+        assertEquals(GiouiPageIds.size, GiouiPageIds.distinct().size)
         assertEquals(PhaseIds.size, PhaseIds.distinct().size)
         // Одна страница не может жить в двух местах: иначе роутер выберет случайную.
-        val both = Gsui4PageIds.intersect(PhaseIds.toSet())
+        val both = GiouiPageIds.intersect(PhaseIds.toSet())
         assertFalse("страницы объявлены дважды: " + both, both.isNotEmpty())
     }
 }

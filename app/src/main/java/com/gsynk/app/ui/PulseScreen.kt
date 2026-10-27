@@ -143,7 +143,7 @@ fun PulseScreen(onBack: () -> Unit) {
             Text(
                 "как приложить палец",
                 color = GrapePink,
-                fontSize = Metro.Type.body,
+                fontSize = Gioui.Type.body,
                 fontWeight = FontWeight.Medium
             )
             Spacer(Modifier.height(6.dp))
@@ -152,7 +152,7 @@ fun PulseScreen(onBack: () -> Unit) {
                     "сквозь палец. Давить сильно не нужно: от давления кровь уходит, и сигнал пропадает. " +
                     "Рука должна лежать на столе, а не висеть.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
 
@@ -163,13 +163,13 @@ fun PulseScreen(onBack: () -> Unit) {
                     Text(
                         text = if (running) "замер идёт: " + seconds.toString() + " с" else "готов записывать",
                         color = if (running) GrapeGreen else TextPrimary,
-                        fontSize = Metro.Type.body
+                        fontSize = Gioui.Type.body
                     )
                     Text(
                         text = "нужно " + (Pulse.DEFAULT_MILLIS / 1000).toString() +
                             " с и немного терпения",
                         color = TextDim,
-                        fontSize = Metro.Type.caption
+                        fontSize = Gioui.Type.caption
                     )
                 }
                 if (running) PulseDot(GrapeRed)
@@ -186,7 +186,7 @@ fun PulseScreen(onBack: () -> Unit) {
                     Text(
                         text = if (running) "камера греет палец…" else "здесь появится волна пульса",
                         color = TextDim,
-                        fontSize = Metro.Type.caption,
+                        fontSize = Gioui.Type.caption,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -203,15 +203,15 @@ fun PulseScreen(onBack: () -> Unit) {
         if (error.isNotBlank()) {
             Spacer(Modifier.height(10.dp))
             SurfaceCard(borderColor = GrapeRed.copy(alpha = 0.5f)) {
-                Text("не смог записать", color = GrapeRed, fontSize = Metro.Type.body)
+                Text("не смог записать", color = GrapeRed, fontSize = Gioui.Type.body)
                 Spacer(Modifier.height(4.dp))
-                Text(error, color = TextDim, fontSize = Metro.Type.caption)
+                Text(error, color = TextDim, fontSize = Gioui.Type.caption)
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = "Часто причина одна: камеру уже занял другой экран — например, замер мерцания " +
                         "или микроскоп. Закройте их и попробуйте снова.",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
         }
@@ -221,27 +221,27 @@ fun PulseScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(10.dp))
             val bpm = reportValue.bpm
             SurfaceCard(borderColor = GrapeGreen.copy(alpha = 0.5f)) {
-                Text("результат", color = TextDim, fontSize = Metro.Type.caption)
+                Text("результат", color = TextDim, fontSize = Gioui.Type.caption)
                 Text(
                     text = if (bpm == null) "—" else bpm.toString(),
                     color = if (bpm == null) GrapeAmber else GrapeGreen,
-                    fontSize = Metro.Type.pageTitle,
+                    fontSize = Gioui.Type.pageTitle,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = if (bpm == null) "ударов в минуту не найдено" else "ударов в минуту",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
                 Spacer(Modifier.height(8.dp))
                 InfoRow("качество сигнала", reportValue.quality.toString() + " из 100")
                 InfoRow("кадров в секунду", String.format(Locale.US, "%.1f", reportValue.fps))
                 InfoRow("точек в записи", reportValue.samples.size.toString())
                 Spacer(Modifier.height(8.dp))
-                Text(reportValue.note, color = GrapeAmber, fontSize = Metro.Type.caption)
+                Text(reportValue.note, color = GrapeAmber, fontSize = Gioui.Type.caption)
                 if (bpm != null) {
                     Spacer(Modifier.height(6.dp))
-                    Text(Pulse.verdict(bpm), color = TextPrimary, fontSize = Metro.Type.body)
+                    Text(Pulse.verdict(bpm), color = TextPrimary, fontSize = Gioui.Type.body)
                 }
             }
             if (reportValue.samples.size > Pulse.MIN_SAMPLES) {
@@ -251,7 +251,7 @@ fun PulseScreen(onBack: () -> Unit) {
                         Text(
                             text = "обездвиженная волна",
                             color = TextPrimary,
-                            fontSize = Metro.Type.body,
+                            fontSize = Gioui.Type.body,
                             modifier = Modifier.weight(1f)
                         )
                         TagChip(text = if (smoothMode) "сглажено" else "как есть", selected = smoothMode) {
@@ -274,7 +274,7 @@ fun PulseScreen(onBack: () -> Unit) {
                         text = "Автокорреляция ищет сдвиг, на котором волна похожа сама на себя. " +
                             "Период этого сдвига — один удар сердца.",
                         color = TextDim,
-                        fontSize = Metro.Type.caption
+                        fontSize = Gioui.Type.caption
                     )
                 }
             }
@@ -292,21 +292,21 @@ fun PulseScreen(onBack: () -> Unit) {
                     text = "среднее " + String.format(Locale.US, "%.0f", history.average()) + " уд/мин. " +
                         "Разброс в 5–10 ударов между замерами — нормальное дело, пульс всё время меняется.",
                     color = TextDim,
-                    fontSize = Metro.Type.caption
+                    fontSize = Gioui.Type.caption
                 )
             }
         }
 
         Spacer(Modifier.height(10.dp))
         SurfaceCard(borderColor = ChipBorder) {
-            Text("это не медицинский прибор", color = GrapeAmber, fontSize = Metro.Type.body)
+            Text("это не медицинский прибор", color = GrapeAmber, fontSize = Gioui.Type.body)
             Spacer(Modifier.height(6.dp))
             Text(
                 text = "Измерение честное — с настоящей камеры, но точность ниже, чем у пульсоксиметра: " +
                     "камера снимает не на просвет, как датчик на палец, а с небольшой глубины. " +
                     "Никаких диагнозов: только цифра и её разбор.",
                 color = TextDim,
-                fontSize = Metro.Type.caption
+                fontSize = Gioui.Type.caption
             )
         }
         Spacer(Modifier.height(20.dp))

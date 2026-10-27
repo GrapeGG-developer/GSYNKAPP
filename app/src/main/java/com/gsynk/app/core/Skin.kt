@@ -6,23 +6,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Кожа GSUI V4: скругления и «стёкла».
+ * Кожа GIOUI: единый набор форм и «стекла» на всё приложение.
  *
- * Раньше форма была задана в коде и её нельзя было тронуть. Теперь это один объект
- * настроек: каждое скругление своё, стекло выбирается по вкусу, и всё это сразу
- * видно на экране. Значения хранятся в настройках телефона и отдаются потоком,
- * чтобы интерфейс перерисовывался сам.
+ * В GIOUI формы больше не «у каждого элемента свой каприз», а одна система:
+ * карточки 24, контролы 16, листы 28, остров — капсула. Настраивать можно вокруг
+ * этих значений (экран «скругления»), но вернутся старые квадратные формы нельзя:
+ * радиусы 5.0 читаются из новых ключей `gio_*`, поэтому обновление поверх 4.x
+ * сразу показывает новый интерфейс, а не сохранённый старый.
  */
 object Skin {
 
-    /** Ползунок: 0 — совсем прямое, 32 — почти капсула. */
+    /** Значения радиусов в dp. По умолчанию — канон GIOUI. */
     data class Values(
-        val tile: Int = 0,
-        val card: Int = 14,
-        val sheet: Int = 22,
-        val button: Int = 8,
-        val toggle: Int = 10,
-        val island: Int = 28,
+        val tile: Int = 24,
+        val card: Int = 24,
+        val sheet: Int = 28,
+        val button: Int = 16,
+        val toggle: Int = 16,
+        val island: Int = 32,
         val glass: String = "liquid",
         val blur: Int = 12,
         val focus: Int = 40,
@@ -54,12 +55,13 @@ object Skin {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val defaults = Values()
         val loaded = Values(
-            tile = prefs.getInt("tile", defaults.tile),
-            card = prefs.getInt("card", defaults.card),
-            sheet = prefs.getInt("sheet", defaults.sheet),
-            button = prefs.getInt("button", defaults.button),
-            toggle = prefs.getInt("toggle", defaults.toggle),
-            island = prefs.getInt("island", defaults.island),
+            // Радиусы — только ключи GIOUI: старые формы 4.x при обновлении не воскресают.
+            tile = prefs.getInt("gio_tile", defaults.tile),
+            card = prefs.getInt("gio_card", defaults.card),
+            sheet = prefs.getInt("gio_sheet", defaults.sheet),
+            button = prefs.getInt("gio_button", defaults.button),
+            toggle = prefs.getInt("gio_toggle", defaults.toggle),
+            island = prefs.getInt("gio_island", defaults.island),
             glass = prefs.getString("glass", defaults.glass) ?: defaults.glass,
             blur = prefs.getInt("blur", defaults.blur),
             focus = prefs.getInt("focus", defaults.focus),
@@ -68,18 +70,19 @@ object Skin {
             speed = prefs.getInt("speed", defaults.speed),
             level = prefs.getInt("level", defaults.level)
         )
-        _values.value = loaded
-        return loaded
+        val clean = clamp(loaded)
+        _values.value = clean
+        return clean
     }
 
-    /** Приводим кожу к допустимым значениям: один вход — один порядок. */
+    /** Единые границы GIOUI: формы можно смягчать/строжить, но система не распадается. */
     fun clamp(values: Values): Values = values.copy(
-        tile = values.tile.coerceIn(0, 32),
-        card = values.card.coerceIn(0, 32),
-        sheet = values.sheet.coerceIn(0, 36),
-        button = values.button.coerceIn(0, 32),
-        toggle = values.toggle.coerceIn(0, 32),
-        island = values.island.coerceIn(8, 40),
+        tile = values.tile.coerceIn(12, 32),
+        card = values.card.coerceIn(12, 32),
+        sheet = values.sheet.coerceIn(16, 36),
+        button = values.button.coerceIn(10, 24),
+        toggle = values.toggle.coerceIn(10, 24),
+        island = values.island.coerceIn(24, 40),
         blur = values.blur.coerceIn(0, 30),
         focus = values.focus.coerceIn(0, 100),
         rays = values.rays.coerceIn(0, 12),
@@ -91,12 +94,12 @@ object Skin {
         val clean = clamp(values)
         _values.value = clean
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putInt("tile", clean.tile)
-            .putInt("card", clean.card)
-            .putInt("sheet", clean.sheet)
-            .putInt("button", clean.button)
-            .putInt("toggle", clean.toggle)
-            .putInt("island", clean.island)
+            .putInt("gio_tile", clean.tile)
+            .putInt("gio_card", clean.card)
+            .putInt("gio_sheet", clean.sheet)
+            .putInt("gio_button", clean.button)
+            .putInt("gio_toggle", clean.toggle)
+            .putInt("gio_island", clean.island)
             .putString("glass", clean.glass)
             .putInt("blur", clean.blur)
             .putInt("focus", clean.focus)
@@ -107,14 +110,14 @@ object Skin {
             .apply()
     }
 
-    /** Готовые наборы: не надо крутить шесть ползунков, чтобы получить другое лицо. */
+    /** Готовые лица GIOUI: одна система форм, разное стекло и темп. */
     val PRESETS: List<Triple<String, String, Values>> = listOf(
-        Triple("metri", "metro чистое", Values(tile = 0, card = 0, sheet = 0, button = 0, toggle = 6, island = 28, glass = "matte", blur = 0, focus = 20, rays = 3, grid = true, speed = 100, level = 1)),
-        Triple("glass", "стеклянное", Values(tile = 0, card = 16, sheet = 24, button = 10, toggle = 12, island = 30, glass = "liquid", blur = 14, focus = 60, rays = 6, grid = true, speed = 110, level = 2)),
-        Triple("frost", "морозное", Values(tile = 4, card = 18, sheet = 26, button = 12, toggle = 14, island = 32, glass = "frost", blur = 20, focus = 80, rays = 4, grid = false, speed = 80, level = 2)),
-        Triple("aqua", "аква", Values(tile = 2, card = 14, sheet = 20, button = 8, toggle = 16, island = 34, glass = "aqua", blur = 10, focus = 70, rays = 8, grid = true, speed = 130, level = 2)),
-        Triple("light", "облегчённое", Values(tile = 0, card = 10, sheet = 16, button = 6, toggle = 8, island = 24, glass = "matte", blur = 0, focus = 30, rays = 0, grid = false, speed = 140, level = 0)),
-        Triple("cube", "квадратное", Values(tile = 0, card = 0, sheet = 0, button = 0, toggle = 0, island = 20, glass = "matte", blur = 0, focus = 10, rays = 2, grid = false, speed = 100, level = 1))
+        Triple("gioui", "GIOUI единое", Values(tile = 24, card = 24, sheet = 28, button = 16, toggle = 16, island = 32, glass = "liquid", blur = 12, focus = 40, rays = 5, grid = true, speed = 100, level = 2)),
+        Triple("strict", "GIOUI строгое", Values(tile = 14, card = 14, sheet = 18, button = 11, toggle = 11, island = 26, glass = "matte", blur = 0, focus = 20, rays = 2, grid = true, speed = 100, level = 1)),
+        Triple("soft", "GIOUI мягкое", Values(tile = 30, card = 30, sheet = 34, button = 20, toggle = 20, island = 36, glass = "frost", blur = 18, focus = 75, rays = 4, grid = false, speed = 85, level = 2)),
+        Triple("aqua", "GIOUI аква", Values(tile = 24, card = 24, sheet = 28, button = 16, toggle = 18, island = 34, glass = "aqua", blur = 10, focus = 70, rays = 8, grid = true, speed = 125, level = 2)),
+        Triple("light", "GIOUI облегчённое", Values(tile = 20, card = 20, sheet = 24, button = 14, toggle = 14, island = 28, glass = "matte", blur = 0, focus = 30, rays = 0, grid = false, speed = 140, level = 0)),
+        Triple("compact", "GIOUI компактное", Values(tile = 16, card = 16, sheet = 20, button = 12, toggle = 12, island = 26, glass = "matte", blur = 4, focus = 25, rays = 2, grid = false, speed = 115, level = 1))
     )
 
     /** Итоговый уровень с поправкой на железо: слабому телефону полный набор не отдаём. */
