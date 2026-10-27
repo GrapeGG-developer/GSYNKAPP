@@ -194,7 +194,7 @@ class GiouiExtraTest {
     @Test
     fun everyTileBelongsToAFolder() {
         val folders = Catalog.Group.entries
-        assertEquals(8, folders.size) // 5.0: добавлены «шифраторы»
+        assertEquals(10, folders.size) // 5.1: шифраторы, анонимность и отдельное расписание
         Catalog.ALL.forEach { entry ->
             assertTrue("плитка без папки: " + entry.id, entry.group in folders)
         }
@@ -231,7 +231,11 @@ class GiouiExtraTest {
         PhaseIds.forEach { id ->
             assertTrue("фазы " + id + " нет в каталоге", routes.contains("page:" + id))
         }
-        assertTrue(routes.contains("page:folders"))
+        assertFalse("отдельного хаба категорий больше нет", routes.contains("page:folders"))
+        assertTrue(routes.contains("panel:schedule"))
+        assertTrue(routes.contains("page:news"))
+        assertTrue(routes.contains("page:ganonym"))
+        assertFalse(routes.contains("panel:nfc"))
     }
 
     @Test

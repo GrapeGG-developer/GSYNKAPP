@@ -1276,7 +1276,7 @@ fun LabExtraScreen(id: String, onBack: () -> Unit): Boolean {
         "wifi" -> { LabWifiChannelsScreen(onBack); return true }
         "wifisig" -> { LabWifiSignalScreen(onBack); return true }
         "usb" -> { LabUsbScreen(onBack); return true }
-        "nfcwrite" -> { LabNfcCardScreen(onBack); return true }
+        "lowlevel" -> { LowLevelScreen(onBack); return true }
     }
     return false
 }

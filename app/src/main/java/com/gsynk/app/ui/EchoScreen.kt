@@ -274,6 +274,11 @@ fun EchoRulerScreen(onBack: () -> Unit) {
 
 /** Запись щелчка и эха целиком: сначала слушаем, потом играем, потом ждём отражение. */
 private fun shoot(context: android.content.Context): ShortArray {
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+        PackageManager.PERMISSION_GRANTED
+    ) {
+        throw SecurityException("нет разрешения на микрофон")
+    }
     val rate = SAMPLE_RATE
     val minBuffer = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
     val bufferSize = minBuffer.coerceAtLeast(rate / 2)

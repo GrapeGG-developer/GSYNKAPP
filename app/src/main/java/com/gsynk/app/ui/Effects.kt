@@ -344,7 +344,7 @@ fun radiusOf(kind: String): Dp = when (kind) {
     "sheet" -> Gioui.Radius.sheet
     "button" -> Gioui.Radius.button
     "toggle" -> Gioui.Radius.switch
-    "island" -> Gioui.Radius.island
+    "capsule" -> Gioui.Radius.capsule
     "panel" -> Gioui.Radius.panel
     else -> Gioui.Radius.card
 }

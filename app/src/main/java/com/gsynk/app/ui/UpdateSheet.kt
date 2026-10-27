@@ -326,8 +326,8 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = update?.notes?.takeIf { it.isNotBlank() }
-                    ?: "2.1 — живые плитки и сортировка, компактный остров с новыми позициями, " +
-                    "локальная модель с чатом, новый Grape Link, сцены и «хакерский набор» инструментов.",
+                    ?: "5.1 — шифры до процессорного уровня, GS-TLS и GANONYM, категория " +
+                    "анонимности, живые плитки на главном и отдельный экран расписания.",
                 color = TextDim,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
             )

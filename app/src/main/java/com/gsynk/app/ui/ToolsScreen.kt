@@ -24,7 +24,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gsynk.app.R
 import com.gsynk.app.core.DeviceProfile
-import com.gsynk.app.core.IslandWidget
 import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.GrapeGreen
 import com.gsynk.app.ui.theme.TextDim
@@ -218,20 +217,11 @@ fun ToolsScreen(
         Spacer(Modifier.height(9.dp))
         TileRow {
             NavTile(
-                title = "Grape Link",
-                subtitle = "NFC-обмен",
-                iconRes = R.drawable.ic_bolt,
-                brush = GioBrush.Cyan,
-                liveText = "касаний: ${settings.nfcTouches}",
-                modifier = Modifier.weight(1f),
-                onClick = onOpenNfc
-            )
-            NavTile(
                 title = "GSYNK рядом",
-                subtitle = "Bluetooth и Wi-Fi Direct",
+                subtitle = "NFC · Grape Link · Bluetooth · Wi-Fi Direct",
                 iconRes = R.drawable.ic_bolt,
                 brush = GioBrush.Blue,
-                liveText = if (com.gsynk.app.core.Nearby.isConnected()) "связь есть" else "связаться",
+                liveText = if (com.gsynk.app.core.Nearby.isConnected()) "связь есть" else "касаний NFC: ${settings.nfcTouches}",
                 modifier = Modifier.weight(1f),
                 onClick = { openExtra = "nearby" }
             )
@@ -398,79 +388,6 @@ fun ToolsScreen(
             ).forEach { (title, key) ->
                 SortChip(label = title, selected = false) { tools.openSettings(key) }
             }
-        }
-
-        // ————— постоянный остров —————
-        Spacer(Modifier.height(18.dp))
-        SectionTitle("Остров у камеры")
-        Spacer(Modifier.height(9.dp))
-        SurfaceCard(borderColor = CardBorder) {
-            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = if (settings.islandPersistent) "Постоянный остров включён" else "Только вспышки",
-                        color = TextPrimary,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
-                    )
-                    Text(
-                        text = "Позиция: " + com.gsynk.app.core.IslandPosition.label(settings.islandPosition) +
-                            if (settings.islandCompact) " • компактный" else " • обычный",
-                        color = TextDim,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
-                    )
-                }
-                PrimaryButton(
-                    text = if (settings.islandPersistent) "Выключить" else "Включить",
-                    onClick = { vm.setIslandPersistent(!settings.islandPersistent) }
-                )
-            }
-            Spacer(Modifier.height(12.dp))
-            Text("Показывать:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
-            Spacer(Modifier.height(7.dp))
-            ChipFlow {
-                IslandWidget.ALL.forEach { widget ->
-                    SortChip(
-                        label = IslandWidget.label(widget),
-                        selected = widget in settings.islandWidgets
-                    ) { vm.toggleIslandWidget(widget, widget !in settings.islandWidgets) }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Text("Расположение:", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
-            Spacer(Modifier.height(7.dp))
-            ChipFlow {
-                com.gsynk.app.core.IslandPosition.ALL.forEach { position ->
-                    SortChip(
-                        label = com.gsynk.app.core.IslandPosition.label(position)
-                            .replace("Сверху ", "")
-                            .replace("По центру ", "центр "),
-                        selected = settings.islandPosition == position
-                    ) { vm.setIslandPosition(position) }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                SortChip("Компактный", settings.islandCompact) { vm.setIslandCompact(true) }
-                SortChip("Обычный", !settings.islandCompact) { vm.setIslandCompact(false) }
-            }
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = "Сдвиг по вертикали: ${settings.islandOffsetY} точек",
-                color = TextSecondary,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
-            )
-            Spacer(Modifier.height(7.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                SortChip(label = "Выше на 4", selected = false) { vm.setIslandOffset((settings.islandOffsetY - 4).coerceIn(-40, 80)) }
-                SortChip(label = "Ниже на 4", selected = false) { vm.setIslandOffset((settings.islandOffsetY + 4).coerceIn(-40, 80)) }
-                SortChip(label = "Сброс", selected = false) { vm.setIslandOffset(0) }
-            }
-            Spacer(Modifier.height(10.dp))
-            SecondaryButton(
-                text = "Показать образец",
-                onClick = { vm.fullIslandPreview() },
-                modifier = Modifier.fillMaxWidth()
-            )
         }
 
         // ————— нагрузка: процессор, ускоритель и ИИ —————

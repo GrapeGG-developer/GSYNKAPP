@@ -150,20 +150,20 @@ class UpdateFlowTest {
             )
         )
         assertFalse(
-            MainViewModel.UpdatePolicy.shouldRemind(available = true, acked = true, lastCapsuleAt = 0L, now = now)
+            MainViewModel.UpdatePolicy.shouldRemind(available = true, acked = true, lastNoticeAt = 0L, now = now)
         )
     }
 
     @Test
-    fun capsuleRemindsLessOftenThanPanel() {
+    fun noticeRemindsLessOftenThanPanel() {
         assertFalse(
             MainViewModel.UpdatePolicy.shouldRemind(
-                available = true, acked = false, lastCapsuleAt = now - 5 * 60_000L, now = now
+                available = true, acked = false, lastNoticeAt = now - 5 * 60_000L, now = now
             )
         )
         assertTrue(
             MainViewModel.UpdatePolicy.shouldRemind(
-                available = true, acked = false, lastCapsuleAt = now - 16 * 60_000L, now = now
+                available = true, acked = false, lastNoticeAt = now - 16 * 60_000L, now = now
             )
         )
     }

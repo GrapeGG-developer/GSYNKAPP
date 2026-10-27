@@ -6,7 +6,7 @@ import android.app.NotificationManager
 import com.gsynk.app.core.AppLog
 
 /**
- * GSYNK — мультитул: расписание яркости и громкости, компактный остров,
+ * GSYNK — мультитул: расписание яркости и громкости, шифры и анонимность,
  * Grape Link по NFC, локальная ИИ-модель, сцены, мини-игры и хакерский набор
  * инструментов. Все данные хранятся на устройстве; интернет нужен только для
  * проверки обновлений.
@@ -30,7 +30,7 @@ class GSYNKApp : Application() {
     private fun createChannels() {
         val nm = getSystemService(NotificationManager::class.java) ?: return
 
-        // Применение правил и постоянный остров
+        // Применение правил
         nm.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_APPLY,

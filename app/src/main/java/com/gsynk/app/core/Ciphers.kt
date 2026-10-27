@@ -1,10 +1,23 @@
 package com.gsynk.app.core
 
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
+import java.security.KeyFactory
+import java.security.KeyPairGenerator
+import java.security.PrivateKey
+import java.security.PublicKey
 import java.security.SecureRandom
+import java.security.spec.ECGenParameterSpec
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
+import java.util.zip.DataFormatException
+import java.util.zip.Deflater
+import java.util.zip.Inflater
 import javax.crypto.Cipher
+import javax.crypto.KeyAgreement
+import javax.crypto.Mac
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.PBEKeySpec
@@ -13,10 +26,11 @@ import javax.crypto.spec.SecretKeySpec
 /**
  * «Шифраторы» GSYNK (GIOUI / 5.0): один универсальный набор обратимых преобразований текста.
  *
- * Три семьи:
+ * Семьи:
  *  * популярные (Base64, HEX, URL, морзе, Цезарь, XOR по ключу);
- *  * символьные (двоичный, 6/7, 4/2, G/S, только G, натуральные 1–9, эмодзи, виноград/банан);
- *  * уникальные GSYNK (GSYNK-32, GS-85, «Виноградная лоза», тяжёлый «GS-Замок» AES-GCM с PBKDF2).
+ *  * символьные (двоичный, 6/7, 4/2, G/S, только G, натуральные 1–9, лица, поросята, виноград/банан);
+ *  * машинные представления (байт-код, ассемблер и процессорный дамп);
+ *  * уникальные GSYNK и анонимность (GSYNK-32, GS-85, «Лоза», «GS-Замок», GS-TLS и GANONYM).
  *
  * Всё — чистая Kotlin/Java без разрешений и без современных API выше Android 11:
  * одинаково работает и на Poco X3 Pro, и на флагманах. Честно: кодировки (Base64, двоичный,
@@ -27,7 +41,9 @@ object Ciphers {
     enum class Family(val title: String) {
         POPULAR("популярные"),
         SYMBOLS("символы"),
-        GSYNK("уникальные GSYNK")
+        MACHINE("машинный уровень"),
+        GSYNK("уникальные GSYNK"),
+        ANON("анонимность")
     }
 
     data class Info(
@@ -48,21 +64,47 @@ object Ciphers {
         Info("xor", "XOR с ключом", Family.POPULAR, "простое перемешивание байтов по парольной фразе", needsKey = true),
 
         Info("bin", "Двоичный код", Family.SYMBOLS, "каждый байт восемью битами 0 и 1"),
-        Info("d67", "Цифры 6 и 7", Family.SYMBOLS, "двоичный код цифрами: 6 — ноль, 7 — единица"),
-        Info("d42", "Цифры 4 и 2", Family.SYMBOLS, "двоичный код цифрами: 4 — ноль, 2 — единица"),
+        Info("d67", "Цифры 6 и 7", Family.SYMBOLS, "двоичный код цифрами: главная 6 — единица, 7 — ноль"),
+        Info("d42", "Цифры 4 и 2", Family.SYMBOLS, "двоичный код цифрами: главная 4 — единица, 2 — ноль"),
         Info("gs", "Буквы G и S", Family.SYMBOLS, "фирменный двоичный: G — ноль, S — единица"),
         Info("gonly", "Только буква G", Family.SYMBOLS, "одна буква на всё: G — ноль, GG — единица (тяжёлый и длинный)", heavy = true),
         Info("nat9", "Натуральные 1–9", Family.SYMBOLS, "без нуля: каждый байт тремя цифрами от 1 до 9"),
         Info("emoji", "Эмодзи 😡 и 😏", Family.SYMBOLS, "двоичный код лицами: первое — ноль, второе — единица"),
         Info("fruit", "Виноград и банан", Family.SYMBOLS, "фирменный фруктовый: банан — ноль, виноград — единица"),
+        Info("pig", "Поросята 🐷", Family.SYMBOLS, "двоичный код поросятами: 🐽 — ноль, 🐷 — единица"),
+
+        Info("bytecode", "Байт-код", Family.MACHINE, "текст как поток байтов 0x00…0xFF с заголовком GSYNK BYTECODE"),
+        Info("asm", "Ассемблер", Family.MACHINE, "каждый байт — команда MOV и вызов emit_byte в x86-стиле", heavy = true),
+        Info("cpu", "Процессорный вид", Family.MACHINE, "дамп памяти MEM с адресами, регистрами IP/SP и флагами"),
 
         Info("gs32", "GSYNK-32", Family.GSYNK, "свой компактный алфавит из 32 знаков, начало GSYNK"),
         Info("g85", "GS-85 компактный", Family.GSYNK, "плотная упаковка: 4 байта в 5 печатных символов"),
         Info("vine", "Виноградная лоза", Family.GSYNK, "красивый: каждые полбайта — виноградное слово"),
-        Info("lock", "GS-Замок (AES)", Family.GSYNK, "строгий и тяжёлый: AES-GCM, ключ из пароля через PBKDF2 (120 000 кругов)", needsKey = true, heavy = true)
+        Info("lock", "GS-Замок (AES)", Family.GSYNK, "строгий и тяжёлый: AES-GCM, ключ из пароля через PBKDF2 (120 000 кругов)", needsKey = true, heavy = true),
+        Info("gstls", "GS-TLS (уровень HTTPS)", Family.GSYNK, "эфемерный ECDH P-256 + HKDF-SHA256 + AES-256-GCM; шифруется открытым ключом получателя, открывается его закрытым", needsKey = true, heavy = true),
+
+        Info("ganonym", "GANONYM", Family.ANON, "компактный анонимный пакет: сжатие, случайная добивка до ступеней размера, PBKDF2 и AES-256-GCM; без автора, адресата, времени и устройства", needsKey = true, heavy = true)
     )
 
     fun byId(id: String): Info = ALL.firstOrNull { it.id == id } ?: ALL[0]
+
+    /** Пара ключей GS-TLS. Открытый можно передавать всем, закрытый нельзя показывать никому. */
+    data class TlsKeyPair(val publicKey: String, val privateKey: String)
+
+    const val TLS_PUBLIC_PREFIX = "GSTLS-PUB."
+    const val TLS_PRIVATE_PREFIX = "GSTLS-PRIV."
+
+    /** Создаёт новую пару P-256 для GS-TLS прямо на телефоне. */
+    fun generateTlsKeyPair(): TlsKeyPair {
+        val generator = KeyPairGenerator.getInstance("EC")
+        generator.initialize(ECGenParameterSpec("secp256r1"), SecureRandom())
+        val pair = generator.generateKeyPair()
+        val encoder = Base64.getUrlEncoder().withoutPadding()
+        return TlsKeyPair(
+            publicKey = TLS_PUBLIC_PREFIX + encoder.encodeToString(pair.public.encoded),
+            privateKey = TLS_PRIVATE_PREFIX + encoder.encodeToString(pair.private.encoded)
+        )
+    }
 
     sealed class Outcome {
         data class Ok(val text: String, val cipherId: String) : Outcome()
@@ -86,17 +128,23 @@ object Ciphers {
                 "caesar" -> caesarShift(plain, 7)
                 "xor" -> "XOR1." + Base64.getUrlEncoder().withoutPadding().encodeToString(xorBytes(bytes, key))
                 "bin" -> bitEncode(bytes, '0', '1')
-                "d67" -> bitEncode(bytes, '6', '7')
-                "d42" -> bitEncode(bytes, '4', '2')
+                "d67" -> bitEncode(bytes, '7', '6')
+                "d42" -> bitEncode(bytes, '2', '4')
                 "gs" -> bitEncode(bytes, 'G', 'S')
                 "gonly" -> gOnlyEncode(bytes)
                 "nat9" -> nat9Encode(bytes)
                 "emoji" -> emojiEncode(bytes, EMOJI_ZERO, EMOJI_ONE)
                 "fruit" -> emojiEncode(bytes, BANANA, GRAPE)
+                "pig" -> emojiEncode(bytes, PIG_NOSE, PIG_FACE)
+                "bytecode" -> bytecodeEncode(bytes)
+                "asm" -> asmEncode(bytes)
+                "cpu" -> cpuEncode(bytes)
                 "gs32" -> "GS32:" + baseNEncode(withLength(bytes), GS32)
                 "g85" -> "G85:" + g85Encode(withLength(bytes))
                 "vine" -> vineEncode(bytes)
                 "lock" -> lockEncode(bytes, key)
+                "gstls" -> tlsEncode(bytes, key)
+                "ganonym" -> ganonymEncode(bytes, key)
                 else -> return Outcome.Err("Неизвестный шифр: " + id)
             }
             Outcome.Ok(out, id)
@@ -119,17 +167,23 @@ object Ciphers {
                 "caesar" -> caesarShift(input, -7)
                 "xor" -> strictUtf8(xorBytes(Base64.getUrlDecoder().decode(removePrefixOnce(input, "XOR1.")), key))
                 "bin" -> strictUtf8(bitDecode(input, setOf('0'), setOf('1')))
-                "d67" -> strictUtf8(bitDecode(input, setOf('6'), setOf('7')))
-                "d42" -> strictUtf8(bitDecode(input, setOf('4'), setOf('2')))
+                "d67" -> digitalDecode(input, '7', '6', '6', '7')
+                "d42" -> digitalDecode(input, '2', '4', '4', '2')
                 "gs" -> strictUtf8(bitDecode(input, setOf('G', 'g'), setOf('S', 's')))
                 "gonly" -> strictUtf8(gOnlyDecode(input))
                 "nat9" -> strictUtf8(nat9Decode(input))
                 "emoji" -> strictUtf8(emojiDecode(input, EMOJI_ZERO, EMOJI_ONE))
                 "fruit" -> strictUtf8(emojiDecode(input, BANANA, GRAPE))
+                "pig" -> strictUtf8(emojiDecode(input, PIG_NOSE, PIG_FACE))
+                "bytecode" -> strictUtf8(bytecodeDecode(input))
+                "asm" -> strictUtf8(asmDecode(input))
+                "cpu" -> strictUtf8(cpuDecode(input))
                 "gs32" -> strictUtf8(withoutLength(baseNDecode(removePrefixOnce(input, "GS32:"), GS32)))
                 "g85" -> strictUtf8(withoutLength(g85Decode(removePrefixOnce(input, "G85:"))))
                 "vine" -> strictUtf8(vineDecode(input))
                 "lock" -> strictUtf8(lockDecode(input, key))
+                "gstls" -> strictUtf8(tlsDecode(input, key))
+                "ganonym" -> strictUtf8(ganonymDecode(input, key))
                 else -> return Outcome.Err("Неизвестный шифр: " + id)
             }
             Outcome.Ok(out, id)
@@ -155,7 +209,12 @@ object Ciphers {
             } else null
         }
         // префиксы уникальных — однозначно
+        if (input.startsWith("GSTLS1.")) return byId("gstls") to "начало GSTLS1. — пакет GS-TLS, нужен закрытый ключ получателя"
+        if (input.startsWith("GA1.")) return byId("ganonym") to "начало GA1. — анонимный пакет GANONYM, нужен пароль"
         if (input.startsWith("GSLOCK1.")) return byId("lock") to "начало GSLOCK1. — «GS-Замок», нужен пароль"
+        if (input.startsWith("; GSYNK BYTECODE 1")) return ok("bytecode", "заголовок байт-кода и поток 0x-байтов")
+        if (input.startsWith("; GSYNK ASM 1")) return ok("asm", "ассемблерный листинг GSYNK ASM")
+        if (input.startsWith("; GSYNK CPU DUMP 1")) return ok("cpu", "процессорный дамп памяти GSYNK CPU")
         if (input.startsWith("GS32:")) return ok("gs32", "начало GS32: — родной алфавит GSYNK") ?: byId("gs32") to "начало GS32:"
         if (input.startsWith("G85:")) return ok("g85", "начало G85: — компактная упаковка") ?: byId("g85") to "начало G85:"
         if (input.startsWith("XOR1.")) return byId("xor") to "начало XOR1. — нужен ключ"
@@ -163,6 +222,7 @@ object Ciphers {
         val words = input.split('-', ' ', '\n').filter { it.isNotBlank() }
         if (words.size >= 4 && words.all { it.lowercase() in VINE }) return ok("vine", "все слова — из виноградного набора «Лозы»")
         // эмодзи и фрукты
+        if (input.contains(PIG_NOSE) || input.contains(PIG_FACE)) return ok("pig", "состоит из поросят 🐽 и 🐷")
         if (input.contains(EMOJI_ZERO) || input.contains(EMOJI_ONE)) return ok("emoji", "состоит из лиц 😡 и 😏")
         if (input.contains(GRAPE) || input.contains(BANANA)) return ok("fruit", "состоит из винограда и бананов")
         val compact = input.filterNot { it.isWhitespace() }
@@ -249,6 +309,20 @@ object Ciphers {
         return bytesOf(bits)
     }
 
+    /**
+     * Цифровые пары 5.1: главная цифра кодирует единицу (6 и 4), вторая — ноль.
+     * Старые сообщения 5.0, где порядок был обратным, пробуем прочитать вторым проходом:
+     * так исправление порядка не ломает уже отправленные шифры.
+     */
+    private fun digitalDecode(input: String, zero: Char, one: Char, legacyZero: Char, legacyOne: Char): String {
+        val current = bitDecode(input, setOf(zero), setOf(one))
+        return try {
+            strictUtf8(current)
+        } catch (e: CipherProblem) {
+            strictUtf8(bitDecode(input, setOf(legacyZero), setOf(legacyOne)))
+        }
+    }
+
     // Только G: бит 0 — один G, бит 1 — два GG, биты разделены пробелами.
     private fun gOnlyEncode(bytes: ByteArray): String =
         bitsOf(bytes).joinToString(" ") { if (it == 1) "GG" else "G" }
@@ -293,6 +367,8 @@ object Ciphers {
     private const val EMOJI_ONE = "\uD83D\uDE0F"  // 😏
     private const val BANANA = "\uD83C\uDF4C"     // 🍌
     private const val GRAPE = "\uD83C\uDF47"      // 🍇
+    private const val PIG_NOSE = "\uD83D\uDC3D"   // 🐽
+    private const val PIG_FACE = "\uD83D\uDC37"   // 🐷
 
     private fun emojiEncode(bytes: ByteArray, zero: String, one: String): String {
         val sb = StringBuilder()
@@ -553,14 +629,342 @@ object Ciphers {
         return out
     }
 
+
+    // ————— машинные представления: обратимые текстовые виды тех же байтов —————
+
+    private fun bytecodeEncode(bytes: ByteArray): String = buildString {
+        appendLine("; GSYNK BYTECODE 1")
+        appendLine("; bytes=" + bytes.size)
+        bytes.toList().chunked(16).forEach { chunk ->
+            appendLine(chunk.joinToString(" ") { "0x%02X".format(it.toInt() and 0xFF) })
+        }
+    }.trimEnd()
+
+    private fun bytecodeDecode(input: String): ByteArray {
+        val found = Regex("0[xX]([0-9A-Fa-f]{2})").findAll(input).toList()
+        if (found.isEmpty()) throw CipherProblem("в байт-коде нет ни одного байта вида 0x7F")
+        return ByteArray(found.size) { found[it].groupValues[1].toInt(16).toByte() }
+    }
+
+    private fun asmEncode(bytes: ByteArray): String = buildString {
+        appendLine("; GSYNK ASM 1")
+        appendLine("section .text")
+        appendLine("global _start")
+        appendLine("_start:")
+        val registers = listOf("al", "bl", "cl", "dl")
+        bytes.forEachIndexed { index, byte ->
+            appendLine("    mov " + registers[index % registers.size] + ", 0x%02X".format(byte.toInt() and 0xFF))
+            appendLine("    call emit_byte")
+        }
+        appendLine("    ret")
+    }.trimEnd()
+
+    private fun asmDecode(input: String): ByteArray {
+        val found = Regex("(?i)mov\\s+[a-z]{2}\\s*,\\s*0x([0-9a-f]{2})").findAll(input).toList()
+        if (found.isEmpty()) throw CipherProblem("в ассемблере нет команд MOV с байтами 0x..")
+        return ByteArray(found.size) { found[it].groupValues[1].toInt(16).toByte() }
+    }
+
+    private fun cpuEncode(bytes: ByteArray): String = buildString {
+        appendLine("; GSYNK CPU DUMP 1")
+        appendLine("IP=0000 SP=FFFE FLAGS=----")
+        bytes.toList().chunked(8).forEachIndexed { index, chunk ->
+            val address = index * 8
+            append("MEM %04X: ".format(address))
+            append(chunk.joinToString(" ") { "%02X".format(it.toInt() and 0xFF) })
+            appendLine("  ; IP=%04X A=%02X B=%02X".format(
+                address + chunk.size,
+                chunk.last().toInt() and 0xFF,
+                chunk.fold(0) { acc, byte -> acc xor (byte.toInt() and 0xFF) }
+            ))
+        }
+        appendLine("HALT")
+    }.trimEnd()
+
+    private fun cpuDecode(input: String): ByteArray {
+        val out = ArrayList<Byte>()
+        input.lineSequence().forEach { rawLine ->
+            val line = rawLine.substringBefore(';').trim()
+            if (!line.startsWith("MEM ")) return@forEach
+            val afterColon = line.substringAfter(':', "")
+            if (afterColon.isBlank()) throw CipherProblem("в процессорном дампе пустая строка MEM")
+            afterColon.trim().split(Regex("\\s+")).forEach { token ->
+                val value = token.toIntOrNull(16)
+                if (token.length != 2 || value == null) throw CipherProblem("в MEM встретился не байт: «" + token + "»")
+                out += value.toByte()
+            }
+        }
+        if (out.isEmpty()) throw CipherProblem("в процессорном виде нет строк MEM")
+        return out.toByteArray()
+    }
+
+    // ————— общие криптопримитивы: HKDF, сжатие и целые в кадрах —————
+
+    private const val MAX_BYTES = 250_000
+
+    private fun hkdfSha256(ikm: ByteArray, salt: ByteArray, info: ByteArray, length: Int): ByteArray {
+        require(length in 1..(255 * 32))
+        val mac = Mac.getInstance("HmacSHA256")
+        val effectiveSalt = if (salt.isEmpty()) ByteArray(32) else salt
+        mac.init(SecretKeySpec(effectiveSalt, "HmacSHA256"))
+        val prk = mac.doFinal(ikm)
+        val out = ByteArrayOutputStream()
+        var previous = ByteArray(0)
+        var counter = 1
+        while (out.size() < length) {
+            mac.init(SecretKeySpec(prk, "HmacSHA256"))
+            mac.update(previous)
+            mac.update(info)
+            mac.update(counter.toByte())
+            previous = mac.doFinal()
+            out.write(previous)
+            counter++
+        }
+        prk.fill(0)
+        return out.toByteArray().copyOf(length)
+    }
+
+    private fun writeInt(target: ByteArray, offset: Int, value: Int) {
+        target[offset] = (value ushr 24).toByte()
+        target[offset + 1] = (value ushr 16).toByte()
+        target[offset + 2] = (value ushr 8).toByte()
+        target[offset + 3] = value.toByte()
+    }
+
+    private fun readInt(source: ByteArray, offset: Int): Int =
+        ((source[offset].toInt() and 0xFF) shl 24) or
+            ((source[offset + 1].toInt() and 0xFF) shl 16) or
+            ((source[offset + 2].toInt() and 0xFF) shl 8) or
+            (source[offset + 3].toInt() and 0xFF)
+
+    private fun deflateRaw(data: ByteArray): ByteArray {
+        val deflater = Deflater(Deflater.BEST_COMPRESSION, true)
+        try {
+            deflater.setInput(data)
+            deflater.finish()
+            val out = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (!deflater.finished()) {
+                val count = deflater.deflate(buffer)
+                if (count > 0) out.write(buffer, 0, count)
+                if (out.size() > MAX_BYTES) throw CipherProblem("сжатый пакет слишком большой")
+            }
+            return out.toByteArray()
+        } finally {
+            deflater.end()
+        }
+    }
+
+    private fun inflateRaw(data: ByteArray, expectedSize: Int): ByteArray {
+        if (expectedSize !in 0..MAX_BYTES) throw CipherProblem("размер распаковки за пределами допустимого")
+        val inflater = Inflater(true)
+        try {
+            inflater.setInput(data)
+            val out = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (!inflater.finished()) {
+                val count = try {
+                    inflater.inflate(buffer)
+                } catch (e: DataFormatException) {
+                    throw CipherProblem("сжатая часть повреждена")
+                }
+                if (count > 0) {
+                    out.write(buffer, 0, count)
+                    if (out.size() > expectedSize) throw CipherProblem("распаковка вышла за заявленный размер")
+                } else if (inflater.needsInput() || inflater.needsDictionary()) {
+                    throw CipherProblem("сжатая часть оборвана")
+                }
+            }
+            val result = out.toByteArray()
+            if (result.size != expectedSize) throw CipherProblem("размер после распаковки не совпал")
+            return result
+        } finally {
+            inflater.end()
+        }
+    }
+
+    private fun passwordKey(password: String, salt: ByteArray, iterations: Int): SecretKeySpec {
+        val spec = PBEKeySpec(password.toCharArray(), salt, iterations, 256)
+        val encoded = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
+        spec.clearPassword()
+        return SecretKeySpec(encoded, "AES")
+    }
+
+    // ————— GS-TLS: ECDH P-256 -> HKDF-SHA256 -> AES-256-GCM —————
+
+    private fun parseTlsPublic(raw: String): PublicKey {
+        val text = raw.trim()
+        if (!text.startsWith(TLS_PUBLIC_PREFIX)) {
+            throw CipherProblem("GS-TLS шифруется открытым ключом получателя GSTLS-PUB.… — создай пару ключей кнопкой ниже и передай отправителю открытый")
+        }
+        return try {
+            val der = Base64.getUrlDecoder().decode(text.removePrefix(TLS_PUBLIC_PREFIX))
+            KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(der))
+        } catch (e: Exception) {
+            throw CipherProblem("открытый ключ GS-TLS повреждён или обрезан")
+        }
+    }
+
+    private fun parseTlsPrivate(raw: String): PrivateKey {
+        val text = raw.trim()
+        if (!text.startsWith(TLS_PRIVATE_PREFIX)) {
+            throw CipherProblem("GS-TLS открывается закрытым ключом получателя GSTLS-PRIV.… — открытый ключ для расшифровки не подходит")
+        }
+        return try {
+            val der = Base64.getUrlDecoder().decode(text.removePrefix(TLS_PRIVATE_PREFIX))
+            KeyFactory.getInstance("EC").generatePrivate(PKCS8EncodedKeySpec(der))
+        } catch (e: Exception) {
+            throw CipherProblem("закрытый ключ GS-TLS повреждён или обрезан")
+        }
+    }
+
+    private fun tlsEncode(data: ByteArray, publicKeyText: String): String {
+        val recipient = parseTlsPublic(publicKeyText)
+        val generator = KeyPairGenerator.getInstance("EC")
+        generator.initialize(ECGenParameterSpec("secp256r1"), SecureRandom())
+        val ephemeral = generator.generateKeyPair()
+        val agreement = KeyAgreement.getInstance("ECDH")
+        agreement.init(ephemeral.private)
+        agreement.doPhase(recipient, true)
+        val shared = agreement.generateSecret()
+        val random = SecureRandom()
+        val salt = ByteArray(16).also { random.nextBytes(it) }
+        val iv = ByteArray(12).also { random.nextBytes(it) }
+        val ephemeralDer = ephemeral.public.encoded
+        if (ephemeralDer.size > 0xFFFF) throw CipherProblem("эфемерный ключ неожиданно большой")
+        val header = ByteArray(2 + ephemeralDer.size + salt.size + iv.size)
+        header[0] = (ephemeralDer.size ushr 8).toByte()
+        header[1] = ephemeralDer.size.toByte()
+        ephemeralDer.copyInto(header, 2)
+        salt.copyInto(header, 2 + ephemeralDer.size)
+        iv.copyInto(header, 2 + ephemeralDer.size + salt.size)
+        val keyBytes = hkdfSha256(
+            ikm = shared,
+            salt = salt,
+            info = "GSYNK GSTLS1 ECDH P-256 AES-256-GCM".toByteArray(Charsets.UTF_8),
+            length = 32
+        )
+        try {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(keyBytes, "AES"), GCMParameterSpec(128, iv))
+            cipher.updateAAD("GSTLS1".toByteArray(Charsets.UTF_8) + header)
+            return "GSTLS1." + Base64.getUrlEncoder().withoutPadding().encodeToString(header + cipher.doFinal(data))
+        } finally {
+            shared.fill(0)
+            keyBytes.fill(0)
+        }
+    }
+
+    private fun tlsDecode(input: String, privateKeyText: String): ByteArray {
+        val recipientPrivate = parseTlsPrivate(privateKeyText)
+        val raw = try {
+            Base64.getUrlDecoder().decode(removePrefixOnce(input, "GSTLS1."))
+        } catch (e: Exception) {
+            throw CipherProblem("тело GS-TLS повреждено (не Base64URL)")
+        }
+        if (raw.size < 2 + 16 + 12 + 16) throw CipherProblem("пакет GS-TLS слишком короткий")
+        val keyLength = ((raw[0].toInt() and 0xFF) shl 8) or (raw[1].toInt() and 0xFF)
+        val headerSize = 2 + keyLength + 16 + 12
+        if (keyLength !in 32..1024 || raw.size < headerSize + 16) throw CipherProblem("заголовок GS-TLS повреждён")
+        val ephemeralDer = raw.copyOfRange(2, 2 + keyLength)
+        val salt = raw.copyOfRange(2 + keyLength, 2 + keyLength + 16)
+        val iv = raw.copyOfRange(2 + keyLength + 16, headerSize)
+        val sealed = raw.copyOfRange(headerSize, raw.size)
+        val ephemeralPublic = try {
+            KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(ephemeralDer))
+        } catch (e: Exception) {
+            throw CipherProblem("эфемерный ключ GS-TLS повреждён")
+        }
+        val agreement = KeyAgreement.getInstance("ECDH")
+        agreement.init(recipientPrivate)
+        agreement.doPhase(ephemeralPublic, true)
+        val shared = agreement.generateSecret()
+        val keyBytes = hkdfSha256(
+            ikm = shared,
+            salt = salt,
+            info = "GSYNK GSTLS1 ECDH P-256 AES-256-GCM".toByteArray(Charsets.UTF_8),
+            length = 32
+        )
+        try {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(keyBytes, "AES"), GCMParameterSpec(128, iv))
+            cipher.updateAAD("GSTLS1".toByteArray(Charsets.UTF_8) + raw.copyOfRange(0, headerSize))
+            return cipher.doFinal(sealed)
+        } catch (e: Exception) {
+            throw CipherProblem("GS-TLS не открылся: закрытый ключ не от этого пакета или пакет изменили")
+        } finally {
+            shared.fill(0)
+            keyBytes.fill(0)
+        }
+    }
+
+    // ————— GANONYM: сжатие + ступени размера + PBKDF2 -> AES-256-GCM без метаданных человека —————
+
+    private const val GANONYM_ITERATIONS = 240_000
+
+    private fun anonymBucket(size: Int): Int {
+        var bucket = 128
+        while (bucket < size && bucket <= MAX_BYTES) bucket *= 2
+        return maxOf(bucket, size)
+    }
+
+    private fun ganonymEncode(data: ByteArray, password: String): String {
+        if (password.isBlank()) throw CipherProblem("GANONYM без пароля не закрывается")
+        if (data.size > MAX_BYTES) throw CipherProblem("GANONYM рассчитан на текст до 250 000 байт")
+        val compressed = deflateRaw(data)
+        val useCompressed = compressed.size < data.size
+        val body = if (useCompressed) compressed else data
+        val random = SecureRandom()
+        val frame = ByteArray(anonymBucket(9 + body.size)).also { random.nextBytes(it) }
+        frame[0] = if (useCompressed) 1 else 0
+        writeInt(frame, 1, data.size)
+        writeInt(frame, 5, body.size)
+        body.copyInto(frame, 9)
+        val salt = ByteArray(16).also { random.nextBytes(it) }
+        val iv = ByteArray(12).also { random.nextBytes(it) }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, passwordKey(password, salt, GANONYM_ITERATIONS), GCMParameterSpec(128, iv))
+        cipher.updateAAD("GA1".toByteArray(Charsets.UTF_8))
+        return "GA1." + Base64.getUrlEncoder().withoutPadding().encodeToString(salt + iv + cipher.doFinal(frame))
+    }
+
+    private fun ganonymDecode(input: String, password: String): ByteArray {
+        if (password.isBlank()) throw CipherProblem("это GANONYM — введи пароль, которым закрывали")
+        val raw = try {
+            Base64.getUrlDecoder().decode(removePrefixOnce(input, "GA1."))
+        } catch (e: Exception) {
+            throw CipherProblem("тело GANONYM повреждено (не Base64URL)")
+        }
+        if (raw.size < 16 + 12 + 16 + 9) throw CipherProblem("пакет GANONYM слишком короткий")
+        val salt = raw.copyOfRange(0, 16)
+        val iv = raw.copyOfRange(16, 28)
+        val frame = try {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, passwordKey(password, salt, GANONYM_ITERATIONS), GCMParameterSpec(128, iv))
+            cipher.updateAAD("GA1".toByteArray(Charsets.UTF_8))
+            cipher.doFinal(raw.copyOfRange(28, raw.size))
+        } catch (e: Exception) {
+            throw CipherProblem("GANONYM не открылся: пароль не тот или пакет изменили")
+        }
+        if (frame.size < 9) throw CipherProblem("внутренний кадр GANONYM повреждён")
+        val originalSize = readInt(frame, 1)
+        val bodySize = readInt(frame, 5)
+        if (originalSize !in 0..MAX_BYTES || bodySize !in 0..(frame.size - 9)) {
+            throw CipherProblem("размеры внутри GANONYM повреждены")
+        }
+        val body = frame.copyOfRange(9, 9 + bodySize)
+        return when (frame[0].toInt()) {
+            0 -> if (body.size == originalSize) body else throw CipherProblem("размер GANONYM не совпал")
+            1 -> inflateRaw(body, originalSize)
+            else -> throw CipherProblem("неизвестный вариант кадра GANONYM")
+        }
+    }
+
     // ————— GS-Замок: пароль -> PBKDF2(120k, SHA-256) -> AES-256-GCM. Тяжёлый нарочно. —————
     private const val LOCK_ITERATIONS = 120_000
 
-    private fun lockKey(password: String, salt: ByteArray): SecretKeySpec {
-        val spec = PBEKeySpec(password.toCharArray(), salt, LOCK_ITERATIONS, 256)
-        val key = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
-        return SecretKeySpec(key, "AES")
-    }
+    private fun lockKey(password: String, salt: ByteArray): SecretKeySpec =
+        passwordKey(password, salt, LOCK_ITERATIONS)
 
     private fun lockEncode(data: ByteArray, password: String): String {
         if (password.isBlank()) throw CipherProblem("«GS-Замок» без пароля не закрывается — придумай пароль и запомни: без него текст не вернуть")

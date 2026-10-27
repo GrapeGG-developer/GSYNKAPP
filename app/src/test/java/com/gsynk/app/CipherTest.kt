@@ -5,6 +5,7 @@ import com.gsynk.app.core.Skin
 import com.gsynk.app.ui.Catalog
 import com.gsynk.app.ui.GiouiPageIds
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -12,7 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Шифраторы GIOUI/5.0: каждый шифр обязан честно возвращать исходный текст,
+ * Шифраторы GIOUI/5.1: каждый шифр обязан честно возвращать исходный текст,
  * автоопределение — узнавать свои шифры, а битые данные — получать отказ, а не мусор.
  */
 class CipherTest {
@@ -39,7 +40,7 @@ class CipherTest {
     fun registryIsCompleteAndUnique() {
         val ids = Ciphers.ALL.map { it.id }
         assertEquals(ids.size, ids.distinct().size)
-        assertTrue("шифров должно быть много", Ciphers.ALL.size >= 18)
+        assertTrue("шифров должно быть много", Ciphers.ALL.size >= 24)
         Ciphers.Family.entries.forEach { family ->
             assertTrue("пустая семья " + family.title, Ciphers.ALL.any { it.family == family })
         }
@@ -48,14 +49,17 @@ class CipherTest {
             assertNotNull("нет шифра " + id, Ciphers.ALL.firstOrNull { it.id == id })
         }
         // популярные и уникальные — тоже
-        listOf("base64", "hex", "url", "morse", "caesar", "xor", "gs32", "g85", "vine", "lock").forEach { id ->
+        listOf(
+            "base64", "hex", "url", "morse", "caesar", "xor", "pig", "bytecode", "asm", "cpu",
+            "gs32", "g85", "vine", "lock", "gstls", "ganonym"
+        ).forEach { id ->
             assertNotNull("нет шифра " + id, Ciphers.ALL.firstOrNull { it.id == id })
         }
     }
 
     @Test
     fun everyCipherRoundTripsRussian() {
-        Ciphers.ALL.filter { it.id != "morse" }.forEach { info ->
+        Ciphers.ALL.filter { it.id != "morse" && it.id != "gstls" }.forEach { info ->
             val key = if (info.needsKey) "виноградный ключ 42" else ""
             roundTrip(info.id, sample, key)
         }
@@ -148,10 +152,10 @@ class CipherTest {
 
     @Test
     fun detectionRecognisesEveryCipher() {
-        val keyed = mapOf("xor" to "ключ", "lock" to "пароль")
+        val keyed = mapOf("xor" to "ключ", "lock" to "пароль", "ganonym" to "тихий пароль")
         listOf(
             "base64", "hex", "url", "bin", "d67", "d42", "gs", "gonly", "nat9",
-            "emoji", "fruit", "gs32", "g85", "vine"
+            "emoji", "fruit", "pig", "bytecode", "asm", "cpu", "gs32", "g85", "vine"
         ).forEach { id ->
             val coded = ok(Ciphers.encode(id, sample))
             val detected = Ciphers.detect(coded)
@@ -194,12 +198,77 @@ class CipherTest {
     }
 
     @Test
+    fun digitalPairsPutHeadDigitForOneAndKeepLegacyReadable() {
+        // A = 01000001. В 5.1 главная цифра пары — единица.
+        assertEquals("76777776", ok(Ciphers.encode("d67", "A")))
+        assertEquals("24222224", ok(Ciphers.encode("d42", "A")))
+        // Сообщения 5.0 с обратным порядком должны остаться читаемыми.
+        assertEquals("A", ok(Ciphers.decode("d67", "67666667")))
+        assertEquals("A", ok(Ciphers.decode("d42", "42444442")))
+    }
+
+    @Test
+    fun pigsAndMachineViewsHaveTheirOwnFaces() {
+        val pigs = roundTrip("pig", sample)
+        assertTrue(pigs.contains("\uD83D\uDC3D"))
+        assertTrue(pigs.contains("\uD83D\uDC37"))
+        val bytecode = roundTrip("bytecode", sample)
+        assertTrue(bytecode.startsWith("; GSYNK BYTECODE 1"))
+        assertTrue(bytecode.contains("0x"))
+        val asm = roundTrip("asm", sample)
+        assertTrue(asm.startsWith("; GSYNK ASM 1"))
+        assertTrue(asm.contains("mov "))
+        assertTrue(asm.contains("call emit_byte"))
+        val cpu = roundTrip("cpu", sample)
+        assertTrue(cpu.startsWith("; GSYNK CPU DUMP 1"))
+        assertTrue(cpu.contains("MEM 0000:"))
+        err(Ciphers.decode("bytecode", "нет байтов"))
+        err(Ciphers.decode("asm", "nop"))
+        err(Ciphers.decode("cpu", "IP=0000"))
+    }
+
+    @Test
+    fun gsTlsUsesRecipientKeyPair() {
+        val pair = Ciphers.generateTlsKeyPair()
+        assertTrue(pair.publicKey.startsWith(Ciphers.TLS_PUBLIC_PREFIX))
+        assertTrue(pair.privateKey.startsWith(Ciphers.TLS_PRIVATE_PREFIX))
+        val first = ok(Ciphers.encode("gstls", sample, pair.publicKey))
+        val second = ok(Ciphers.encode("gstls", sample, pair.publicKey))
+        assertTrue(first.startsWith("GSTLS1."))
+        assertNotEquals("эфемерный ECDH обязан менять каждый пакет", first, second)
+        assertEquals(sample, ok(Ciphers.decode("gstls", first, pair.privateKey)))
+        assertEquals("gstls", Ciphers.detect(first)?.first?.id)
+        err(Ciphers.encode("gstls", sample, pair.privateKey))
+        err(Ciphers.decode("gstls", first, pair.publicKey))
+        err(Ciphers.decode("gstls", first, Ciphers.generateTlsKeyPair().privateKey))
+        err(Ciphers.encode("gstls", sample, "обычный пароль"))
+    }
+
+    @Test
+    fun ganonymCompressesPadsAndNeedsPassword() {
+        val long = "виноград и тишина ".repeat(300)
+        val coded = ok(Ciphers.encode("ganonym", long, "тихий пароль"))
+        assertTrue(coded.startsWith("GA1."))
+        assertTrue("GANONYM обязан сжимать повторяющийся текст", coded.length < long.length)
+        assertEquals(long, ok(Ciphers.decode("ganonym", coded, "тихий пароль")))
+        assertEquals("ganonym", Ciphers.detect(coded)?.first?.id)
+        val second = ok(Ciphers.encode("ganonym", long, "тихий пароль"))
+        assertNotEquals("соль и nonce GANONYM случайны", coded, second)
+        err(Ciphers.decode("ganonym", coded, "не тот пароль"))
+        err(Ciphers.encode("ganonym", sample, ""))
+        assertFalse(coded.contains("виноград"))
+    }
+
+    @Test
     fun cryptoCategoryIsInCatalogAndRouted() {
         val crypto = Catalog.Group.CRYPTO
         assertEquals("шифраторы", crypto.title)
         val inside = Catalog.ALL.filter { it.group == crypto }
         assertTrue("в шифраторах должны жить и старые кодеры", inside.size >= 7)
-        listOf("ciphers", "cipherlock", "ciphergrape", "cipherauto").forEach { page ->
+        listOf(
+            "ciphers", "cipherlock", "ciphergrape", "cipherauto", "cipherpig",
+            "cipherbytecode", "cipherasm", "ciphercpu", "gstls"
+        ).forEach { page ->
             assertTrue("страница " + page + " не в роутере GIOUI", GiouiPageIds.contains(page))
             assertNotNull("плитки страницы " + page + " нет", Catalog.ALL.firstOrNull { it.route == "page:" + page })
         }

@@ -73,6 +73,7 @@ fun CipherScreen(
     var lastMillis by remember { mutableStateOf(-1L) }
     var usedCipherTitle by remember { mutableStateOf("") }
     var detected by remember { mutableStateOf<Pair<Ciphers.Info, String>?>(null) }
+    var tlsPair by remember { mutableStateOf<Ciphers.TlsKeyPair?>(null) }
 
     val selected = Ciphers.byId(selectedId)
 
@@ -215,13 +216,71 @@ fun CipherScreen(
             else -> null
         }
         if (keyCipher != null) {
+            val keyLabel = when {
+                keyCipher.id == "gstls" && encryptMode -> "Открытый ключ получателя GSTLS-PUB.…"
+                keyCipher.id == "gstls" -> "Ваш закрытый ключ GSTLS-PRIV.… (никому не показывать)"
+                keyCipher.id == "lock" -> "Пароль замка (не сохраняется)"
+                keyCipher.id == "ganonym" -> "Пароль GANONYM (не сохраняется)"
+                else -> "Ключ (фраза)"
+            }
             GrapeTextField(
                 value = keyText,
                 onValueChange = { keyText = it },
-                label = if (keyCipher.id == "lock") "Пароль замка (не сохраняется)" else "Ключ (фраза)",
+                label = keyLabel,
                 modifier = Modifier.fillMaxWidth(),
-                masked = true
+                masked = !(keyCipher.id == "gstls" && encryptMode)
             )
+            if (keyCipher.id == "gstls") {
+                Spacer(Modifier.height(8.dp))
+                SurfaceCard(Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Как устроен GS-TLS",
+                        color = TextPrimary,
+                        fontSize = Gioui.Type.body,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "Получатель один раз создаёт пару: открытый ключ можно отправить кому угодно, закрытый остаётся только у него. Каждое сообщение получает новый эфемерный ECDH-ключ, поэтому одинаковый текст каждый раз выглядит иначе.",
+                        color = TextDim,
+                        fontSize = Gioui.Type.caption
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    SecondaryButton(
+                        text = if (tlsPair == null) "Создать мою пару ключей GS-TLS" else "Создать другую пару ключей",
+                        onClick = {
+                            scope.launch {
+                                val pair = withContext(Dispatchers.Default) { Ciphers.generateTlsKeyPair() }
+                                tlsPair = pair
+                                keyText = if (encryptMode) pair.publicKey else pair.privateKey
+                                statusError = false
+                                status = "Пара GS-TLS создана на телефоне. Открытый можно передавать, закрытый сохрани в тайном месте."
+                            }
+                        }
+                    )
+                    tlsPair?.let { pair ->
+                        Spacer(Modifier.height(8.dp))
+                        SelectionContainer {
+                            Text(text = pair.publicKey, color = GrapeCyan, fontSize = Gioui.Type.caption, fontFamily = FontFamily.Monospace)
+                        }
+                        Text(
+                            text = "закрытый: " + pair.privateKey.take(28) + "… (полностью только кнопкой копирования)",
+                            color = GrapeAmber,
+                            fontSize = Gioui.Type.caption
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SecondaryButton(text = "Копир. открытый", onClick = {
+                                val clipboard = context.getSystemService(ClipboardManager::class.java)
+                                clipboard?.setPrimaryClip(ClipData.newPlainText("GS-TLS открытый ключ", pair.publicKey))
+                            })
+                            SecondaryButton(text = "Копир. закрытый", onClick = {
+                                val clipboard = context.getSystemService(ClipboardManager::class.java)
+                                clipboard?.setPrimaryClip(ClipData.newPlainText("GS-TLS ЗАКРЫТЫЙ ключ", pair.privateKey))
+                            })
+                        }
+                    }
+                }
+            }
             Spacer(Modifier.height(10.dp))
         }
 
@@ -363,10 +422,10 @@ fun CipherScreen(
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "Кодировки (Base64, двоичный, винограды, G/S, лоза) прячут текст только от случайных " +
-                    "глаз: кто знает схему — прочитает. Настоящую секретность даёт «GS-Замок» (AES-GCM + пароль): " +
-                    "без пароля текст не вернуть даже нам, пароль нигде не хранится. Всё считается на телефоне, " +
-                    "в сеть ничего не уходит.",
+                text = "Кодировки (Base64, поросята, двоичный, байт-код и процессор) прячут текст только от случайных " +
+                    "глаз: кто знает схему — прочитает. Настоящую секретность дают «GS-Замок», GANONYM и GS-TLS. " +
+                    "GS-TLS не делает телефон HTTPS-сервером: это тот же класс защиты внутри текстового пакета — " +
+                    "ECDH P-256, HKDF и AES-GCM. Ключи и пароли нигде не хранятся, в сеть ничего не уходит.",
                 color = TextDim,
                 fontSize = Gioui.Type.caption
             )

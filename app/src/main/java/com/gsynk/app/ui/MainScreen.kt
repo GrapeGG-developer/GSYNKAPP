@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.gsynk.app.ui
 
@@ -12,6 +12,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -68,7 +69,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -77,8 +80,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gsynk.app.R
+import com.gsynk.app.core.Ciphers
 import com.gsynk.app.core.DeviceProfile
-import com.gsynk.app.core.IslandPosition
+import com.gsynk.app.core.ReleaseNews
 import com.gsynk.app.core.Permissions
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleScheduler
@@ -115,6 +119,8 @@ fun MainScreen(vm: MainViewModel) {
     val message by vm.message.collectAsStateWithLifecycle()
     val hasUpdate by vm.updateAvailable.collectAsStateWithLifecycle()
     val hadCrash by vm.lastCrash.collectAsStateWithLifecycle()
+    val updateStatus by vm.updateStatus.collectAsStateWithLifecycle()
+    val agentUnseen by vm.agentUnseen.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
@@ -133,7 +139,6 @@ fun MainScreen(vm: MainViewModel) {
     var pendingLab by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var favorites by remember { mutableStateOf(Catalog.loadFavorites(context)) }
-    val recent = remember { Catalog.loadRecent(context) }
     val toolsVm: ToolsViewModel = viewModel()
 
     // подземелье на два телефона: сопряжение NFC + игра по Wi-Fi
@@ -204,7 +209,12 @@ fun MainScreen(vm: MainViewModel) {
         val (kind, name) = Router.split(request)
         when (kind) {
             "panel" -> {
-                panel = name
+                if (name == "schedule_new") {
+                    panel = "schedule"
+                    creating = true
+                } else {
+                    panel = name
+                }
                 Router.consume()
             }
 
@@ -263,7 +273,7 @@ fun MainScreen(vm: MainViewModel) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 vm.checkUpdateIfStale()
-                // Заодно смотрим, не ответил ли агент: ответ показывается капсулой.
+                // Заодно смотрим, не ответил ли агент: ответ появится обычным уведомлением в приложении.
                 vm.checkAgentMail(silent = true)
             }
         }
@@ -271,8 +281,45 @@ fun MainScreen(vm: MainViewModel) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val sortedRules = remember(rules, settings.ruleSort) { RuleSort.apply(rules, settings.ruleSort) }
     val nextRule = remember(rules) { nextOccurrence(rules) }
+    val nextId = remember(rules) { nextRuleId(rules) }
+
+    fun homeTileLines(entry: Catalog.Entry): List<String> = when (entry.id) {
+        "nearby" -> listOf(
+            "NFC · Grape Link · Bluetooth · Wi-Fi Direct",
+            "касаний NFC на этом телефоне: " + settings.nfcTouches,
+            profile.model.ifBlank { "передача рядом" }
+        )
+        "schedule", "schedulestatus" -> listOf(
+            "активны " + rules.count { it.enabled } + " из " + rules.size,
+            nextRule?.let { "ближайшее изменение через " + humanDelta(ZonedDateTime.now(), it) } ?: "правил пока нет",
+            if (settings.autopilot) "автопилот включён" else "автопилот выключен"
+        )
+        "schedulenew" -> listOf("дни · время · яркость · громкость", "создай правило в категории расписания")
+        "ciphers" -> listOf(
+            Ciphers.ALL.size.toString() + " шифров на одном экране",
+            "🐽 ноль · 🐷 единица",
+            "GS-TLS · GANONYM · байт-код · ASM"
+        )
+        "gstls" -> listOf("ECDH P-256 + AES-256-GCM", "новый эфемерный ключ у каждого пакета", "открытый ключ получателя")
+        "ganonym" -> listOf("без автора · устройства · времени", "сжатие и ступени размера", "PBKDF2 + AES-256-GCM")
+        "anonymity", "nickgen", "avatarlab", "tracecheck" -> listOf(entry.subtitle, "всё локально на телефоне", "персона из текстового зерна")
+        "news" -> ReleaseNews.items.map { it.title }
+        "update" -> listOf(
+            if (hasUpdate) "новая версия доступна" else "обновлений сейчас нет",
+            updateStatus.ifBlank { "проверка через GitHub" }
+        )
+        "agent" -> listOf(
+            if (agentUnseen > 0) "новых ответов: " + agentUnseen else "связь через GitHub",
+            "вопросы и ответы агента"
+        )
+        "lowlevel", "registers" -> listOf("HEX · биты · BE/LE", "IP · A/B/C · флаги", "CRC32 · SHA-256 · дампы")
+        else -> buildList {
+            add(entry.subtitle)
+            if (entry.fresh) add("новое в GSYNK 5.1")
+            add(entry.group.hint)
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
     AnimatedGrapeBackground {
@@ -304,18 +351,16 @@ fun MainScreen(vm: MainViewModel) {
                 }
 
                 item {
-                    val unseen by vm.agentUnseen.collectAsStateWithLifecycle()
                     AnimatedVisibility(
-                        visible = unseen > 0,
+                        visible = agentUnseen > 0,
                         enter = expandVertically() + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
-                        AgentMailBanner(unseen = unseen, onClick = { panel = "page:agent" })
+                        AgentMailBanner(unseen = agentUnseen, onClick = { panel = "page:agent" })
                     }
                 }
 
                 item {
-                    val updateStatus by vm.updateStatus.collectAsStateWithLifecycle()
                     AnimatedVisibility(
                         visible = hasUpdate,
                         enter = expandVertically() + fadeIn(),
@@ -331,38 +376,41 @@ fun MainScreen(vm: MainViewModel) {
                     }
                 }
 
-                // ————— вау-слой: живое сияние и параллакс от наклона —————
+                // ————— новости релиза: фирменная иллюстрация и пункты прямо с главного —————
                 item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(128.dp)
-                            .clip(skinShape("card"))
-                    ) {
-                        AuroraField(intensity = 1f)
-                        ParallaxBox(Modifier.fillMaxSize(), strength = 9f) {
-                            Column(
-                                Modifier
-                                    .fillMaxSize()
-                                    .padding(16.dp),
-                                verticalArrangement = Arrangement.Bottom
-                            ) {
+                    SurfaceCard(Modifier.fillMaxWidth(), onClick = { panel = "page:news" }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(R.drawable.grapescript_logo),
+                                contentDescription = "Логотип Grape Script",
+                                modifier = Modifier.width(112.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
                                 Text(
-                                    text = "gsynk " + Gioui.UI_VERSION.lowercase(),
+                                    text = "новости GSYNK 5.1",
                                     color = TextPrimary,
-                                    fontSize = Gioui.Type.pageSubtitle,
-                                    fontWeight = FontWeight.Light,
-                                    letterSpacing = (-0.5).sp
+                                    fontSize = Gioui.Type.tileLive,
+                                    fontWeight = FontWeight.Light
                                 )
                                 Text(
-                                    text = "единый интерфейс · все функции по категориям",
+                                    text = "шифры до процессора · анонимность · живые плитки",
                                     color = TextSecondary,
                                     fontSize = Gioui.Type.caption
                                 )
                             }
                         }
-                        // Блик по герою: маленькая деталь, из-за которой экран кажется живым.
-                        Box(Modifier.fillMaxSize().then(shimmerModifier(active = true)))
+                        Spacer(Modifier.height(10.dp))
+                        ReleaseNews.items.take(3).forEach { news ->
+                            Row(Modifier.padding(vertical = 2.dp)) {
+                                Text("•", color = GrapeGreen, fontSize = Gioui.Type.body, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.width(8.dp))
+                                Text(news.title, color = TextSecondary, fontSize = Gioui.Type.caption)
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text("открыть все пункты с картинками →", color = GrapeGreen, fontSize = Gioui.Type.caption, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -376,46 +424,23 @@ fun MainScreen(vm: MainViewModel) {
                     )
                 }
 
-                // ————— GIOUI: быстрые переключатели одной карточкой —————
-                item {
-                    SurfaceCard(Modifier.fillMaxWidth()) {
-                        SectionTitle("быстро")
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Автопилот", color = TextPrimary, fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
-                                Text(
-                                    text = nextRule?.let { "следующее правило через " + humanDelta(ZonedDateTime.now(), it) } ?: "правил пока нет",
-                                    color = TextDim, fontSize = Gioui.Type.caption
-                                )
-                            }
-                            Switch(checked = settings.autopilot, onCheckedChange = { vm.setAutopilot(it) })
-                        }
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Остров", color = TextPrimary, fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
-                                Text(
-                                    text = if (settings.islandPersistent) "постоянный под камерой" else "только вспышки событий",
-                                    color = TextDim, fontSize = Gioui.Type.caption
-                                )
-                            }
-                            Switch(checked = settings.islandPersistent, onCheckedChange = { vm.setIslandPersistent(it) })
-                        }
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text("Уведомления", color = TextPrimary, fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
-                                Text(
-                                    text = if (settings.notifications) "напоминать о правилах и событиях" else "тишина",
-                                    color = TextDim, fontSize = Gioui.Type.caption
-                                )
-                            }
-                            Switch(checked = settings.notifications, onCheckedChange = { vm.setNotifications(it) })
-                        }
-                        Text(
-                            text = profile.model.ifBlank { "Устройство" } + " · " +
-                                if (profile.isFull) "функции определены автоматически" else "базовый набор функций",
-                            color = TextDim, fontSize = Gioui.Type.caption
+                if (!permissions.allGranted) {
+                    item {
+                        PermissionsCard(
+                            snapshot = permissions,
+                            onOpen = { id -> Permissions.open(context, id) }
                         )
                     }
+                }
+
+                item {
+                    ScheduleSummaryCard(
+                        active = rules.count { it.enabled },
+                        total = rules.size,
+                        next = nextRule,
+                        autopilot = settings.autopilot,
+                        onOpen = { panel = "schedule" }
+                    )
                 }
 
                 // ————— GIOUI: поиск показывает результат сразу, без лишних экранов —————
@@ -437,6 +462,7 @@ fun MainScreen(vm: MainViewModel) {
                                         size = entry.size,
                                         color = entry.color,
                                         icon = ImageVector.vectorResource(entry.iconRes),
+                                        liveLines = homeTileLines(entry),
                                         badge = when {
                                             entry.fresh -> "новое"
                                             entry.id in favorites -> "моё"
@@ -453,131 +479,58 @@ fun MainScreen(vm: MainViewModel) {
                         }
                     }
                 } else {
-                    // ————— категории GIOUI: каждая функция ровно в своей группе —————
-                    item {
-                        SectionTitle("категории")
-                        Text(
-                            text = Catalog.ALL.size.toString() + " функций · " + Catalog.Group.entries.size +
-                                " категорий · долгое нажатие в категории — в «моё»",
-                            color = TextDim, fontSize = Gioui.Type.caption
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Catalog.Group.entries.chunked(2).forEach { row ->
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(Gioui.gutter)
-                            ) {
-                                row.forEach { grp ->
-                                    val count = Catalog.ALL.count { it.group == grp }
-                                    GioCard(
-                                        title = grp.title,
-                                        subtitle = grp.hint,
-                                        size = Gioui.Size.MEDIUM,
-                                        color = Gioui.Palette.tiles[grp.ordinal % Gioui.Palette.tiles.size],
-                                        live = count.toString(),
-                                        badge = if (grp == Catalog.Group.CRYPTO) "новое" else null,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = {
-                                            Catalog.saveGroup(context, grp)
-                                            panel = "page:folders"
+                    // ————— категории сразу на главном: вертикальная лента живых плиток —————
+                    Catalog.Group.entries.forEach { grp ->
+                        val entries = Catalog.ALL
+                            .filter { it.group == grp }
+                            .sortedByDescending { it.hot }
+                        if (entries.isNotEmpty()) {
+                            stickyHeader(key = "home-group-" + grp.name) {
+                                Box(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clip(skinShape("card"))
+                                        .background(CardBg.copy(alpha = 0.9f))
+                                        .border(1.dp, CardBorder, skinShape("card"))
+                                        .padding(horizontal = 14.dp, vertical = 4.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            GioGroup(grp.title)
+                                            Text(grp.hint, color = TextDim, fontSize = Gioui.Type.caption)
                                         }
-                                    )
+                                        TagChip(text = entries.size.toString() + " функций")
+                                    }
                                 }
-                                repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
                             }
-                            Spacer(Modifier.height(Gioui.gutter))
-                        }
-                    }
-
-                    val lastHome = Catalog.recentOrdered(recent).take(2)
-                    if (lastHome.isNotEmpty()) {
-                        item {
-                            SectionTitle("недавнее")
-                            Spacer(Modifier.height(6.dp))
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(Gioui.gutter)
-                            ) {
-                                lastHome.forEach { entry ->
-                                    GioCard(
-                                        title = entry.title,
-                                        subtitle = entry.subtitle,
-                                        size = Gioui.Size.MEDIUM,
-                                        color = entry.color,
-                                        icon = ImageVector.vectorResource(entry.iconRes),
-                                        modifier = Modifier.weight(1f),
-                                        onClick = { Catalog.open(context, entry) }
-                                    )
+                            item(key = "home-grid-" + grp.name) {
+                                GioGrid(Modifier.fillMaxWidth()) {
+                                    entries.forEach { entry ->
+                                        GioCard(
+                                            title = entry.title,
+                                            subtitle = entry.subtitle,
+                                            size = entry.size,
+                                            color = entry.color,
+                                            icon = ImageVector.vectorResource(entry.iconRes),
+                                            liveLines = homeTileLines(entry),
+                                            badge = when {
+                                                entry.fresh -> "5.1"
+                                                entry.id in favorites -> "моё"
+                                                else -> null
+                                            },
+                                            onClick = { Catalog.open(context, entry) },
+                                            onLongClick = {
+                                                favorites = if (entry.id in favorites) favorites - entry.id else favorites + entry.id
+                                                Catalog.saveFavorites(context, favorites)
+                                            }
+                                        )
+                                    }
                                 }
-                                repeat(2 - lastHome.size) { Spacer(Modifier.weight(1f)) }
                             }
                         }
                     }
                 }
 
-                if (!permissions.allGranted) {
-                    item {
-                        PermissionsCard(
-                            snapshot = permissions,
-                            onOpen = { id -> Permissions.open(context, id) }
-                        )
-                    }
-                }
-
-                item {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Расписание",
-                            color = TextPrimary,
-                            style = MaterialTheme.typography.headlineSmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light),
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = "${rules.count { it.enabled }} из ${rules.size} активны",
-                            color = TextDim,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
-                        )
-                    }
-                }
-
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        RuleSort.ALL.forEach { mode ->
-                            SortChip(
-                                label = RuleSort.label(mode),
-                                selected = settings.ruleSort == mode
-                            ) { vm.setRuleSort(mode) }
-                        }
-                    }
-                }
-
-                if (sortedRules.isEmpty()) {
-                    item { EmptyState(onAdd = { creating = true }) }
-                }
-
-                items(sortedRules, key = { it.id }) { rule ->
-                    RuleCard(
-                        rule = rule,
-                        isNext = rule.id == nextRuleId(rules),
-                        onEdit = { editing = rule },
-                        onApply = { vm.applyNow(rule) },
-                        onDuplicate = { vm.duplicate(rule) },
-                        onToggle = { vm.setEnabled(rule, it) },
-                        onDelete = { vm.delete(rule) }
-                    )
-                }
-
-                item {
-                    AddRuleTile(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { creating = true }
-                    )
-                }
             }
 
             SnackbarHost(
@@ -624,6 +577,15 @@ fun MainScreen(vm: MainViewModel) {
         )
     }
 
+    if (panel == "schedule") {
+        ScheduleScreen(
+            vm = vm,
+            onBack = { panel = null },
+            onCreate = { creating = true },
+            onEdit = { editing = it }
+        )
+    }
+
     if (panel == "tools") {
         ToolsScreen(
             vm = vm,
@@ -636,6 +598,7 @@ fun MainScreen(vm: MainViewModel) {
                 pendingFlag = null
                 pendingLab = null
             },
+            // Единственная пользовательская дверь к Grape Link — кнопка NFC внутри «GSYNK рядом».
             onOpenNfc = { panel = "nfc" },
             // «GSYNK рядом» умеет передать игру в те же экраны, что и NFC
             onHostGame = {
@@ -654,7 +617,7 @@ fun MainScreen(vm: MainViewModel) {
         )
     }
 
-    // Страницы GIOUI: остров, эффекты, скругления, каждый день, пасхалки, рулетка, ИИ, бенчмарк.
+    // Страницы GIOUI: эффекты, скругления, каждый день, шифры, анонимность, новости, ИИ, бенчмарк.
     panel?.takeIf { it.startsWith("page:") }?.let { name ->
         val page = name.removePrefix("page:")
         if (GiouiPage(page, vm, onBack = { panel = null })) return@let
@@ -755,8 +718,8 @@ fun MainScreen(vm: MainViewModel) {
             },
             invite = rogueInvite,
             onInviteByNfc = {
-                panel = null
-                panel = "nfc"
+                pendingTool = "nearby"
+                panel = "tools"
             },
             coop = coopRole,
             onCoopSetup = {
@@ -783,6 +746,38 @@ fun MainScreen(vm: MainViewModel) {
     }
 }
 
+
+@Composable
+private fun ScheduleSummaryCard(
+    active: Int,
+    total: Int,
+    next: ZonedDateTime?,
+    autopilot: Boolean,
+    onOpen: () -> Unit
+) {
+    SurfaceCard(Modifier.fillMaxWidth(), onClick = onOpen) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("расписание", color = TextPrimary, fontSize = Gioui.Type.groupHeader, fontWeight = FontWeight.SemiBold)
+                Text(
+                    text = "активны " + active + " из " + total + " · автопилот " + if (autopilot) "включён" else "выключен",
+                    color = TextSecondary,
+                    fontSize = Gioui.Type.caption
+                )
+                Text(
+                    text = next?.let {
+                        "ближайшее: " + it.format(DateTimeFormatter.ofPattern("d MMM, HH:mm")) +
+                            " · через " + humanDelta(ZonedDateTime.now(), it)
+                    } ?: "ближайшего изменения нет",
+                    color = TextDim,
+                    fontSize = Gioui.Type.caption
+                )
+            }
+            Text("→", color = GrapeGreen, fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
+        }
+    }
+}
+
 // ————————————————————————————————————————————————
 //  Заголовок и живая строка состояния
 // ————————————————————————————————————————————————
@@ -794,6 +789,13 @@ private fun HomeHeader(model: String, onSettings: () -> Unit, vm: MainViewModel?
     val logoContext = LocalContext.current
     Column(Modifier.padding(top = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = painterResource(R.drawable.grapescript_logo),
+                contentDescription = "Логотип Grape Script",
+                modifier = Modifier.width(92.dp),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Box {
                     GradientText(
@@ -961,7 +963,7 @@ private fun PermissionRow(item: Permissions.Item, onClick: () -> Unit) {
 // ————————————————————————————————————————————————
 
 @Composable
-private fun RuleCard(
+internal fun RuleCard(
     rule: Rule,
     isNext: Boolean,
     onEdit: () -> Unit,
@@ -1103,7 +1105,7 @@ private fun RuleCard(
 }
 
 @Composable
-private fun EmptyState(onAdd: () -> Unit) {
+internal fun EmptyState(onAdd: () -> Unit) {
     SurfaceCard {
         Text("Правил пока нет", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
         Spacer(Modifier.height(4.dp))
@@ -1126,14 +1128,14 @@ private fun EmptyState(onAdd: () -> Unit) {
 //  Ближайшее правило
 // ————————————————————————————————————————————————
 
-private fun nextOccurrence(rules: List<Rule>): ZonedDateTime? {
+internal fun nextOccurrence(rules: List<Rule>): ZonedDateTime? {
     val now = ZonedDateTime.now()
     return rules.filter { it.enabled }
         .mapNotNull { RuleScheduler.nextOccurrence(it, now) }
         .minOrNull()
 }
 
-private fun nextRuleId(rules: List<Rule>): String? {
+internal fun nextRuleId(rules: List<Rule>): String? {
     val now = ZonedDateTime.now()
     return rules.filter { it.enabled }
         .mapNotNull { rule -> RuleScheduler.nextOccurrence(rule, now)?.let { it to rule } }

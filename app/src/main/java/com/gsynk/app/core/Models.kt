@@ -105,20 +105,6 @@ data class AppSettings(
     val autopilot: Boolean = true,
     /** Показывать короткое уведомление в момент применения правила. */
     val notifications: Boolean = true,
-    /** Показывать мини-айленд при срабатывании правила. */
-    val islandEnabled: Boolean = true,
-    /** Положение острова на экране (см. IslandPosition). */
-    val islandPosition: Int = IslandPosition.TOP_CENTER,
-    /** Постоянный остров: висит на экране всегда. */
-    val islandPersistent: Boolean = false,
-    /** Что показывать на постоянном острове (см. IslandWidget). */
-    val islandWidgets: List<String> = IslandWidget.DEFAULTS,
-    /** Компактный размер капсулы. */
-    val islandCompact: Boolean = true,
-    /** Смещение острова по вертикали, dp (можно поднять/опустить под свой вырез). */
-    val islandOffsetY: Int = 0,
-    /** Остров 2.0 садится вплотную под фронтальную камеру (по вырезу экрана). */
-    val islandHugCamera: Boolean = true,
     /** После перезагрузки применить правило, чьё время было последним по графику. */
     val syncAfterBoot: Boolean = true,
     /** Порядок правил на главном экране (см. RuleSort). */
@@ -168,50 +154,6 @@ data class AppSettings(
     val reportToken: String = "",
     val reportLastUpload: Long = 0L
 )
-
-object IslandPosition {
-    const val TOP_LEFT = 0
-    const val TOP_CENTER = 1
-    const val TOP_RIGHT = 2
-    const val MID_LEFT = 3
-    const val MID_RIGHT = 4
-    const val BOTTOM_LEFT = 5
-    const val BOTTOM_CENTER = 6
-    const val BOTTOM_RIGHT = 7
-
-    val ALL = listOf(TOP_LEFT, TOP_CENTER, TOP_RIGHT, MID_LEFT, MID_RIGHT, BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT)
-
-    fun label(value: Int): String = when (value) {
-        TOP_LEFT -> "Сверху слева"
-        TOP_CENTER -> "Сверху по центру"
-        TOP_RIGHT -> "Сверху справа"
-        MID_LEFT -> "По центру слева"
-        MID_RIGHT -> "По центру справа"
-        BOTTOM_LEFT -> "Снизу слева"
-        BOTTOM_CENTER -> "Снизу по центру"
-        else -> "Снизу справа"
-    }
-}
-
-/** Что выводить на постоянном острове. */
-object IslandWidget {
-    const val CLOCK = "clock"
-    const val BATTERY = "battery"
-    const val NEXT_RULE = "next_rule"
-    const val NFC_COUNT = "nfc"
-    const val RECORD = "record"
-
-    val ALL = listOf(CLOCK, BATTERY, NEXT_RULE, NFC_COUNT, RECORD)
-    val DEFAULTS = listOf(CLOCK, BATTERY, NEXT_RULE)
-
-    fun label(id: String): String = when (id) {
-        CLOCK -> "Часы"
-        BATTERY -> "Заряд батареи"
-        NEXT_RULE -> "Ближайшее правило"
-        NFC_COUNT -> "Счётчик NFC-касаний"
-        else -> "Рекорд игр"
-    }
-}
 
 object RuleSort {
     const val BY_TIME = 0

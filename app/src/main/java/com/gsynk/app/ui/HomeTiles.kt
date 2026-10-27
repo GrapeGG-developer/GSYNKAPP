@@ -17,6 +17,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -80,7 +81,8 @@ fun LiveTile(
     onClick: () -> Unit
 ) {
     val haptics = LocalHapticFeedback.current
-    var pressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.94f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
@@ -108,7 +110,7 @@ fun LiveTile(
             .background(brush)
             .border(1.dp, Color.White.copy(alpha = 0.14f), skinShape("card"))
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null
             ) {
                 // Отклик по настройкам: вибрация и/или щелчок (в «Кастомизации»).
@@ -363,7 +365,8 @@ fun GioHomeCard(
     onClick: () -> Unit
 ) {
     val haptics = LocalHapticFeedback.current
-    var pressed by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
     val press by animateFloatAsState(
         targetValue = if (pressed) 0.95f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
@@ -416,7 +419,7 @@ fun GioHomeCard(
             .background(brush)
             .border(1.dp, Color.White.copy(alpha = 0.12f), skinShape("card"))
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null
             ) {
                 // Отклик по настройкам: вибрация и/или щелчок (в «Кастомизации»).

@@ -3,11 +3,8 @@ package com.gsynk.app.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.gsynk.app.R
 import com.gsynk.app.core.AppLog
 import com.gsynk.app.core.AppSettings
-import com.gsynk.app.core.IslandOverlay
-import com.gsynk.app.core.IslandService
 import com.gsynk.app.core.Permissions
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleEngine
@@ -45,15 +42,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.settings.stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
 
     private val _message = MutableStateFlow<String?>(null)
-    /** Непрочитанные ответы агента: показываются капсулой на главном экране. */
+    /** Непрочитанные ответы агента: показываются баннером и живой плиткой на главном экране. */
     private val _agentUnseen = MutableStateFlow(0)
     val agentUnseen: kotlinx.coroutines.flow.StateFlow<Int> = _agentUnseen.asStateFlow()
     val message: StateFlow<String?> = _message.asStateFlow()
 
     init {
         viewModelScope.launch { rescheduleAll() }
-        // Остров 2.0: сразу применяем посадку из настроек, иначе капсула встанет ниже камеры.
-        syncIslandHug()
     }
 
     private fun app(): Application = getApplication()
@@ -79,13 +74,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 list.forEach { RuleScheduler.cancel(app(), it.id) }
             }
         }
-    }
-
-    private fun islandPosition() = settings.value.islandPosition
-
-    /** Посадка острова приходит из настроек — держим оверлей в курсе. */
-    private fun syncIslandHug() {
-        IslandOverlay.hugCamera = settings.value.islandHugCamera
     }
 
     // ————— действия с правилами —————
@@ -171,15 +159,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             parts.isNotEmpty() -> "Применено: " + parts.joinToString(", ")
             rule.useBrightness || rule.useVolume -> "Нет нужных доступов"
             else -> "В правиле отключены яркость и громкость"
-        }
-        if (parts.isNotEmpty() && settings.value.islandEnabled) {
-            IslandOverlay.show(
-                context = app(),
-                iconRes = if (result.brightness) R.drawable.ic_brightness else R.drawable.ic_volume,
-                title = rule.name,
-                subtitle = parts.joinToString(" • ").replaceFirstChar { it.uppercase() },
-                position = islandPosition()
-            )
         }
 
         // если применяли разовое правило вручную — тоже выключаем его
@@ -279,8 +258,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         /** Возвращение в приложение: проверяем, если прошло больше полуминуты. */
         const val STALE_INTERVAL_MS = 30 * 1000L
 
-        /** Пока обновление не установлено, напоминаем в островке раз в 15 минут. */
-        const val REMIND_CAPSULE_MS = 15 * 60 * 1000L
+        /** Пока обновление не установлено, напоминаем сообщением раз в 15 минут. */
+        const val REMIND_NOTICE_MS = 15 * 60 * 1000L
 
         /** И раз в 20 минут зовём панель обновления — сами, без нажатий. */
         const val REMIND_PANEL_MS = 20 * 60 * 1000L
@@ -310,10 +289,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return now - lastPromptAt >= REMIND_PANEL_MS
         }
 
-        /** Пора ли напомнить в островке. */
-        fun shouldRemind(available: Boolean, acked: Boolean, lastCapsuleAt: Long, now: Long): Boolean {
+        /** Пора ли напомнить сообщением внутри приложения. */
+        fun shouldRemind(available: Boolean, acked: Boolean, lastNoticeAt: Long, now: Long): Boolean {
             if (!available || acked) return false
-            return now - lastCapsuleAt >= REMIND_CAPSULE_MS
+            return now - lastNoticeAt >= REMIND_NOTICE_MS
         }
 
         /**
@@ -367,7 +346,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Когда последний раз показывали панель и когда отложили напоминание. */
     private var lastPromptAt = 0L
-    private var lastCapsuleAt = 0L
+    private var lastNoticeAt = 0L
     private var postponedUntil = 0L
 
     /** Проверка идёт прямо сейчас: панель показывает это честно. */
@@ -421,7 +400,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * Напоминания об обновлении. Живут в том же круге: пока версия не установлена и не
-     * отмечена «пропустить», панель зовёт себя сама, а островок тихо напоминает.
+     * отмечена «пропустить», панель зовёт себя сама, а обычное сообщение тихо напоминает.
      */
     private fun remindAboutUpdate() {
         val now = System.currentTimeMillis()
@@ -432,9 +411,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             lastPromptAt = now
             _updatePrompt.value = _updatePrompt.value + 1
         }
-        if (UpdatePolicy.shouldRemind(available, acked, lastCapsuleAt, now)) {
-            lastCapsuleAt = now
-            announceIsland("GSYNK " + result.latestTag, "обновление ждёт установки", persistent = false)
+        if (UpdatePolicy.shouldRemind(available, acked, lastNoticeAt, now)) {
+            lastNoticeAt = now
+            surfaceNotice("GSYNK " + result.latestTag, "обновление ждёт установки")
         }
     }
 
@@ -460,11 +439,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val before = _agentUnseen.value
         _agentUnseen.value = fresh
         if (fresh > before && fresh > 0) {
-            // Новая весть от агента — в островок, как и обновление версии.
-            announceIsland(
+            // Новая весть от агента показывается обычным сообщением и баннером.
+            surfaceNotice(
                 title = "агент ответил",
-                subtitle = "новых сообщений: " + fresh,
-                persistent = false
+                subtitle = "новых сообщений: " + fresh
             )
         }
         if (!silent) _message.value = result.message
@@ -520,16 +498,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         if (!silent) _message.value = result.message
 
-        // Версия нашлась: капсула в островке + зов панели, даже если её закрывали.
+        // Версия нашлась: обычное сообщение + зов панели, даже если её закрывали.
         if (result.updateAvailable && result.latestTag != settings.value.seenVersion) {
             val fresh = result.latestTag != (_updateAnnounce.value ?: "")
             _updateAnnounce.value = result.latestTag
-            if (fresh || lastCapsuleAt + REMIND_CAPSULE_MS < System.currentTimeMillis()) {
-                lastCapsuleAt = System.currentTimeMillis()
-                announceIsland(
+            if (fresh || lastNoticeAt + REMIND_NOTICE_MS < System.currentTimeMillis()) {
+                lastNoticeAt = System.currentTimeMillis()
+                surfaceNotice(
                     title = "GSYNK " + result.latestTag,
                     subtitle = if (result.webOnly) "есть новая версия" else "обновление готово",
-                    persistent = false,
                     progress = -1
                 )
             }
@@ -543,52 +520,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Остров говорит «GSYNK»: одна капсула на все случаи обновления — нашлась версия,
-     * качается APK, готово к установке. Progress меньше нуля — без полосы.
+     * Обычное уведомление внутри приложения: обновления, агент и загрузка сообщаются
+     * сообщением главного экрана и существующим состоянием прогресса, без overlay-капсул.
      */
-    private fun announceIsland(title: String, subtitle: String, persistent: Boolean, progress: Int = -1) {
-        // Настройки уже лежат в потоке состояния — читать хранилище из UI-потока не нужно.
-        val current = settings.value
-        if (persistent) {
-            val text = if (progress in 0..100) progress.toString() + "%" else title
-            // Если капсула уже висит — только обновляем подписи: окно не пересоздаётся
-            // на каждый процент, иначе система мигает при загрузке.
-            if (IslandOverlay.isShownPersistent()) {
-                IslandOverlay.updatePersistent(
-                    context = app(),
-                    title = title,
-                    subtitle = subtitle,
-                    expandedText = text,
-                    position = islandPosition(),
-                    compact = current.islandCompact,
-                    offsetY = current.islandOffsetY
-                )
-            } else {
-                IslandOverlay.showPersistent(
-                    context = app(),
-                    title = title,
-                    subtitle = subtitle,
-                    expandedText = text,
-                    position = islandPosition(),
-                    compact = current.islandCompact,
-                    offsetY = current.islandOffsetY
-                )
-            }
-        } else {
-            IslandOverlay.show(
-                context = app(),
-                iconRes = com.gsynk.app.R.drawable.ic_bolt,
-                title = title,
-                subtitle = subtitle,
-                position = islandPosition(),
-                durationMs = 5_000L,
-                compact = current.islandCompact,
-                offsetY = current.islandOffsetY
-            )
+    private fun surfaceNotice(title: String, subtitle: String, progress: Int = -1) {
+        if (progress in 0..100) {
+            _updateProgress.value = progress
+            return
+        }
+        val text = listOf(title.trim(), subtitle.trim()).filter { it.isNotEmpty() }.joinToString(" — ")
+        if (text.isNotBlank()) {
+            _message.value = text
+            AppLog.event("Уведомление", text)
         }
     }
 
-    /** Метка версии, о которой уже рассказали в островке: чтобы не повторяться. */
+    /** Метка версии, о которой уже сообщили: чтобы не повторяться. */
     private val _updateAnnounce = MutableStateFlow<String?>(null)
     val updateAnnounce: StateFlow<String?> = _updateAnnounce.asStateFlow()
 
@@ -646,7 +593,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         _updateDownloading.value = true
         _updateProgress.value = 0
-        announceIsland("GSYNK " + tag, "качаю 0%", persistent = true, progress = 0)
+        surfaceNotice("GSYNK " + tag, "качаю 0%", progress = 0)
         val download = withContext(Dispatchers.IO) {
             UpdateChecker.download(
                 context = app(),
@@ -654,8 +601,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 sha256 = result?.sha256.orEmpty()
             ) { percent ->
                 _updateProgress.value = percent
-                // Полоса и подпись в островке идут за настоящей загрузкой.
-                announceIsland("GSYNK " + tag, "качаю " + percent.toString() + "%", persistent = true, progress = percent)
+                // Существующее состояние прогресса идёт за настоящей загрузкой.
+                surfaceNotice("GSYNK " + tag, "качаю " + percent.toString() + "%", progress = percent)
             }
         }
         _updateDownloading.value = false
@@ -663,11 +610,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (file == null) {
             // Причину показываем как есть: «не скачалось» без объяснения бесполезно.
             _message.value = "Обновление не скачалось: " + download.message
-            announceIsland("GSYNK " + tag, "не скачалось", persistent = false)
+            surfaceNotice("GSYNK " + tag, "не скачалось")
             AppLog.event("Обновление", "скачивание не удалось: " + download.message)
             return@launch
         }
-        announceIsland("GSYNK " + tag, "скачано, ставлю", persistent = false)
+        surfaceNotice("GSYNK " + tag, "скачано, ставлю")
         if (!UpdateChecker.canInstall(app())) {
             _message.value = "Разрешите установку из GSYNK — сейчас открою настройки"
             UpdateChecker.openInstallSettings(app())
@@ -847,89 +794,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         guarded { repository.saveSettings(repository.currentSettings().copy(notifications = enabled)) }
     }
 
-    fun setIsland(enabled: Boolean) = viewModelScope.launch {
-        guarded {
-            repository.saveSettings(repository.currentSettings().copy(islandEnabled = enabled))
-            if (enabled && !Permissions.canDrawOverlays(app())) {
-                _message.value = "Нужен доступ «Поверх других приложений»"
-            } else {
-                _message.value = if (enabled) "Мини-айленд включён" else "Мини-айленд выключен"
-            }
-        }
-    }
-
-    /** Постоянный остров: включён — висит капсула, выключен — только вспышки. */
-    fun setIslandPersistent(enabled: Boolean) = viewModelScope.launch {
-        guarded {
-            repository.saveSettings(repository.currentSettings().copy(islandPersistent = enabled))
-            if (enabled) {
-                if (!Permissions.canDrawOverlays(app())) {
-                    _message.value = "Нужен доступ «Поверх других приложений»"
-                } else if (!Permissions.hasNotifications(app())) {
-                    _message.value = "Нужны уведомления: без них остров не удержать"
-                } else {
-                    IslandService.start(app())
-                    _message.value = "Остров включён"
-                }
-            } else {
-                IslandService.stop(app())
-                _message.value = "Остров выключен"
-            }
-        }
-    }
-
-    fun setIslandPosition(position: Int) = viewModelScope.launch {
-        guarded {
-            repository.saveSettings(repository.currentSettings().copy(islandPosition = position))
-            _message.value = "Остров: " + com.gsynk.app.core.IslandPosition.label(position).lowercase()
-            if (settings.value.islandPersistent) {
-                IslandService.start(app())
-            } else if (settings.value.islandEnabled) {
-                fullIslandPreview()
-            }
-        }
-    }
-
-    /** Размер капсулы: компактный или обычный. */
-    override fun onCleared() {
-        runCatching { turbo.release() }
-        super.onCleared()
-    }
-
-    fun setIslandCompact(compact: Boolean) = viewModelScope.launch {
-        guarded {
-            repository.saveSettings(repository.currentSettings().copy(islandCompact = compact))
-            if (settings.value.islandPersistent) IslandService.start(app()) else fullIslandPreview()
-        }
-    }
-
-    /** Смещение острова по вертикали в dp. */
-    fun setIslandOffset(offset: Int) = viewModelScope.launch {
-        guarded {
-            repository.saveSettings(repository.currentSettings().copy(islandOffsetY = offset))
-            if (settings.value.islandPersistent) IslandService.start(app()) else fullIslandPreview()
-        }
-    }
-
-    /** Остров 2.0: прижаться к камере или встать ниже неё. */
-    fun setIslandHugCamera(hug: Boolean) = viewModelScope.launch {
-        guarded {
-            repository.saveSettings(repository.currentSettings().copy(islandHugCamera = hug))
-            IslandOverlay.hugCamera = hug
-            if (settings.value.islandPersistent) IslandService.start(app()) else fullIslandPreview()
-        }
-    }
-
-    /** Что показывать на постоянном острове. */
-    fun toggleIslandWidget(widget: String, on: Boolean) = viewModelScope.launch {
-        guarded {
-            val current = repository.currentSettings().islandWidgets
-            val next = if (on) (current + widget).distinct() else current.filterNot { it == widget }
-            repository.saveSettings(repository.currentSettings().copy(islandWidgets = next))
-            if (settings.value.islandPersistent) IslandService.start(app())
-        }
-    }
-
     /** Порядок правил на главном экране. */
     // ————— кастомизация —————
 
@@ -1001,25 +865,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Тестовый показ айленда. */
-    fun previewIsland() = viewModelScope.launch {
-        if (!Permissions.canDrawOverlays(app())) {
-            _message.value = "Сначала дайте доступ «Поверх других приложений»"
-            return@launch
-        }
-        fullIslandPreview()
-    }
-
-    fun fullIslandPreview() {
-        IslandOverlay.show(
-            context = app(),
-            iconRes = R.drawable.ic_brightness,
-            title = "GSYNK",
-            subtitle = "Яркость 25% • Звук 0%",
-            position = islandPosition()
-        )
-    }
-
     /** Показать сообщение в главном экране (например, от мультитула). */
     fun showMessage(text: String) {
         _message.value = text
@@ -1028,4 +873,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun clearMessage() {
         _message.value = null
     }
+    override fun onCleared() {
+        runCatching { turbo.release() }
+        super.onCleared()
+    }
+
 }

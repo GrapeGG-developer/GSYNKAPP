@@ -30,7 +30,7 @@ object Permissions {
         val id: String,
         val title: String,
         val granted: Boolean,
-        /** Необязательный доступ: не блокирует работу правил (мини-айленд). */
+        /** Необязательный доступ: нужен только отдельным визуальным функциям. */
         val optional: Boolean = false
     )
 
@@ -44,7 +44,9 @@ object Permissions {
         Settings.System.canWrite(context)
     }.getOrDefault(false)
 
-    fun canDrawOverlays(context: Context): Boolean = IslandOverlay.isAvailable(context)
+    fun canDrawOverlays(context: Context): Boolean = runCatching {
+        Settings.canDrawOverlays(context)
+    }.getOrDefault(false)
 
     fun canScheduleExact(context: Context): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -102,7 +104,7 @@ object Permissions {
             Item(ID_WRITE, "Изменение системных настроек", canWriteSettings(context)),
             Item(ID_BATTERY, "Без ограничений батареи", batteryExempt(context)),
             Item(ID_NOTIF, "Уведомления", hasNotifications(context)),
-            Item(ID_OVERLAY, "Остров поверх приложений", canDrawOverlays(context), optional = true),
+            Item(ID_OVERLAY, "Слой поверх приложений (затемнение и NFC-показ)", canDrawOverlays(context), optional = true),
             Item(ID_MIC, "Микрофон (шумомер)", hasMicrophone(context), optional = true)
         )
     )

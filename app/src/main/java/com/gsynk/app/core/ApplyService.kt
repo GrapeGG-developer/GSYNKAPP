@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
  *
  * Foreground-служба типа specialUse — единственный способ гарантированно менять
  * системную громкость из фона (в Android 17 фоновые вызовы игнорируются).
- * Дополнительно показывает «мини-айленд» и пересобирает расписание.
+ * Записывает событие в журнал и пересобирает расписание.
  */
 class ApplyService : Service() {
 
@@ -38,7 +38,6 @@ class ApplyService : Service() {
         val foregroundStarted = runCatching { startForegroundCompat() }.isSuccess
 
         scope.launch {
-            var islandShown = false
             try {
                 val repository = RuleRepository(applicationContext)
                 val settings = repository.currentSettings()
@@ -60,11 +59,6 @@ class ApplyService : Service() {
                                 (if (result.brightness) ", яркость ${rule.brightness}%" else "") +
                                 (if (result.volume) ", звук ${rule.volume}%" else "")
                         )
-                        if (settings.islandEnabled && (result.brightness || result.volume)) {
-                            islandShown = showIsland(
-                                rule, result, settings.islandPosition, settings.islandCompact, settings.islandOffsetY
-                            )
-                        }
                         // разовое правило (с конкретными датами) отработало — выключаем его,
                         // чтобы оно не срабатывало в эти же дни недели каждую неделю
                         if (rule.isOneTime) {
@@ -77,37 +71,12 @@ class ApplyService : Service() {
             } catch (_: Throwable) {
                 // одна неудачная попытка не должна ронять службу
             } finally {
-                // оставляем процесс живым, пока играет анимация острова
-                delay(if (islandShown) ISLAND_ALIVE_MS else 120L)
+                // Короткая пауза, чтобы система успела завершить foreground-запуск.
+                delay(120L)
                 stopSelf(startId)
             }
         }
         return START_NOT_STICKY
-    }
-
-    private fun showIsland(
-        rule: Rule,
-        result: RuleEngine.Applied,
-        position: Int,
-        compact: Boolean,
-        offsetY: Int
-    ): Boolean {
-        val parts = buildList {
-            if (result.brightness) add("Яркость ${rule.brightness}%")
-            if (result.volume) add("Звук ${rule.volume}%")
-        }
-        if (parts.isEmpty()) return false
-        val icon = if (result.brightness) R.drawable.ic_brightness else R.drawable.ic_volume
-        IslandOverlay.show(
-            context = applicationContext,
-            iconRes = icon,
-            title = rule.name,
-            subtitle = parts.joinToString(" • "),
-            position = position,
-            compact = compact,
-            offsetY = offsetY
-        )
-        return true
     }
 
     private fun startForegroundCompat() {
@@ -144,7 +113,6 @@ class ApplyService : Service() {
     companion object {
         const val NOTIFICATION_ID = 1001
         const val EXTRA_RULE_ID = "rule_id"
-        private const val ISLAND_ALIVE_MS = 3_700L
 
         fun start(context: Context, ruleId: String?) {
             val intent = Intent(context, ApplyService::class.java)

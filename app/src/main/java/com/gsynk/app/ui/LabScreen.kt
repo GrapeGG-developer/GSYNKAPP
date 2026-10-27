@@ -104,6 +104,7 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
     if (tool != null && LabExtraScreen(tool!!, onBack = { tool = null })) return
 
     when (tool) {
+        "lowlevel" -> LowLevelScreen(onBack = { tool = null })
         "strobe" -> StrobeScreen(onBack = { tool = null })
         "screen" -> ScreenTestScreen(onBack = { tool = null })
         "sensors" -> SensorsScreen(onBack = { tool = null })
@@ -144,6 +145,25 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
         }
         Spacer(Modifier.height(12.dp))
 
+        TileRow {
+            NavTile(
+                title = "Низкий уровень",
+                subtitle = "байты, endian, регистры CPU",
+                iconRes = com.gsynk.app.R.drawable.ic_bolt,
+                brush = GioBrush.Cyan,
+                modifier = Modifier.weight(1f),
+                onClick = { tool = "lowlevel" }
+            )
+            NavTile(
+                title = "Регистры и флаги",
+                subtitle = "IP, A/B/C, трассировка",
+                iconRes = com.gsynk.app.R.drawable.ic_tune,
+                brush = GioBrush.Violet,
+                modifier = Modifier.weight(1f),
+                onClick = { tool = "lowlevel" }
+            )
+        }
+        Spacer(Modifier.height(11.dp))
         TileRow {
             NavTile(
                 title = "Стробоскоп",
@@ -1794,7 +1814,7 @@ private val extrasLab: List<Triple<String, String, Int>> = listOf(
     Triple("wifi", "каналы wi-fi", 0),
     Triple("wifisig", "сигнал wi-fi", 1),
     Triple("usb", "usb и otg", 2),
-    Triple("nfcwrite", "метка-визитка", 3)
+    Triple("lowlevel", "байты и CPU", 3)
 )
 
 /** Плитки расширенной лаборатории: тот же экран, без углубления в подменю. */

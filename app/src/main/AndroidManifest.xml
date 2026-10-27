@@ -100,6 +100,7 @@
 
         <activity
             android:name=".ui.MainActivity"
+            android:screenOrientation="portrait"
             android:exported="true"
             android:theme="@style/Theme.GSYNK"
             android:launchMode="singleTop"
@@ -150,16 +151,6 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Applies scheduled screen brightness and media volume presets" />
-        </service>
-
-        <!-- Постоянный остров (часы и состояние рядом с фронтальной камерой) -->
-        <service
-            android:name=".core.IslandService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Shows a persistent capsule island overlay with clock and status" />
         </service>
 
         <!-- Получатель сработавшего будильника правила -->

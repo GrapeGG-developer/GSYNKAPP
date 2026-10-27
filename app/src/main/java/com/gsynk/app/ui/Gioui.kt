@@ -1,5 +1,21 @@
 package com.gsynk.app.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,12 +39,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -49,12 +70,13 @@ import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 /**
  * GIOUI — GSYNK INTELLIGENT OUR UI (5.0).
  *
  * Единая дизайн-система вместо старого интерфейса:
- *  * один язык форм: карточки и плитки 24 dp, контролы 16 dp, листы 28 dp, чипы и остров — капсулы;
+ *  * один язык форм: карточки и плитки 24 dp, контролы 16 dp, листы 28 dp, чипы и капсулы — мягкие акценты;
  *  * одна сетка карточек: функции лежат по категориям, а не свалены одной лентой;
  *  * одна типографика: компактные заголовки без огромных «плакатов»;
  *  * одна виноградная палитра акцентов на тёмном фирменном фоне;
@@ -86,8 +108,8 @@ object Gioui {
         val button: Dp = 16.dp
         /** Переключатели и чипы — как контролы. */
         val switch: Dp = 16.dp
-        /** Остров — самый скруглённый элемент приложения. */
-        val island: Dp = 28.dp
+        /** Капсулы и мягкие акценты — самые скруглённые формы приложения. */
+        val capsule: Dp = 28.dp
         /** Панель обновления — как лист. */
         val panel: Dp = 20.dp
     }
@@ -98,7 +120,7 @@ object Gioui {
         val sheet = RoundedCornerShape(Radius.sheet)
         val button = RoundedCornerShape(Radius.button)
         val toggle = RoundedCornerShape(Radius.switch)
-        val island = RoundedCornerShape(Radius.island)
+        val capsule = RoundedCornerShape(Radius.capsule)
         val panel = RoundedCornerShape(Radius.panel)
     }
 
@@ -180,13 +202,9 @@ object Gioui {
 
     /** Сколько строк займёт набор плиток — для предварительной высоты. */
     fun rowsFor(tiles: List<Size>, columns: Int = COLUMNS): Int {
-        val grid = ArrayList<BooleanArray>()
-        var maxRow = 0
-        for (tile in tiles) {
-            val place = findPlace(grid, tile, columns)
-            maxRow = max(maxRow, place.second + tile.h)
-        }
-        return max(1, maxRow)
+        val places = plan(tiles, columns)
+        val lastRow = tiles.indices.maxOfOrNull { index -> places[index].first + tiles[index].h } ?: 1
+        return max(1, lastRow)
     }
 
     /** Ищем первое свободное место в сетке — так плитки укладываются без дыр. */
@@ -270,7 +288,7 @@ fun skinRadius(kind: String): Dp {
         "sheet" -> skin.sheet.dp
         "button" -> skin.button.dp
         "toggle" -> skin.toggle.dp
-        "island" -> skin.island.dp
+        "capsule" -> skin.capsule.dp
         "panel" -> skin.sheet.dp
         else -> skin.card.dp
     }
@@ -306,15 +324,14 @@ fun GioGrid(
     columns: Int = LocalGiouiColumns.current,
     content: @Composable () -> Unit
 ) {
-    val gutters = Gioui.gutter.value * (columns - 1)
     Layout(content = content, modifier = modifier) { measurables, constraints ->
         val width = constraints.maxWidth
-        val cell = ((width - gutters) / columns).coerceAtLeast(24f)
+        val gutterPx = Gioui.gutter.roundToPx().toFloat()
+        val cellPx = ((width - gutterPx * (columns - 1)) / columns)
+            .coerceAtLeast(24.dp.toPx())
         val spans = measurables.map { it.layoutId?.toString() ?: Gioui.Size.MEDIUM.id }
         val sizes = spans.map { Gioui.Size.of(it) }
         val places = Gioui.plan(sizes, columns)
-        val cellPx = cell
-        val gutterPx = Gioui.gutter.value * (if (density > 0) density else 1f)
 
         val placeables = measurables.mapIndexed { index, measurable ->
             val size = sizes[index]
@@ -356,6 +373,7 @@ fun GioCard(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     live: String? = null,
+    liveLines: List<String> = emptyList(),
     badge: String? = null,
     dark: Boolean = true,
     onClick: () -> Unit,
@@ -369,17 +387,44 @@ fun GioCard(
         Gioui.Size.WIDE, Gioui.Size.LARGE -> 15.sp
     }
     val textColor = if (dark) Color.White else Color(0xFF101018)
+    val rotatingLines = remember(liveLines, live, subtitle) {
+        val clean = liveLines.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        when {
+            clean.isNotEmpty() -> clean
+            !live.isNullOrBlank() && live != subtitle -> listOf(live)
+            else -> emptyList()
+        }
+    }
+    var rotatingIndex by remember(rotatingLines) { mutableIntStateOf(0) }
+    LaunchedEffect(rotatingLines, effects) {
+        rotatingIndex = 0
+        if (rotatingLines.size > 1 && effects != Gioui.Effects.PLAIN) {
+            val stagger = 2_500L + (title.hashCode().toLong() and 0x3ffL)
+            while (true) {
+                delay(stagger)
+                rotatingIndex = (rotatingIndex + 1) % rotatingLines.size
+            }
+        }
+    }
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "gioPress"
+    )
 
     Box(
         modifier
             .gioSpan(size)
+            .scale(pressScale)
             .clip(Gioui.Shapes.tile)
-            .background(Brush.linearGradient(listOf(color, color.copy(alpha = 0.68f))))
+            .background(Brush.linearGradient(listOf(color.copy(alpha = 0.94f), color.copy(alpha = 0.66f))))
             .border(1.dp, Color.White.copy(alpha = 0.16f), Gioui.Shapes.tile)
             .then(
                 if (onLongClick != null) {
                     Modifier.combinedClickable(
-                        interactionSource = remember { MutableInteractionSource() },
+                        interactionSource = interactionSource,
                         indication = null,
                         onLongClick = {
                             UiTweaks.tap(context, long = true)
@@ -392,7 +437,7 @@ fun GioCard(
                     )
                 } else {
                     Modifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
+                        interactionSource = interactionSource,
                         indication = null
                     ) {
                         UiTweaks.tap(context)
@@ -402,7 +447,7 @@ fun GioCard(
             )
     ) {
         // Живое переливание: только там, где телефон это вытянет.
-        if (effects != Gioui.Effects.PLAIN) {
+        if (effects != Gioui.Effects.PLAIN && size != Gioui.Size.SMALL) {
             GioSheen(color = color, strong = effects == Gioui.Effects.FULL)
         }
         Column(
@@ -454,13 +499,30 @@ fun GioCard(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = if (size == Gioui.Size.SMALL) 2 else 1
                 )
-                if (size != Gioui.Size.SMALL && subtitle.isNotBlank()) {
+                if (size != Gioui.Size.SMALL && rotatingLines.isNotEmpty()) {
+                    AnimatedContent(
+                        targetState = rotatingLines[rotatingIndex.coerceIn(0, rotatingLines.lastIndex)],
+                        transitionSpec = {
+                            (fadeIn(tween(240)) + slideInVertically(tween(240)) { it / 3 }) togetherWith
+                                (fadeOut(tween(160)) + slideOutVertically(tween(160)) { -it / 3 })
+                        },
+                        label = "gioLiveLine"
+                    ) { line ->
+                        Text(
+                            text = line,
+                            color = textColor.copy(alpha = 0.82f),
+                            fontSize = Gioui.Type.caption,
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 2
+                        )
+                    }
+                } else if (size != Gioui.Size.SMALL && subtitle.isNotBlank()) {
                     Text(
                         text = subtitle,
                         color = textColor.copy(alpha = 0.78f),
                         fontSize = Gioui.Type.caption,
                         fontWeight = FontWeight.Normal,
-                        maxLines = 1
+                        maxLines = 2
                     )
                 }
             }
@@ -518,19 +580,35 @@ fun GioGroup(header: String, modifier: Modifier = Modifier) {
 /** Плавный блик по плитке — «живая плитка» из GIOUI, но без лишних кадров. */
 @Composable
 fun GioSheen(color: Color, strong: Boolean) {
-    val light = if (strong) 0.22f else 0.12f
+    val light = if (strong) 0.2f else 0.1f
+    val transition = rememberInfiniteTransition(label = "gioSheen")
+    val shift by transition.animateFloat(
+        initialValue = -0.7f,
+        targetValue = 1.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = if (strong) 4_800 else 6_800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "gioSheenShift"
+    )
     Box(
         Modifier
             .fillMaxSize()
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = light),
-                        Color.Transparent,
-                        color.copy(alpha = 0.12f)
+            .drawBehind {
+                val startX = size.width * shift
+                drawRect(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = light),
+                            color.copy(alpha = light * 0.45f),
+                            Color.Transparent
+                        ),
+                        start = Offset(startX - size.width * 0.45f, 0f),
+                        end = Offset(startX + size.width * 0.45f, size.height)
                     )
                 )
-            )
+            }
     )
 }
 

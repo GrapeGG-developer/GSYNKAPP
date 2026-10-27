@@ -160,7 +160,7 @@ fun GamesScreen(
             InfoRow("Побед в дуэлях", duelWins.toString())
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Рекорды хранятся на телефоне и показываются на острове. " +
+                text = "Рекорды хранятся на телефоне и показываются живыми плитками. " +
                     "Вызвать друга на дуэль можно касанием в Grape Link.",
                 color = TextDim,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)

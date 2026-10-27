@@ -39,8 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.BuildConfig
-import com.gsynk.app.core.IslandPosition
-import com.gsynk.app.core.IslandWidget
 import com.gsynk.app.core.Permissions
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBorder
@@ -135,77 +133,12 @@ fun SettingsSheet(
                 onChange = { vm.setSyncAfterBoot(it) }
             )
 
-            // ————— остров —————
-            Spacer(Modifier.height(8.dp))
-            SectionTitle("Остров у камеры")
-            Spacer(Modifier.height(8.dp))
-            SettingRow(
-                title = "Показывать остров",
-                subtitle = "вспышки при срабатывании правил",
-                checked = settings.islandEnabled,
-                onChange = { vm.setIsland(it) }
-            )
-            SettingRow(
-                title = "Постоянный остров",
-                subtitle = "капсула висит с часами и зарядом",
-                checked = settings.islandPersistent,
-                onChange = { vm.setIslandPersistent(it) }
-            )
-                        SettingRow(
-                title = "Компактный размер",
-                subtitle = if (settings.islandCompact) "низкая строка" else "обычная высота",
-                checked = settings.islandCompact,
-                onChange = { vm.setIslandCompact(it) }
-            )
-
-            Spacer(Modifier.height(10.dp))
-            ChipFlow {
-                SortChip("Выше", settings.islandOffsetY < 0) {
-                    vm.setIslandOffset(settings.islandOffsetY - 4)
-                }
-                SortChip("Ниже", settings.islandOffsetY > 0) {
-                    vm.setIslandOffset(settings.islandOffsetY + 4)
-                }
-                SortChip("Сброс", settings.islandOffsetY == 0) { vm.setIslandOffset(0) }
-            }
-
             Spacer(Modifier.height(12.dp))
-            Text("Расположение", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
-            Spacer(Modifier.height(7.dp))
-            ChipFlow {
-                IslandPosition.ALL.forEach { position ->
-                    SortChip(
-                        label = shortPosition(position),
-                        selected = settings.islandPosition == position
-                    ) { vm.setIslandPosition(position) }
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Text("Что показывать", color = TextSecondary, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
-            Spacer(Modifier.height(7.dp))
-            ChipFlow {
-                IslandWidget.ALL.forEach { widget ->
-                    SortChip(
-                        label = IslandWidget.label(widget),
-                        selected = widget in settings.islandWidgets
-                    ) { vm.toggleIslandWidget(widget, widget !in settings.islandWidgets) }
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                SecondaryButton(
-                    text = "Показать образец",
-                    onClick = { vm.fullIslandPreview() },
-                    modifier = Modifier.weight(1f)
-                )
-                SecondaryButton(
-                    text = "Мультитул",
-                    onClick = onOpenTools,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            SecondaryButton(
+                text = "Мультитул",
+                onClick = onOpenTools,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // ————— обновления —————
             Spacer(Modifier.height(16.dp))
@@ -374,15 +307,4 @@ fun SettingRow(
         }
         ToggleDot(checked = checked) { onChange(!checked) }
     }
-}
-
-private fun shortPosition(position: Int): String = when (position) {
-    IslandPosition.TOP_LEFT -> "↑ слева"
-    IslandPosition.TOP_CENTER -> "↑ центр"
-    IslandPosition.TOP_RIGHT -> "↑ справа"
-    IslandPosition.MID_LEFT -> "• слева"
-    IslandPosition.MID_RIGHT -> "• справа"
-    IslandPosition.BOTTOM_LEFT -> "↓ слева"
-    IslandPosition.BOTTOM_CENTER -> "↓ центр"
-    else -> "↓ справа"
 }

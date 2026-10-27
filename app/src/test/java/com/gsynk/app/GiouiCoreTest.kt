@@ -332,14 +332,30 @@ class GiouiCoreTest {
     }
 
     @Test
+    fun giouiRowsForUsesRowsNotColumns() {
+        assertEquals(2, com.gsynk.app.ui.Gioui.rowsFor(listOf(com.gsynk.app.ui.Gioui.Size.WIDE)))
+        assertEquals(
+            4,
+            com.gsynk.app.ui.Gioui.rowsFor(
+                listOf(
+                    com.gsynk.app.ui.Gioui.Size.MEDIUM,
+                    com.gsynk.app.ui.Gioui.Size.MEDIUM,
+                    com.gsynk.app.ui.Gioui.Size.MEDIUM
+                )
+            )
+        )
+        assertEquals(1, com.gsynk.app.ui.Gioui.rowsFor(List(4) { com.gsynk.app.ui.Gioui.Size.SMALL }))
+    }
+
+    @Test
     fun catalogFiltersBySearchAndGroup() {
         val all = com.gsynk.app.ui.Catalog.ALL
         assertTrue(all.size >= 60)
         assertTrue(all.map { it.id }.distinct().size == all.size)
 
-        val found = com.gsynk.app.ui.Catalog.view(query = "остров")
+        val found = com.gsynk.app.ui.Catalog.view(query = "анонимность")
         assertTrue(found.isNotEmpty())
-        assertTrue(found.all { it.matches("остров") })
+        assertTrue(found.all { it.matches("анонимность") })
 
         val hardware = com.gsynk.app.ui.Catalog.view(group = com.gsynk.app.ui.Catalog.Group.HARDWARE)
         assertTrue(hardware.isNotEmpty())

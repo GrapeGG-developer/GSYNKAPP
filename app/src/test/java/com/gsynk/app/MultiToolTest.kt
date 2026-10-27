@@ -1,8 +1,6 @@
 package com.gsynk.app
 
 import com.gsynk.app.core.DeviceProfile
-import com.gsynk.app.core.IslandPosition
-import com.gsynk.app.core.IslandWidget
 import com.gsynk.app.core.NfcLink
 import com.gsynk.app.core.Passwords
 import com.gsynk.app.core.PayloadCodec
@@ -23,7 +21,7 @@ import kotlin.random.Random
 
 /**
  * Логика мультитула: профиль устройства, версии для OTA, обмен по NFC,
- * сортировка правил, остров и генератор паролей. Всё без Android — чистая логика.
+ * сортировка правил и генератор паролей. Всё без Android — чистая логика.
  */
 class MultiToolTest {
 
@@ -47,7 +45,7 @@ class MultiToolTest {
         val full = info(DeviceProfile.TIER_FULL)
         assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.RULES))
         assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.AI_CHAT))
-        assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.ISLAND))
+        assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.LAB))
         assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.UPDATE))
         assertTrue(DeviceProfile.feature(full, DeviceProfile.Feature.TOOLS))
     }
@@ -61,7 +59,6 @@ class MultiToolTest {
         assertTrue(DeviceProfile.feature(legacy, DeviceProfile.Feature.FLASHLIGHT))
         assertTrue(DeviceProfile.feature(legacy, DeviceProfile.Feature.SCREENSAVER))
         assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.AI_CHAT))
-        assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.ISLAND))
         assertFalse(DeviceProfile.feature(legacy, DeviceProfile.Feature.UPDATE))
     }
 
@@ -147,7 +144,7 @@ class MultiToolTest {
         assertTrue("слишком длинно: ${encoded.length}", encoded.length < 800)
     }
 
-    // ————— сортировка и остров —————
+    // ————— сортировка правил —————
 
     @Test
     fun ruleSort_ordersAsExpected() {
@@ -158,19 +155,6 @@ class MultiToolTest {
         assertEquals("А", RuleSort.apply(rules, RuleSort.BY_NAME)[0].name)
         assertEquals("А", RuleSort.apply(rules, RuleSort.BY_TIME)[0].name)
         assertEquals("А", RuleSort.apply(rules, RuleSort.ACTIVE_FIRST)[0].name)
-    }
-
-    @Test
-    fun islandPositions_allHaveLabels() {
-        assertEquals(8, IslandPosition.ALL.size)
-        IslandPosition.ALL.forEach { assertTrue(IslandPosition.label(it).isNotBlank()) }
-        assertEquals(IslandPosition.ALL.size, IslandPosition.ALL.toSet().size)
-    }
-
-    @Test
-    fun islandWidgets_allHaveLabels() {
-        assertTrue(IslandWidget.ALL.isNotEmpty())
-        IslandWidget.ALL.forEach { assertTrue(IslandWidget.label(it).isNotBlank()) }
     }
 
     // ————— 2048 —————

@@ -36,7 +36,6 @@ import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.Eggs
 import com.gsynk.app.core.Everyday
 import com.gsynk.app.core.Haptics
-import com.gsynk.app.core.IslandOverlay
 import com.gsynk.app.core.Roulette
 import com.gsynk.app.core.Skin
 import com.gsynk.app.ui.theme.CardBgAlt
@@ -50,108 +49,9 @@ import java.time.LocalDate
 /**
  * Страницы GIOUI.
  *
- * Здесь живёт всё, что появилось в четвёртой версии интерфейса: живой остров 2.0,
- * ползунки эффектов и скруглений, «каждый день» с новым содержимым, пасхалки и
- * рулетка случайных функций. Каждая страница — один уровень, без вложенных меню.
+ * Здесь живут страницы эффектов и скруглений, «каждый день», пасхалки, рулетка,
+ * шифраторы, анонимность и новости. Каждая страница — один уровень, без вложенных меню.
  */
-
-/** Остров 2.0: посадка под камеру, живые виджеты, стекло. */
-@Composable
-fun Island2Screen(vm: MainViewModel, onBack: () -> Unit) {
-    val context = LocalContext.current
-    val settings by vm.settings.collectAsStateWithLifecycle()
-    val skin by Skin.values.collectAsStateWithLifecycle()
-    val profile = remember { DeviceProfile.detect(context) }
-    val cutout = remember(context) { IslandOverlay.cutoutHeight(context) }
-
-    GrapeScreen(title = "Остров 2.0", subtitle = "вплотную под камерой", onBack = onBack) {
-        SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.45f)) {
-            Text("Где садится капсула", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = if (cutout > 0) {
-                    "Камера занимает " + cutout + " px сверху — остров садится ровно под ней, " +
-                        "без зазора в сто точек, как было раньше."
-                } else {
-                    "Выреза под камеру нет: остров садится под строкой состояния."
-                },
-                color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
-            )
-            Spacer(Modifier.height(10.dp))
-            InfoRow("Позиция", com.gsynk.app.core.IslandPosition.label(settings.islandPosition))
-            InfoRow("Сдвиг", settings.islandOffsetY.toString() + " точек")
-            InfoRow("Скругление", skin.island.toString() + " dp — самое большое в приложении")
-        }
-
-        Spacer(Modifier.height(12.dp))
-        SectionTitle("Что показывать")
-        Spacer(Modifier.height(7.dp))
-        ChipFlow {
-            com.gsynk.app.core.IslandWidget.ALL.forEach { widget ->
-                SortChip(
-                    label = com.gsynk.app.core.IslandWidget.label(widget),
-                    selected = widget in settings.islandWidgets
-                ) { vm.toggleIslandWidget(widget, widget !in settings.islandWidgets) }
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-        SectionTitle("Посадка")
-        Spacer(Modifier.height(7.dp))
-        ChipFlow {
-            SortChip("Вплотную к камере", settings.islandHugCamera) { vm.setIslandHugCamera(true) }
-            SortChip("Ниже камеры", !settings.islandHugCamera) { vm.setIslandHugCamera(false) }
-        }
-        Spacer(Modifier.height(7.dp))
-        ChipFlow {
-            SortChip("Выше на 2", false) { vm.setIslandOffset((settings.islandOffsetY - 2).coerceIn(-60, 120)) }
-            SortChip("Ниже на 2", false) { vm.setIslandOffset((settings.islandOffsetY + 2).coerceIn(-60, 120)) }
-            SortChip("Сброс", false) { vm.setIslandOffset(0) }
-        }
-
-        Spacer(Modifier.height(12.dp))
-        SectionTitle("Скругление острова")
-        Spacer(Modifier.height(7.dp))
-        ChipFlow {
-            listOf(16, 20, 26, 32, 40).forEach { value ->
-                SortChip(value.toString() + " dp", skin.island == value) {
-                    Skin.save(context, skin.copy(island = value))
-                }
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-        SectionTitle("Постоянный остров")
-        Spacer(Modifier.height(7.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PrimaryButton(
-                text = if (settings.islandPersistent) "Выключить" else "Включить",
-                onClick = { vm.setIslandPersistent(!settings.islandPersistent) },
-                modifier = Modifier.weight(1f)
-            )
-            SecondaryButton(
-                text = "Образец",
-                onClick = { vm.fullIslandPreview() },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-        SurfaceCard(borderColor = CardBorder) {
-            Text("Живое стекло", color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Капсула не стоит на месте: два оттенка перетекают друг в друга " +
-                    "в реальном времени, а не по картинке. На слабом телефоне это " +
-                    "выключается вместе с уровнем эффектов.",
-                color = TextDim,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
-            )
-        }
-        Spacer(Modifier.height(20.dp))
-    }
-}
 
 /** Эффекты: размытие, стекло, фокус, лучи, сетка — всё живьём. */
 @Composable
@@ -338,15 +238,15 @@ fun RadiusScreen(onBack: () -> Unit) {
                     Modifier
                         .width(64.dp)
                         .height(40.dp)
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(skin.island.dp))
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(skin.capsule.dp))
                         .background(Gioui.Palette.Cobalt)
                 )
             }
         }
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Слева направо: карточка-функция, карточка, переключатель, остров. В GIOUI это одна " +
-                "система: канон — карточки 24 dp, контролы 16 dp, листы 28 dp, остров — капсула.",
+            text = "Слева направо: карточка-функция, карточка, переключатель, капсула. В GIOUI это одна " +
+                "система: канон — карточки 24 dp, контролы 16 dp, листы 28 dp, капсулы — самые мягкие.",
             color = TextDim,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
@@ -367,15 +267,15 @@ fun RadiusScreen(onBack: () -> Unit) {
         radiusGroup("Листы и панели", skin.sheet, listOf(20, 24, 28, 32)) { value ->
             Skin.save(context, skin.copy(sheet = value))
         }
-        radiusGroup("Остров (капсула)", skin.island, listOf(24, 28, 32, 40)) { value ->
-            Skin.save(context, skin.copy(island = value))
+        radiusGroup("Капсулы", skin.capsule, listOf(24, 28, 32, 40)) { value ->
+            Skin.save(context, skin.copy(capsule = value))
         }
 
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SecondaryButton(
                 text = "Канон GIOUI",
-                onClick = { Skin.save(context, skin.copy(tile = 24, card = 24, sheet = 28, button = 16, toggle = 16, island = 32)) },
+                onClick = { Skin.save(context, skin.copy(tile = 24, card = 24, sheet = 28, button = 16, toggle = 16, capsule = 32)) },
                 modifier = Modifier.weight(1f)
             )
             SecondaryButton(
@@ -763,16 +663,18 @@ fun SurpriseScreen(onBack: () -> Unit) {
  */
 
 val GiouiPageIds: List<String> = listOf(
-    "island", "effects", "radius", "everyday", "easter", "surprise", "ai", "bench",
-    "echo", "eyes", "pulse",
-    // GIOUI 5.0: шифраторы — один экран, разные стартовые пресеты
-    "ciphers", "cipherlock", "ciphergrape", "cipherauto"
+    "effects", "radius", "everyday", "easter", "surprise", "ai", "bench",
+    "echo", "eyes", "pulse", "news",
+    // Шифраторы — один экран, разные стартовые пресеты.
+    "ciphers", "cipherlock", "ciphergrape", "cipherauto", "cipherpig",
+    "cipherbytecode", "cipherasm", "ciphercpu", "gstls",
+    // Анонимность — один экран, разные инструменты внутри.
+    "anonymity", "nickgen", "avatarlab", "tracecheck", "ganonym"
 )
 
 @Composable
 fun GiouiPage(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
     when (id) {
-        "island" -> { Island2Screen(vm, onBack); return true }
         "effects" -> { EffectsScreen(onBack); return true }
         "radius" -> { RadiusScreen(onBack); return true }
         "everyday" -> { EverydayScreen(onBack); return true }
@@ -787,6 +689,17 @@ fun GiouiPage(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
         "cipherlock" -> { CipherScreen(onBack, initialCipher = "lock"); return true }
         "ciphergrape" -> { CipherScreen(onBack, initialCipher = "fruit"); return true }
         "cipherauto" -> { CipherScreen(onBack, initialDecrypt = true); return true }
+        "cipherpig" -> { CipherScreen(onBack, initialCipher = "pig"); return true }
+        "cipherbytecode" -> { CipherScreen(onBack, initialCipher = "bytecode"); return true }
+        "cipherasm" -> { CipherScreen(onBack, initialCipher = "asm"); return true }
+        "ciphercpu" -> { CipherScreen(onBack, initialCipher = "cpu"); return true }
+        "gstls" -> { CipherScreen(onBack, initialCipher = "gstls"); return true }
+        "news" -> { NewsScreen(onBack); return true }
+        "anonymity" -> { AnonymityScreen(onBack, initialMode = "persona"); return true }
+        "nickgen" -> { AnonymityScreen(onBack, initialMode = "nick"); return true }
+        "avatarlab" -> { AnonymityScreen(onBack, initialMode = "avatar"); return true }
+        "tracecheck" -> { AnonymityScreen(onBack, initialMode = "traces"); return true }
+        "ganonym" -> { AnonymityScreen(onBack, initialMode = "ganonym"); return true }
     }
     return false
 }

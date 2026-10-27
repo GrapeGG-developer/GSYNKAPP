@@ -5,10 +5,6 @@
     <string name="notif_channel_apply">Применение правил</string>
     <string name="notif_channel_apply_desc">Короткое уведомление, когда GSYNK меняет яркость и громкость</string>
     <string name="nfc_hce_description">GSYNK: передача данных касанием</string>
-    <string name="notif_island_persistent">Остров GSYNK</string>
-    <string name="notif_island_persistent_text">Показывает часы и состояние рядом с фронтальной камерой</string>
     <string name="notif_channel_updates">Обновления GSYNK</string>
     <string name="notif_channel_updates_desc">Сообщение о новой версии приложения</string>
-    <string name="island_refreshing">обновляю…</string>
-    <string name="island_default_title">GSYNK</string>
 </resources>

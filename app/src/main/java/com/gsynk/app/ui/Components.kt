@@ -119,7 +119,10 @@ import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
 import com.gsynk.app.ui.theme.TrackBg
 import kotlinx.coroutines.delay
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 // ————————————————————————————————————————————————
 //  Живой фон: плавно дышащий градиент + медленные засветки
@@ -131,150 +134,95 @@ fun AnimatedGrapeBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    // Настройки внешнего вида (акцент, скорость) читаем как состояние: сменил — фон ожил.
+    // Акцент и скорость читаем состоянием: изменил настройку — фон сразу перекрасился.
     val tweakRevision by UiTweaks.revision.collectAsStateWithLifecycle()
-    // Фон переливается ВСЕГДА — независимо от нейросети. Пока идёт нагрузка,
-    // фазу дополнительно подгоняет «турбо», поэтому поток бежит быстрее.
     val turboActive by TurboState.active.collectAsState()
-    val turboPhase by TurboState.progress.collectAsState()
     val aiMode by TurboState.aiMode.collectAsState()
+    if (tweakRevision < 0) return
+
+    // Одна круговая фаза 0→1. Все координаты и цвета ниже построены на sin/cos(2π·phase),
+    // поэтому последний кадр цикла совпадает с первым: нет прыгающей полосы и «шва».
     val transition = rememberInfiniteTransition(label = "bg")
-    // Дыхание палитры: 24 секунды туда-обратно, с мягкой кривой. Раньше было 16 секунд
-    // с резким разворотом — на глаз это читалось как «рваный» градиент.
-    val breath by transition.animateFloat(
+    val rawPhase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = UiTweaks.breathMs, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "breath"
-    )
-    // постоянное переливание: сквозная циклическая фаза для бегущей волны и полосы
-    val shimmer by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = UiTweaks.shimmerMs, easing = LinearEasing),
+            animation = tween(durationMillis = UiTweaks.breathMs, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "shimmer"
-    )
-    val drift by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = UiTweaks.driftMs, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "drift"
-    )
-    val tilt by transition.animateFloat(
-        initialValue = -1f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 34_000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "tilt"
+        label = "bgPhase"
     )
 
     Box(
         modifier
             .fillMaxSize()
             .drawBehind {
-                val top = lerp(BgTopA, BgTopB, breath)
-                val mid = lerp(BgMidA, BgMidB, breath)
-                val bottom = lerp(BgBottomA, BgBottomB, breath)
+                val angle = (rawPhase * 2f * PI).toFloat()
+                val wave = (sin(angle) + 1f) * 0.5f
+                val wave2 = (sin(angle * 2f + PI.toFloat() * 0.35f) + 1f) * 0.5f
+                val driftX = cos(angle)
+                val driftY = sin(angle)
 
-                // основной градиент — угол плавно гуляет
+                val top = lerp(BgTopA, BgTopB, wave)
+                val mid = lerp(BgMidA, BgMidB, wave2)
+                val bottom = lerp(BgBottomA, BgBottomB, 1f - wave)
                 drawRect(
                     brush = Brush.linearGradient(
                         colors = listOf(top, mid, bottom),
-                        start = Offset(size.width * (0.1f + 0.25f * tilt), 0f),
-                        end = Offset(size.width * (0.9f - 0.25f * tilt), size.height)
+                        start = Offset(size.width * (0.18f + 0.08f * driftX), 0f),
+                        end = Offset(size.width * (0.82f - 0.08f * driftX), size.height)
                     )
                 )
 
-                // Единый оттенок кадра: и круги, и волна берут один и тот же цвет,
-                // поэтому переходы между слоями больше не выглядят ступеньками.
                 val accent = if (turboActive) {
                     when (aiMode) {
                         RealtimeAi.MODE_ACTIVE -> Color(0xFF7C3AED)
-                        RealtimeAi.MODE_NIGHT -> Color(0xFF1E3A8A)
+                        RealtimeAi.MODE_NIGHT -> Color(0xFF2563EB)
                         else -> Color(0xFF22C55E)
                     }
                 } else {
-                    // Акцент из «Кастомизации»: фон подстраивается под выбранный оттенок.
-                    lerp(UiTweaks.accentStart, Color(0xFF22D3EE), breath)
+                    lerp(UiTweaks.accentStart, Color(0xFF22D3EE), wave)
+                }
+                val glowAlpha = if (turboActive) 0.42f else 0.32f
+
+                fun glow(center: Offset, radius: Float, color: Color, alpha: Float) {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(color.copy(alpha = alpha), Color.Transparent),
+                            center = center,
+                            radius = radius
+                        ),
+                        radius = radius,
+                        center = center
+                    )
                 }
 
-                // виноградная засветка сверху
-                val radius = size.minDimension * (0.95f + 0.12f * drift)
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(accent.copy(alpha = 0.42f), Color.Transparent),
-                        center = Offset(
-                            size.width * (0.16f + 0.06f * drift),
-                            size.height * (0.10f + 0.03f * tilt)
-                        ),
-                        radius = radius
-                    ),
-                    radius = radius,
+                glow(
                     center = Offset(
-                        size.width * (0.16f + 0.06f * drift),
-                        size.height * (0.10f + 0.03f * tilt)
-                    )
+                        size.width * (0.18f + 0.055f * driftX),
+                        size.height * (0.12f + 0.03f * driftY)
+                    ),
+                    radius = size.minDimension * (0.92f + 0.08f * wave),
+                    color = accent,
+                    alpha = glowAlpha
                 )
-
-                // Переливание идёт всегда — фон должен быть живым сам по себе.
-                // Нейросеть лишь ускоряет и подкрашивает поток, когда идёт нагрузка.
-                run {
-                    val phase = if (turboActive) turboPhase else shimmer
-                    // край волны мягкий с обеих сторон — резкого «шва» по краю экрана нет
-                    val travel = phase * size.height * 1.8f - size.height * 0.4f
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                accent.copy(alpha = 0.30f),
-                                Color(0xFFC4B5FD).copy(alpha = 0.16f),
-                                Color.Transparent
-                            ),
-                            start = Offset(0f, travel),
-                            end = Offset(size.width, travel + size.height * 0.55f)
-                        )
-                    )
-                    val stripe = ((phase * 3f) % 1f) * size.width * 1.4f - size.width * 0.2f
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.White.copy(alpha = 0.07f),
-                                Color.Transparent
-                            ),
-                            start = Offset(stripe, 0f),
-                            end = Offset(stripe + size.width * 0.35f, size.height)
-                        )
-                    )
-                }
-
-                // зелёная засветка снизу
-                val radius2 = size.minDimension * (0.85f + 0.15f * (1f - drift))
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(lerp(accent, Color(0xFF22C55E), 0.55f).copy(alpha = 0.34f), Color.Transparent),
-                        center = Offset(
-                            size.width * (0.88f - 0.06f * drift),
-                            size.height * (0.88f + 0.04f * tilt)
-                        ),
-                        radius = radius2
-                    ),
-                    radius = radius2,
+                glow(
                     center = Offset(
-                        size.width * (0.88f - 0.06f * drift),
-                        size.height * (0.88f + 0.04f * tilt)
-                    )
+                        size.width * (0.84f - 0.05f * driftX),
+                        size.height * (0.54f + 0.06f * cos(angle * 2f))
+                    ),
+                    radius = size.minDimension * (0.72f + 0.07f * wave2),
+                    color = lerp(accent, Color(0xFF22D3EE), 0.55f),
+                    alpha = glowAlpha * 0.72f
+                )
+                glow(
+                    center = Offset(
+                        size.width * (0.78f + 0.04f * sin(angle * 2f)),
+                        size.height * (0.9f - 0.025f * driftY)
+                    ),
+                    radius = size.minDimension * (0.86f + 0.08f * (1f - wave)),
+                    color = lerp(accent, Color(0xFF22C55E), 0.58f),
+                    alpha = glowAlpha * 0.82f
                 )
             }
     ) {
@@ -283,7 +231,7 @@ fun AnimatedGrapeBackground(
 }
 
 // ————————————————————————————————————————————————
-//  Карточка: полностью непрозрачная, с тонкой рамкой
+//  Карточка: полупрозрачная стеклянная поверхность с тонкой рамкой
 // ————————————————————————————————————————————————
 
 @Composable
@@ -829,11 +777,9 @@ fun GrapeScreen(
     content: @Composable ColumnScope.() -> Unit
 ) {
     AnimatedGrapeBackground {
-        // GIOUI: живое сияние поверх общего фона — на КАЖДОМ экране, а не только на главном.
-        // На слабом железе слой не рисуется: там эффекты выключаются целиком.
-        if (LocalGiouiEffects.current != Gioui.Effects.PLAIN) {
-            Box(Modifier.fillMaxSize()) { AuroraField(intensity = 0.5f, speedMillis = 26_000) }
-        }
+        // GIOUI 5.1: AnimatedGrapeBackground уже является единственным живым слоем.
+        // Вторичная аврора на каждом экране убрана: полупрозрачные панели должны
+        // показывать тот же бесшовный фон, а не два спорящих градиента.
         Column(
             Modifier
                 .fillMaxSize()

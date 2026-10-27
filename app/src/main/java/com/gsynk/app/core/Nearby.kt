@@ -102,9 +102,9 @@ object Nearby {
     private val _partnerBattery = MutableStateFlow(-1)
     val partnerBattery: StateFlow<Int> = _partnerBattery.asStateFlow()
 
-    /** Текст, который собеседник просит показать на нашем острове. */
-    private val _incomingIsland = MutableStateFlow<String?>(null)
-    val incomingIsland: StateFlow<String?> = _incomingIsland.asStateFlow()
+    /** Короткая входящая заметка от собеседника рядом. */
+    private val _incomingNote = MutableStateFlow<String?>(null)
+    val incomingNote: StateFlow<String?> = _incomingNote.asStateFlow()
 
     /** Тело сценария, пришедшее по связи, — интерфейс предложит его применить. */
     private val _incomingProfile = MutableStateFlow<String?>(null)
@@ -608,9 +608,9 @@ object Nearby {
                 log("Заряд собеседника: " + _partnerBattery.value + " проц.")
             }
 
-            ISLAND -> {
-                _incomingIsland.value = decodeText(parts.drop(1).joinToString("|"))
-                log("На остров: " + _incomingIsland.value)
+            NOTE -> {
+                _incomingNote.value = decodeText(parts.drop(1).joinToString("|"))
+                log("Входящая заметка рядом: " + _incomingNote.value)
             }
 
             FILE -> {
@@ -661,8 +661,8 @@ object Nearby {
     /** Отправляет свой заряд, чтобы собеседник видел его на экране связи. */
     fun sendBattery(percent: Int): Boolean = send(line(BATTERY, percent.toString()))
 
-    /** Пишет текст на острове собеседника (если у него включён остров). */
-    fun sendIslandText(text: String): Boolean = send(line(ISLAND, encodeText(text)))
+    /** Отправляет короткую заметку собеседнику рядом. */
+    fun sendNoteText(text: String): Boolean = send(line(NOTE, encodeText(text)))
 
     /** Отправляет визитку: имя и телефон. */
     fun sendContact(name: String, phone: String): Boolean = send(line(SAY, "визитка: " + name + " • " + phone))
@@ -715,7 +715,7 @@ object Nearby {
     fun reset() {
         _latency.value = 0L
         _partnerBattery.value = -1
-        _incomingIsland.value = null
+        _incomingNote.value = null
         _hostAddress.value = ""
         _peers.value = emptyList()
         _log.value = emptyList()
@@ -792,6 +792,6 @@ object Nearby {
     const val PING = "PING"
     const val PONG = "PONG"
     const val BATTERY = "BATT"
-    const val ISLAND = "ISLE"
+    const val NOTE = "ISLE" // старый проводной тег: совместимость со старыми GSYNK
     const val FILE = "FILE"
 }

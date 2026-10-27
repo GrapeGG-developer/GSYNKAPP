@@ -67,8 +67,8 @@ object AppLog {
     fun describeState(settings: AppSettings, rules: List<Rule>, granted: List<String>): String = buildString {
         appendLine("Правил: ${rules.size}, активных: ${rules.count { it.enabled }}")
         appendLine(
-            "Настройки: автопилот=${settings.autopilot}, остров=${settings.islandPersistent}, " +
-                "позиция=${IslandPosition.label(settings.islandPosition)}, компактный=${settings.islandCompact}, " +
+            "Настройки: автопилот=${settings.autopilot}, уведомления=${settings.notifications}, " +
+                "синхронизация после перезагрузки=${settings.syncAfterBoot}, " +
                 "автопроверка=${settings.updateAuto}"
         )
         appendLine("Счётчик NFC: ${settings.nfcTouches}")

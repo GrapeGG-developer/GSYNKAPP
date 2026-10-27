@@ -177,7 +177,6 @@ object DeviceProfile {
         const val GAMES = "games"
         const val FLASHLIGHT = "flashlight"
         const val TOOLS = "tools"
-        const val ISLAND = "island"
         const val AI_CHAT = "ai_chat"
         const val GRAPE_UI = "grape_ui"
         const val UPDATE = "update"
@@ -199,7 +198,6 @@ object DeviceProfile {
             GAMES to "Мини-игры",
             SCREENSAVER to "Скринсейвер",
             TOOLS to "Инструменты и датчики",
-            ISLAND to "Остров у камеры",
             AI_CHAT to "Локальный ИИ-чат",
             GRAPE_UI to "GRAPEUI",
             UPDATE to "Обновление по воздуху",
