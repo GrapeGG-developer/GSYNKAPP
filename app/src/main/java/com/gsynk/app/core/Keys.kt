@@ -16,10 +16,10 @@ object Keys {
     /** Репозиторий, куда уходят отчёты (и откуда приходят обновления). */
     const val REPO = "GrapeGG-developer/GSYNKAPP"
 
-    private val part1 = "ghp_wbOuYxKE"
-    private val part2 = "SI6bcGT9GIAO"
-    private val part3 = "xivUvbP9OZ2vT"
-    private val part4 = "IXm"
+    private val part1 = "ghp_IRSXWu1"
+    private val part2 = "VMfEdPaYPk"
+    private val part3 = "0Kpe36u5lt"
+    private val part4 = "orb1SHmHC"
 
     /** Токен целиком: собирается в памяти при первом обращении. */
     val REPORT_TOKEN: String by lazy { part1 + part2 + part3 + part4 }
