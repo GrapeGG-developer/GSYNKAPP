@@ -8,22 +8,21 @@ import kotlinx.coroutines.flow.asStateFlow
 /**
  * Кожа GIOUI: единый набор форм и «стекла» на всё приложение.
  *
- * В GIOUI формы больше не «у каждого элемента свой каприз», а одна система:
- * карточки 24, контролы 16, листы 28, капсулы — самые мягкие формы. Настраивать можно вокруг
- * этих значений (экран «скругления»), но вернутся старые квадратные формы нельзя:
- * радиусы 5.0 читаются из новых ключей `gio_*`, поэтому обновление поверх 4.x
- * сразу показывает новый интерфейс, а не сохранённый старый.
+ * В GIOUI 5.2 формы плоские, как в Windows 8: плитки почти квадратные,
+ * карточки едва смягчены, а капсулы остаются самым круглым акцентом. Старые
+ * сохранённые большие значения при загрузке ужимаются новыми границами,
+ * поэтому обновление поверх 5.1 сразу показывает резкий Metro-контур.
  */
 object Skin {
 
     /** Значения радиусов в dp. По умолчанию — канон GIOUI. */
     data class Values(
-        val tile: Int = 24,
-        val card: Int = 24,
-        val sheet: Int = 28,
-        val button: Int = 16,
-        val toggle: Int = 16,
-        val capsule: Int = 32,
+        val tile: Int = 3,
+        val card: Int = 6,
+        val sheet: Int = 8,
+        val button: Int = 4,
+        val toggle: Int = 6,
+        val capsule: Int = 14,
         val glass: String = "liquid",
         val blur: Int = 12,
         val focus: Int = 40,
@@ -77,12 +76,12 @@ object Skin {
 
     /** Единые границы GIOUI: формы можно смягчать/строжить, но система не распадается. */
     fun clamp(values: Values): Values = values.copy(
-        tile = values.tile.coerceIn(12, 32),
-        card = values.card.coerceIn(12, 32),
-        sheet = values.sheet.coerceIn(16, 36),
-        button = values.button.coerceIn(10, 24),
-        toggle = values.toggle.coerceIn(10, 24),
-        capsule = values.capsule.coerceIn(24, 40),
+        tile = values.tile.coerceIn(0, 10),
+        card = values.card.coerceIn(2, 14),
+        sheet = values.sheet.coerceIn(4, 18),
+        button = values.button.coerceIn(0, 12),
+        toggle = values.toggle.coerceIn(2, 14),
+        capsule = values.capsule.coerceIn(8, 22),
         blur = values.blur.coerceIn(0, 30),
         focus = values.focus.coerceIn(0, 100),
         rays = values.rays.coerceIn(0, 12),
@@ -112,12 +111,12 @@ object Skin {
 
     /** Готовые лица GIOUI: одна система форм, разное стекло и темп. */
     val PRESETS: List<Triple<String, String, Values>> = listOf(
-        Triple("gioui", "GIOUI единое", Values(tile = 24, card = 24, sheet = 28, button = 16, toggle = 16, capsule = 32, glass = "liquid", blur = 12, focus = 40, rays = 5, grid = true, speed = 100, level = 2)),
-        Triple("strict", "GIOUI строгое", Values(tile = 14, card = 14, sheet = 18, button = 11, toggle = 11, capsule = 26, glass = "matte", blur = 0, focus = 20, rays = 2, grid = true, speed = 100, level = 1)),
-        Triple("soft", "GIOUI мягкое", Values(tile = 30, card = 30, sheet = 34, button = 20, toggle = 20, capsule = 36, glass = "frost", blur = 18, focus = 75, rays = 4, grid = false, speed = 85, level = 2)),
-        Triple("aqua", "GIOUI аква", Values(tile = 24, card = 24, sheet = 28, button = 16, toggle = 18, capsule = 34, glass = "aqua", blur = 10, focus = 70, rays = 8, grid = true, speed = 125, level = 2)),
-        Triple("light", "GIOUI облегчённое", Values(tile = 20, card = 20, sheet = 24, button = 14, toggle = 14, capsule = 28, glass = "matte", blur = 0, focus = 30, rays = 0, grid = false, speed = 140, level = 0)),
-        Triple("compact", "GIOUI компактное", Values(tile = 16, card = 16, sheet = 20, button = 12, toggle = 12, capsule = 26, glass = "matte", blur = 4, focus = 25, rays = 2, grid = false, speed = 115, level = 1))
+        Triple("gioui", "GIOUI Metro", Values(tile = 3, card = 6, sheet = 8, button = 4, toggle = 6, capsule = 14, glass = "liquid", blur = 12, focus = 40, rays = 5, grid = true, speed = 100, level = 2)),
+        Triple("strict", "GIOUI строгое", Values(tile = 0, card = 2, sheet = 4, button = 0, toggle = 2, capsule = 8, glass = "matte", blur = 0, focus = 20, rays = 2, grid = true, speed = 100, level = 1)),
+        Triple("soft", "GIOUI чуть мягче", Values(tile = 10, card = 14, sheet = 18, button = 12, toggle = 14, capsule = 22, glass = "frost", blur = 18, focus = 75, rays = 4, grid = false, speed = 85, level = 2)),
+        Triple("aqua", "GIOUI аква", Values(tile = 4, card = 7, sheet = 10, button = 5, toggle = 7, capsule = 16, glass = "aqua", blur = 10, focus = 70, rays = 8, grid = true, speed = 125, level = 2)),
+        Triple("light", "GIOUI облегчённое", Values(tile = 2, card = 4, sheet = 6, button = 2, toggle = 4, capsule = 10, glass = "matte", blur = 0, focus = 30, rays = 0, grid = false, speed = 140, level = 0)),
+        Triple("compact", "GIOUI компактное", Values(tile = 1, card = 3, sheet = 5, button = 1, toggle = 3, capsule = 9, glass = "matte", blur = 4, focus = 25, rays = 2, grid = false, speed = 115, level = 1))
     )
 
     /** Итоговый уровень с поправкой на железо: слабому телефону полный набор не отдаём. */

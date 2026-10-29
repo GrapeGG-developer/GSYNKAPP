@@ -13,7 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Шифраторы GIOUI/5.1: каждый шифр обязан честно возвращать исходный текст,
+ * Шифраторы GIOUI/5.2: каждый шифр обязан честно возвращать исходный текст,
  * автоопределение — узнавать свои шифры, а битые данные — получать отказ, а не мусор.
  */
 class CipherTest {
@@ -40,7 +40,7 @@ class CipherTest {
     fun registryIsCompleteAndUnique() {
         val ids = Ciphers.ALL.map { it.id }
         assertEquals(ids.size, ids.distinct().size)
-        assertTrue("шифров должно быть много", Ciphers.ALL.size >= 24)
+        assertTrue("шифров должно быть много", Ciphers.ALL.size >= 42)
         Ciphers.Family.entries.forEach { family ->
             assertTrue("пустая семья " + family.title, Ciphers.ALL.any { it.family == family })
         }
@@ -51,7 +51,9 @@ class CipherTest {
         // популярные и уникальные — тоже
         listOf(
             "base64", "hex", "url", "morse", "caesar", "xor", "pig", "bytecode", "asm", "cpu",
-            "gs32", "g85", "vine", "lock", "gstls", "ganonym"
+            "gs32", "g85", "vine", "lock", "gstls", "ganonym",
+            "base32", "base58", "ascii85", "quoted", "rot13", "atbash", "vigenere",
+            "cats", "moon", "chess", "braille", "runes", "dna", "decimal", "octal", "ternary", "quaternary", "roman"
         ).forEach { id ->
             assertNotNull("нет шифра " + id, Ciphers.ALL.firstOrNull { it.id == id })
         }
@@ -179,6 +181,81 @@ class CipherTest {
     }
 
     @Test
+    fun detectionRecognisesNew52Ciphers() {
+        listOf(
+            "base32", "base58", "ascii85", "quoted", "cats", "moon", "chess", "braille", "runes",
+            "dna", "decimal", "octal", "ternary", "quaternary", "roman"
+        ).forEach { id ->
+            val coded = ok(Ciphers.encode(id, sample))
+            val detected = Ciphers.detect(coded)
+            assertNotNull("автоопределение не узнало новый шифр " + id, detected)
+            assertEquals("автоопределение перепутало новый шифр " + id, id, detected!!.first.id)
+            assertEquals(sample, ok(Ciphers.decode(detected.first.id, coded)))
+        }
+        // ROT13, Атбаш и Виженер неотличимы от обычного текста без ключей/маркеров:
+        // честный детектор не должен выдумывать их из воздуха.
+        assertNull(Ciphers.detect(ok(Ciphers.encode("rot13", "HELLO GSYNK"))))
+    }
+
+    @Test
+    fun smartDecoderPeelsRepeatedAndMixedLayers() {
+        var repeated = sample
+        repeat(3) { repeated = ok(Ciphers.encode("base64", repeated)) }
+        val repeatedOutcome = Ciphers.decodeLayers(repeated)
+        assertTrue(repeatedOutcome is Ciphers.LayerOutcome.Ok)
+        repeatedOutcome as Ciphers.LayerOutcome.Ok
+        assertEquals(sample, repeatedOutcome.text)
+        assertEquals(listOf("base64", "base64", "base64"), repeatedOutcome.steps.map { it.cipherId })
+
+        var mixed = ok(Ciphers.encode("pig", sample))
+        mixed = ok(Ciphers.encode("base64", mixed))
+        mixed = ok(Ciphers.encode("base64", mixed))
+        val mixedOutcome = Ciphers.decodeLayers(mixed)
+        assertTrue(mixedOutcome is Ciphers.LayerOutcome.Ok)
+        mixedOutcome as Ciphers.LayerOutcome.Ok
+        assertEquals(sample, mixedOutcome.text)
+        assertEquals(listOf("base64", "base64", "pig"), mixedOutcome.steps.map { it.cipherId })
+
+        val pigsOnce = ok(Ciphers.encode("pig", "Слой!"))
+        val pigsTwice = ok(Ciphers.encode("pig", pigsOnce))
+        val pigOutcome = Ciphers.decodeLayers(pigsTwice)
+        assertTrue(pigOutcome is Ciphers.LayerOutcome.Ok)
+        pigOutcome as Ciphers.LayerOutcome.Ok
+        assertEquals("Слой!", pigOutcome.text)
+        assertEquals(listOf("pig", "pig"), pigOutcome.steps.map { it.cipherId })
+
+        assertTrue(Ciphers.decodeLayers(sample) is Ciphers.LayerOutcome.Err)
+    }
+
+    @Test
+    fun smartDecoderPeelsRepeatedLockedLayersWithSamePassword() {
+        val key = "один пароль на оба слоя"
+        val once = ok(Ciphers.encode("lock", sample, key))
+        val twice = ok(Ciphers.encode("lock", once, key))
+        val outcome = Ciphers.decodeLayers(twice, key)
+        assertTrue(outcome is Ciphers.LayerOutcome.Ok)
+        outcome as Ciphers.LayerOutcome.Ok
+        assertEquals(sample, outcome.text)
+        assertEquals(listOf("lock", "lock"), outcome.steps.map { it.cipherId })
+        assertTrue(Ciphers.decodeLayers(twice, "чужой пароль") is Ciphers.LayerOutcome.Err)
+    }
+
+    @Test
+    fun newCompactAndNumericFacesAreHonest() {
+        assertTrue(ok(Ciphers.encode("base32", sample)).all { it in 'A'..'Z' || it in '2'..'7' || it == '=' })
+        assertTrue(ok(Ciphers.encode("base58", sample)).startsWith("B58:"))
+        assertTrue(ok(Ciphers.encode("ascii85", sample)).startsWith("A85:"))
+        assertTrue(ok(Ciphers.encode("braille", sample)).filterNot { it.isWhitespace() }.all { it.code in 0x2800..0x28FF })
+        val decimal = ok(Ciphers.encode("decimal", "A"))
+        assertEquals("DEC:65", decimal)
+        assertEquals("B4:1001", ok(Ciphers.encode("quaternary", "A")))
+        assertEquals("ROMAN:LXV", ok(Ciphers.encode("roman", "A")))
+        err(Ciphers.encode("vigenere", sample, "12345"))
+        err(Ciphers.decode("roman", "ROMAN:IIII"))
+        err(Ciphers.decode("base58", "B58:0OIl"))
+    }
+
+    @Test
     fun brokenCiphersGetRefusalsNotGarbage() {
         val bin = ok(Ciphers.encode("bin", sample))
         err(Ciphers.decode("bin", bin.dropLast(1)))             // потерян бит
@@ -267,7 +344,7 @@ class CipherTest {
         assertTrue("в шифраторах должны жить и старые кодеры", inside.size >= 7)
         listOf(
             "ciphers", "cipherlock", "ciphergrape", "cipherauto", "cipherpig",
-            "cipherbytecode", "cipherasm", "ciphercpu", "gstls"
+            "cipherbytecode", "cipherasm", "ciphercpu", "gstls", "ciphersmart", "cipherbase58", "ciphercats"
         ).forEach { page ->
             assertTrue("страница " + page + " не в роутере GIOUI", GiouiPageIds.contains(page))
             assertNotNull("плитки страницы " + page + " нет", Catalog.ALL.firstOrNull { it.route == "page:" + page })
@@ -286,14 +363,15 @@ class CipherTest {
     @Test
     fun giouiSkinCanonIsUnified() {
         val values = Skin.Values()
-        assertEquals(24, values.tile)
-        assertEquals(24, values.card)
-        assertEquals(28, values.sheet)
-        assertEquals(16, values.button)
-        assertEquals(16, values.toggle)
-        // старая квадратная форма через clamp не просочится
-        val clamped = Skin.clamp(Skin.Values(tile = 0, card = 0, button = 0, toggle = 0, sheet = 0))
-        assertTrue(clamped.tile >= 12 && clamped.card >= 12 && clamped.button >= 10 && clamped.sheet >= 16)
+        assertEquals(3, values.tile)
+        assertEquals(6, values.card)
+        assertEquals(8, values.sheet)
+        assertEquals(4, values.button)
+        assertEquals(6, values.toggle)
+        assertEquals(14, values.capsule)
+        // старые круглые формы через clamp не просочатся: Metro остаётся резким
+        val clamped = Skin.clamp(Skin.Values(tile = 500, card = 500, button = 500, toggle = 500, sheet = 500, capsule = 500))
+        assertTrue(clamped.tile <= 10 && clamped.card <= 14 && clamped.button <= 12 && clamped.sheet <= 18 && clamped.capsule <= 22)
         assertTrue(Skin.PRESETS.any { it.first == "gioui" })
         assertTrue(Skin.PRESETS.none { it.first == "cube" || it.first == "metri" })
     }

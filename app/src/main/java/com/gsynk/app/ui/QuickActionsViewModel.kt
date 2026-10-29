@@ -19,7 +19,7 @@ import kotlinx.coroutines.withContext
  * Состояние быстрых инструментов: фонарик, «не беспокоить», сирена, вибрация
  * и живой дашборд показателей телефона.
  */
-class ToolsViewModel(application: Application) : AndroidViewModel(application) {
+class QuickActionsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _torch = MutableStateFlow(false)
     val torch: StateFlow<Boolean> = _torch.asStateFlow()
@@ -39,7 +39,7 @@ class ToolsViewModel(application: Application) : AndroidViewModel(application) {
     private var statsJob: Job? = null
 
     init {
-        AppLog.event("Tools", "открыт раздел «Инструменты»")
+        AppLog.event("Quick", "открыты быстрые переключатели")
         refreshDnd()
     }
 

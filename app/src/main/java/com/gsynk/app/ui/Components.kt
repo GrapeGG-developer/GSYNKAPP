@@ -777,54 +777,52 @@ fun GrapeScreen(
     content: @Composable ColumnScope.() -> Unit
 ) {
     AnimatedGrapeBackground {
-        // GIOUI 5.1: AnimatedGrapeBackground уже является единственным живым слоем.
-        // Вторичная аврора на каждом экране убрана: полупрозрачные панели должны
-        // показывать тот же бесшовный фон, а не два спорящих градиента.
+        // GIOUI Metro 5.2: GrapeScreen больше не рисует собственный большой
+        // «старый» заголовок. Полноэкранной плиткой управляет MetroAppShell
+        // (название, свернуть, закрыть), а здесь остаётся только компактный
+        // внутренний возврат для вложенных страниц одного приложения.
         Column(
             Modifier
                 .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars)
                 .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 16.dp)
         ) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 14.dp),
+                    .padding(top = 8.dp, bottom = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Кнопка возврата — как значок на панели приложения GIOUI: 44×44, без заливки.
                 Box(
                     Modifier
-                        .size(44.dp)
-                        .clip(skinShape("toggle"))
-                        .border(1.dp, ChipBorder, skinShape("toggle"))
+                        .size(width = 42.dp, height = 36.dp)
+                        .clip(RectangleShape)
+                        .background(Color.White.copy(alpha = 0.07f))
+                        .border(1.dp, Color.White.copy(alpha = 0.16f), RectangleShape)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) { onBack() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("←", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Light)
+                    Text("←", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Light)
                 }
-                Spacer(Modifier.width(Gioui.unit * 1.5f))
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    // Тонкий крупный заголовок страницы: 42 pt в исходнике Gioui.
-                    GradientText(
-                        text = title,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light).copy(
-                            fontSize = Gioui.Type.pageTitle,
-                            fontWeight = FontWeight.Light,
-                            letterSpacing = (-0.6).sp
-                        ),
-                        brush = GrapeGradient
+                    Text(
+                        text = title.lowercase(),
+                        color = TextPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Light,
+                        maxLines = 1
                     )
                     if (subtitle != null) {
                         Text(
                             text = subtitle,
                             color = TextDim,
-                            fontSize = Gioui.Type.pageSubtitle,
-                            fontWeight = FontWeight.Light
+                            fontSize = Gioui.Type.caption,
+                            fontWeight = FontWeight.Light,
+                            maxLines = 1
                         )
                     }
                 }
@@ -837,12 +835,11 @@ fun GrapeScreen(
                     .verticalScroll(rememberScrollState())
             ) {
                 content()
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
 }
-
 
 /**
  * Анимация при нажатии на логотип GSYNK.

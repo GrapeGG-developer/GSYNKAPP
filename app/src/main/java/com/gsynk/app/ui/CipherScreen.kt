@@ -69,6 +69,7 @@ fun CipherScreen(
     var output by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("") }
     var statusError by remember { mutableStateOf(false) }
+    var smartChain by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var lastMillis by remember { mutableStateOf(-1L) }
     var usedCipherTitle by remember { mutableStateOf("") }
@@ -89,15 +90,42 @@ fun CipherScreen(
         if (snapshot == input) detected = found
     }
 
-    fun run(forceCipherId: String? = null, forceDecrypt: Boolean = false) {
+    fun run(forceCipherId: String? = null, forceDecrypt: Boolean = false, forceSmart: Boolean = false) {
         if (busy) return
         val decrypting = forceDecrypt || !encryptMode
         val effectiveId = forceCipherId
             ?: if (decrypting && autoDetect) (detected?.first?.id ?: selectedId) else selectedId
         busy = true
         status = ""
+        smartChain = ""
+        val useSmart = decrypting && (forceSmart || (autoDetect && forceCipherId == null))
         scope.launch {
             val started = System.nanoTime()
+            if (useSmart) {
+                val layered = withContext(Dispatchers.Default) { Ciphers.decodeLayers(input, keyText, maxLayers = 16) }
+                lastMillis = (System.nanoTime() - started) / 1_000_000
+                when (layered) {
+                    is Ciphers.LayerOutcome.Ok -> {
+                        output = layered.text
+                        usedCipherTitle = layered.steps.lastOrNull()?.title ?: "умная расшифровка"
+                        smartChain = layered.steps.joinToString(" → ") { it.title }
+                        statusError = false
+                        status = if (layered.steps.size <= 1) {
+                            "Умная расшифровка: снят слой «" + usedCipherTitle + "»"
+                        } else {
+                            "Умная расшифровка: снято слоёв — " + layered.steps.size + ", добрались до исходного текста"
+                        }
+                    }
+                    is Ciphers.LayerOutcome.Err -> {
+                        output = ""
+                        smartChain = layered.steps.joinToString(" → ") { it.title }
+                        statusError = true
+                        status = layered.message
+                    }
+                }
+                busy = false
+                return@launch
+            }
             val result = withContext(Dispatchers.Default) {
                 if (decrypting) {
                     Ciphers.decode(effectiveId, input, keyText)
@@ -131,7 +159,7 @@ fun CipherScreen(
 
     GrapeScreen(
         title = "шифраторы",
-        subtitle = "один экран · " + Ciphers.ALL.size + " шифров · автоопределение",
+        subtitle = "один экран · " + Ciphers.ALL.size + " шифров · умные слои",
         onBack = onBack
     ) {
         // ——— режим ———
@@ -167,11 +195,21 @@ fun CipherScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 SecondaryButton(
-                    text = "Расшифровать как «" + info.title + "»",
+                    text = "Расшифровать один слой «" + info.title + "»",
                     onClick = {
                         encryptMode = false
                         selectedId = info.id
                         run(forceCipherId = info.id, forceDecrypt = true)
+                    },
+                    icon = Icons.Filled.Refresh
+                )
+                Spacer(Modifier.height(6.dp))
+                SecondaryButton(
+                    text = "Снять все слои подряд",
+                    onClick = {
+                        encryptMode = false
+                        autoDetect = true
+                        run(forceDecrypt = true, forceSmart = true)
                     },
                     icon = Icons.Filled.Refresh
                 )
@@ -317,13 +355,20 @@ fun CipherScreen(
                 Column(Modifier.weight(1f)) {
                     Text(text = "Автоопределение шифра", color = TextPrimary, fontSize = Gioui.Type.body)
                     Text(
-                        text = "Вставлен шифр — приложение само поймёт, чем он закрыт",
+                        text = "Вставлен шифр — приложение само поймёт слои и снимет повторные шифрования подряд",
                         color = TextDim,
                         fontSize = Gioui.Type.caption
                     )
                 }
                 Switch(checked = autoDetect, onCheckedChange = { autoDetect = it })
             }
+            Spacer(Modifier.height(8.dp))
+            SecondaryButton(
+                text = "Умно снять все слои сразу",
+                onClick = { run(forceDecrypt = true, forceSmart = true) },
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Filled.Refresh
+            )
             Spacer(Modifier.height(10.dp))
         }
 
@@ -342,6 +387,13 @@ fun CipherScreen(
                 color = if (statusError) GrapeRed else GrapeGreen,
                 fontSize = Gioui.Type.caption
             )
+        }
+        if (smartChain.isNotBlank()) {
+            Spacer(Modifier.height(8.dp))
+            SurfaceCard(Modifier.fillMaxWidth()) {
+                Text(text = "цепочка снятия слоёв", color = GrapeCyan, fontSize = Gioui.Type.caption, fontWeight = FontWeight.SemiBold)
+                Text(text = smartChain, color = TextPrimary, fontSize = Gioui.Type.caption)
+            }
         }
 
         // ——— результат ———

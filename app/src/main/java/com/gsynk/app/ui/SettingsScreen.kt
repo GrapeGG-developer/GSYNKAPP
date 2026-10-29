@@ -13,12 +13,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.graphics.RectangleShape
@@ -26,9 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -56,25 +54,17 @@ import com.gsynk.app.ui.theme.TextSecondary
  * на строку состояния, а кнопка закрытия всегда на виду.
  */
 @Composable
-fun SettingsSheet(
+fun SettingsScreen(
     vm: MainViewModel,
-    onDismiss: () -> Unit,
-    onOpenTools: () -> Unit
+    onBack: () -> Unit
 ) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = CardBg,
-        shape = skinShape("sheet"),
-        dragHandle = null
-    ) {
+    AnimatedGrapeBackground {
         Column(
             Modifier
-                .fillMaxWidth()
-                .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
+                .fillMaxSize()
                 .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
                 .padding(horizontal = 18.dp)
                 .verticalScroll(rememberScrollState())
@@ -82,35 +72,23 @@ fun SettingsSheet(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp, bottom = 12.dp),
+                    .padding(top = 12.dp, bottom = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
-                    // Заголовок GIOUI: 42 pt Light, без градиента — плитка сама кричит цветом.
                     Text(
-                        text = "Настройки",
+                        text = "настройки",
                         color = TextPrimary,
-                        fontSize = Gioui.Type.pageTitle,
-                        fontWeight = FontWeight.Light,
-                        letterSpacing = (-1).sp
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Light
                     )
                     Text(
-                        text = "GSYNK ${BuildConfig.VERSION_NAME}",
+                        text = "GSYNK ${BuildConfig.VERSION_NAME} · Metro-приложение",
                         color = TextDim,
-                        fontSize = Gioui.Type.caption,
-                        letterSpacing = 1.2.sp
+                        fontSize = Gioui.Type.caption
                     )
                 }
-                // Закрытие — как «назад» в GIOUI: 44×44, без заливки, в правом верхнем углу.
-                Box(
-                    Modifier
-                        .size(44.dp)
-                        .clip(skinShape("button"))
-                        .clickable { onDismiss() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("✕", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Light)
-                }
+                SecondaryButton(text = "Назад", onClick = onBack)
             }
 
             // ————— автопилот и уведомления —————
@@ -131,13 +109,6 @@ fun SettingsSheet(
                 subtitle = "телефон сам придёт к последнему правилу",
                 checked = settings.syncAfterBoot,
                 onChange = { vm.setSyncAfterBoot(it) }
-            )
-
-            Spacer(Modifier.height(12.dp))
-            SecondaryButton(
-                text = "Мультитул",
-                onClick = onOpenTools,
-                modifier = Modifier.fillMaxWidth()
             )
 
             // ————— обновления —————

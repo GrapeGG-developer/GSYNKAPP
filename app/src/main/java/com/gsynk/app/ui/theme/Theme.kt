@@ -105,11 +105,11 @@ fun GSYNKTheme(content: @Composable () -> Unit) {
         colorScheme = GsynkColors,
         typography = GsynkTypography,
         shapes = Shapes(
-            extraSmall = RoundedCornerShape(12.dp),
-            small = RoundedCornerShape(16.dp),
-            medium = RoundedCornerShape(24.dp),
-            large = RoundedCornerShape(28.dp),
-            extraLarge = RoundedCornerShape(32.dp)
+            extraSmall = RoundedCornerShape(2.dp),
+            small = RoundedCornerShape(4.dp),
+            medium = RoundedCornerShape(6.dp),
+            large = RoundedCornerShape(8.dp),
+            extraLarge = RoundedCornerShape(12.dp)
         ),
         content = content
     )

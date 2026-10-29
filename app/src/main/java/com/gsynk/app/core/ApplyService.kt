@@ -57,7 +57,8 @@ class ApplyService : Service() {
                             "Правило",
                             "«${rule.name}»" +
                                 (if (result.brightness) ", яркость ${rule.brightness}%" else "") +
-                                (if (result.volume) ", звук ${rule.volume}%" else "")
+                                (if (result.volume) ", звук ${rule.volume}%" else "") +
+                                (if (result.silent) (if (rule.silentMode == 1) ", тишина включена" else ", тишина выключена") else "")
                         )
                         // разовое правило (с конкретными датами) отработало — выключаем его,
                         // чтобы оно не срабатывало в эти же дни недели каждую неделю

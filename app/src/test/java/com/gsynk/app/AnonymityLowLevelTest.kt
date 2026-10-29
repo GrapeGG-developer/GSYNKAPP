@@ -97,8 +97,8 @@ class AnonymityLowLevelTest {
     }
 
     @Test
-    fun releaseNewsIsCompleteFor51() {
-        assertEquals("5.1.0", ReleaseNews.VERSION)
+    fun releaseNewsIsCompleteFor52() {
+        assertEquals("5.2.0", ReleaseNews.VERSION)
         assertTrue(ReleaseNews.items.size >= 5)
         assertEquals(ReleaseNews.items.size, ReleaseNews.items.map { it.id }.distinct().size)
         ReleaseNews.items.forEach { item ->
@@ -110,7 +110,7 @@ class AnonymityLowLevelTest {
     }
 
     @Test
-    fun catalog51HasDirectCategoriesScheduleAnonymityAndNoDeletedEntries() {
+    fun catalog52HasDirectCategoriesScheduleAnonymityAndNoDeletedEntries() {
         assertEquals(10, Catalog.Group.entries.size)
         assertNotNull(Catalog.byId("anonymity"))
         assertNotNull(Catalog.byId("avatarlab"))

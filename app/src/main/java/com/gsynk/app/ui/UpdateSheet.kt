@@ -326,8 +326,8 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = update?.notes?.takeIf { it.isNotBlank() }
-                    ?: "5.1 — шифры до процессорного уровня, GS-TLS и GANONYM, категория " +
-                    "анонимности, живые плитки на главном и отдельный экран расписания.",
+                    ?: "5.2 — Metro-«Пуск», пустой дом, автоматизации жизни, 42 шифра " +
+                    "и прямые полноэкранные приложения без старых хабов.",
                 color = TextDim,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
             )

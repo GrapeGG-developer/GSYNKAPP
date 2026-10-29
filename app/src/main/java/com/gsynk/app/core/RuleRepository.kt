@@ -63,7 +63,8 @@ class RuleRepository(context: Context) {
                 intervalHours = rule.intervalHours.coerceIn(0, 23),
                 intervalMinutes = rule.intervalMinutes.coerceIn(0, 59),
                 intervalStartHour = rule.intervalStartHour.coerceIn(0, 23),
-                intervalStartMinute = rule.intervalStartMinute.coerceIn(0, 59)
+                intervalStartMinute = rule.intervalStartMinute.coerceIn(0, 59),
+                silentMode = rule.silentMode.coerceIn(-1, 1)
             )
         }
         appContext.dataStore.edit { prefs ->

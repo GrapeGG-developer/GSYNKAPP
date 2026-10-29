@@ -246,42 +246,42 @@ fun RadiusScreen(onBack: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Слева направо: карточка-функция, карточка, переключатель, капсула. В GIOUI это одна " +
-                "система: канон — карточки 24 dp, контролы 16 dp, листы 28 dp, капсулы — самые мягкие.",
+                "система: канон Metro — плитки 3 dp, карточки 6 dp, контролы 4 dp, листы 8 dp.",
             color = TextDim,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
         )
 
         Spacer(Modifier.height(14.dp))
-        radiusGroup("Карточки-функции", skin.tile, listOf(16, 20, 24, 28)) { value ->
+        radiusGroup("Карточки-функции", skin.tile, listOf(0, 2, 3, 6, 10)) { value ->
             Skin.save(context, skin.copy(tile = value))
         }
-        radiusGroup("Карточки", skin.card, listOf(16, 20, 24, 28)) { value ->
+        radiusGroup("Карточки", skin.card, listOf(2, 4, 6, 10, 14)) { value ->
             Skin.save(context, skin.copy(card = value))
         }
-        radiusGroup("Кнопки", skin.button, listOf(12, 14, 16, 20)) { value ->
+        radiusGroup("Кнопки", skin.button, listOf(0, 2, 4, 8, 12)) { value ->
             Skin.save(context, skin.copy(button = value))
         }
-        radiusGroup("Переключатели", skin.toggle, listOf(12, 14, 16, 20)) { value ->
+        radiusGroup("Переключатели", skin.toggle, listOf(2, 4, 6, 10, 14)) { value ->
             Skin.save(context, skin.copy(toggle = value))
         }
-        radiusGroup("Листы и панели", skin.sheet, listOf(20, 24, 28, 32)) { value ->
+        radiusGroup("Листы и панели", skin.sheet, listOf(4, 6, 8, 12, 18)) { value ->
             Skin.save(context, skin.copy(sheet = value))
         }
-        radiusGroup("Капсулы", skin.capsule, listOf(24, 28, 32, 40)) { value ->
+        radiusGroup("Капсулы", skin.capsule, listOf(8, 10, 14, 18, 22)) { value ->
             Skin.save(context, skin.copy(capsule = value))
         }
 
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SecondaryButton(
-                text = "Канон GIOUI",
-                onClick = { Skin.save(context, skin.copy(tile = 24, card = 24, sheet = 28, button = 16, toggle = 16, capsule = 32)) },
+                text = "Канон Metro",
+                onClick = { Skin.save(context, skin.copy(tile = 3, card = 6, sheet = 8, button = 4, toggle = 6, capsule = 14)) },
                 modifier = Modifier.weight(1f)
             )
             SecondaryButton(
-                text = "Всё скруглённое",
+                text = "Чуть мягче",
                 onClick = {
-                    Skin.save(context, skin.copy(tile = 30, card = 30, sheet = 34, button = 20, toggle = 20))
+                    Skin.save(context, skin.copy(tile = 10, card = 14, sheet = 18, button = 12, toggle = 14))
                     // Пасхалка «клавиатура из плиток»: всё скруглено до предела.
                     Eggs.unlock(context, "keyboard")
                 },
@@ -667,7 +667,7 @@ val GiouiPageIds: List<String> = listOf(
     "echo", "eyes", "pulse", "news",
     // Шифраторы — один экран, разные стартовые пресеты.
     "ciphers", "cipherlock", "ciphergrape", "cipherauto", "cipherpig",
-    "cipherbytecode", "cipherasm", "ciphercpu", "gstls",
+    "cipherbytecode", "cipherasm", "ciphercpu", "gstls", "ciphersmart", "cipherbase58", "ciphercats",
     // Анонимность — один экран, разные инструменты внутри.
     "anonymity", "nickgen", "avatarlab", "tracecheck", "ganonym"
 )
@@ -693,6 +693,9 @@ fun GiouiPage(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
         "cipherbytecode" -> { CipherScreen(onBack, initialCipher = "bytecode"); return true }
         "cipherasm" -> { CipherScreen(onBack, initialCipher = "asm"); return true }
         "ciphercpu" -> { CipherScreen(onBack, initialCipher = "cpu"); return true }
+        "ciphersmart" -> { CipherScreen(onBack, initialDecrypt = true); return true }
+        "cipherbase58" -> { CipherScreen(onBack, initialCipher = "base58"); return true }
+        "ciphercats" -> { CipherScreen(onBack, initialCipher = "cats"); return true }
         "gstls" -> { CipherScreen(onBack, initialCipher = "gstls"); return true }
         "news" -> { NewsScreen(onBack); return true }
         "anonymity" -> { AnonymityScreen(onBack, initialMode = "persona"); return true }

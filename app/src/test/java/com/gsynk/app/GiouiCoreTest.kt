@@ -255,9 +255,9 @@ class GiouiCoreTest {
     fun skinClampsValuesToReasonableRanges() {
         val wild = Skin.Values(tile = 500, card = -20, sheet = 900, blur = 99, rays = 99, speed = 1_000, level = 9)
         val clamped = Skin.clamp(wild)
-        assertEquals(32, clamped.tile)
-        assertEquals(12, clamped.card) // GIOUI: ниже 12 dp единая система не опускается
-        assertEquals(36, clamped.sheet)
+        assertEquals(10, clamped.tile)
+        assertEquals(2, clamped.card) // Metro 5.2: карточки почти острые, старые 24 dp не воскресают
+        assertEquals(18, clamped.sheet)
         assertEquals(30, clamped.blur)
         assertEquals(12, clamped.rays)
         assertEquals(200, clamped.speed)
@@ -409,7 +409,7 @@ class GiouiCoreTest {
 
     @Test
     fun giouiIsTheOnlyUiSystem() {
-        assertEquals("GIOUI 1.0", com.gsynk.app.ui.Gioui.UI_VERSION)
+        assertEquals("GIOUI Metro 5.2", com.gsynk.app.ui.Gioui.UI_VERSION)
         val uiDir = java.io.File("src/main/java/com/gsynk/app/ui")
         assertTrue("старый файл дизайн-системы остался", !java.io.File(uiDir, "Metro.kt").exists())
         val leftovers = uiDir.listFiles()!!.filter { it.extension == "kt" }

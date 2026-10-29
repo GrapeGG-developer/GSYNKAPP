@@ -2,6 +2,7 @@
 
 package com.gsynk.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -83,7 +84,6 @@ import com.gsynk.app.R
 import com.gsynk.app.core.Ciphers
 import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.ReleaseNews
-import com.gsynk.app.core.Permissions
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleScheduler
 import com.gsynk.app.core.RuleSort
@@ -106,12 +106,18 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * Главный экран 2.1.
+ * Главный экран GSYNK 5.2.
  *
- * Сверху — крупные живые плитки (автопилот, NFC, разделы) и переключатели, ниже —
- * расписание правил с сортировкой. Панель обновления выезжает сама, когда вышла
- * новая версия: пользователю не нужно ничего искать.
+ * Дом намеренно пуст, все функции живут в горизонтальном Metro-«Пуске», а каждая
+ * открытая плитка работает как полноэкранное приложение с общей статус-панелью.
  */
+private data class MinimizedAppState(
+    val panel: String,
+    val featureRoute: String?,
+    val route: String?,
+    val title: String
+)
+
 @Composable
 fun MainScreen(vm: MainViewModel) {
     val rules by vm.rules.collectAsStateWithLifecycle()
@@ -127,19 +133,18 @@ fun MainScreen(vm: MainViewModel) {
 
     var editing by remember { mutableStateOf<Rule?>(null) }
     var creating by remember { mutableStateOf(false) }
-    var permissions by remember { mutableStateOf(Permissions.snapshot(context)) }
     var rogueInvite by remember { mutableStateOf<NfcLinkInvite?>(null) }
     // Ровно одна панель на экране: раньше их можно было открыть несколько сразу,
     // и они накладывались друг на друга. null — главный экран.
     var panel by remember { mutableStateOf<String?>(null) }
     var panelBeforeUpdate by remember { mutableStateOf<String?>(null) }
-    // Каталог: заявки роутера и состояние плиток главного экрана.
-    var pendingTool by remember { mutableStateOf<String?>(null) }
-    var pendingFlag by remember { mutableStateOf<String?>(null) }
-    var pendingLab by remember { mutableStateOf<String?>(null) }
+    // Пуск и Metro-оболочка плиток: промежуточных хабов больше нет.
+    var startOpen by remember { mutableStateOf(false) }
+    var featureRoute by remember { mutableStateOf<String?>(null) }
+    var activeRoute by remember { mutableStateOf<String?>(null) }
+    var minimizedApp by remember { mutableStateOf<MinimizedAppState?>(null) }
     var query by remember { mutableStateOf("") }
     var favorites by remember { mutableStateOf(Catalog.loadFavorites(context)) }
-    val toolsVm: ToolsViewModel = viewModel()
 
     // подземелье на два телефона: сопряжение NFC + игра по Wi-Fi
     var coopInvite by remember { mutableStateOf<com.gsynk.app.core.NfcLink.GameInvite?>(null) }
@@ -147,18 +152,7 @@ fun MainScreen(vm: MainViewModel) {
     // открыть комнату сразу, без лишнего нажатия: так делает касание в режиме «отдаю»
     var coopAutoHost by remember { mutableStateOf(false) }
     val profile = remember { DeviceProfile.detect(context) }
-
-    // пересчёт разрешений при возвращении из системных экранов
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, panel == "settings", panel == "tools", panel == "nfc") {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                permissions = Permissions.snapshot(context)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
 
     LaunchedEffect(message) {
         message?.let {
@@ -198,20 +192,31 @@ fun MainScreen(vm: MainViewModel) {
             }
 
             null -> Unit
-            else -> panel = "nfc"
+            else -> {
+                activeRoute = "tool:nearby"
+                startOpen = false
+                panel = "nfc"
+            }
         }
     }
 
-    // Единый роутер: любому экрану разрешено открыть что угодно одной строкой.
+    // Единый роутер Metro: маршрут сразу становится полноэкранной плиткой.
     val route by Router.request.collectAsStateWithLifecycle()
     LaunchedEffect(route) {
         val request = route ?: return@LaunchedEffect
         val (kind, name) = Router.split(request)
         when (kind) {
             "panel" -> {
+                activeRoute = request
+                startOpen = false
+                minimizedApp = null
                 if (name == "schedule_new") {
                     panel = "schedule"
                     creating = true
+                } else if (name == "tools") {
+                    // Старый маршрут больше не ведёт в хаб: только быстрые переключатели.
+                    featureRoute = "tool:quick"
+                    panel = "feature"
                 } else {
                     panel = name
                 }
@@ -219,36 +224,33 @@ fun MainScreen(vm: MainViewModel) {
             }
 
             "page" -> {
+                activeRoute = request
+                startOpen = false
+                minimizedApp = null
                 panel = "page:" + name
                 Router.consume()
             }
 
             "sys" -> {
-                // «report» — не системный экран, а сбор отчёта: его собирает модель.
                 if (name == "report") {
-                    vm.collectReport("Отчёт по кнопке из каталога")
+                    vm.collectReport("Отчёт по плитке Пуска")
                 } else {
-                    toolsVm.openSettings(name)
+                    com.gsynk.app.core.AutomationActions.openSettings(context, name)
                 }
                 Router.consume()
             }
 
-            "tool" -> {
-                pendingTool = name
-                panel = "tools"
-                Router.consume()
-            }
-
-            "flag" -> {
-                pendingFlag = name
-                panel = "tools"
-                Router.consume()
-            }
-
-            "lab" -> {
-                pendingLab = name
-                pendingTool = "lab"
-                panel = "tools"
+            "tool", "flag", "lab" -> {
+                activeRoute = request
+                startOpen = false
+                minimizedApp = null
+                if (request == "flag:update") {
+                    panelBeforeUpdate = panel
+                    panel = "update"
+                } else {
+                    featureRoute = request
+                    panel = "feature"
+                }
                 Router.consume()
             }
         }
@@ -284,6 +286,88 @@ fun MainScreen(vm: MainViewModel) {
     val nextRule = remember(rules) { nextOccurrence(rules) }
     val nextId = remember(rules) { nextRuleId(rules) }
 
+    fun currentRoute(): String? = when {
+        panel == "feature" -> featureRoute ?: activeRoute
+        panel?.startsWith("page:") == true -> panel
+        panel != null -> "panel:" + panel
+        else -> activeRoute
+    }
+
+    fun titleForRoute(route: String?): String {
+        when (route) {
+            "panel:settings" -> return "настройки"
+            "panel:schedule", "panel:schedule_new" -> return "расписание"
+            "panel:lifeauto", "page:lifeauto" -> return "автоматизации жизни"
+            "panel:diagnostics", "flag:diagnostics" -> return "диагностика"
+            "panel:games" -> return "игры"
+            "panel:nfc", "tool:nearby" -> return "gsynk рядом"
+            "panel:coop" -> return "игра вдвоём"
+            "panel:rogue" -> return "gtboi"
+            "panel:scenes" -> return "сцены сейчас"
+            "panel:update", "flag:update" -> return "обновление"
+            "page:news" -> return "новости"
+        }
+        Catalog.ALL.firstOrNull { it.route == route }?.let { return it.title }
+        return route
+            ?.substringAfter(':')
+            ?.replace('_', ' ')
+            ?.takeIf { it.isNotBlank() }
+            ?: "gsynk"
+    }
+
+    fun closeCurrentApp() {
+        if (panel == "rogue" && coopRole != null) com.gsynk.app.core.WifiCoop.stop()
+        if (panel == "rogue" || panel == "coop") {
+            coopRole = null
+            coopInvite = null
+            coopAutoHost = false
+        }
+        panel = null
+        featureRoute = null
+        activeRoute = null
+        startOpen = true
+    }
+
+    fun minimizeCurrentApp() {
+        val currentPanel = panel ?: return
+        val routeNow = currentRoute()
+        minimizedApp = MinimizedAppState(
+            panel = currentPanel,
+            featureRoute = featureRoute,
+            route = routeNow,
+            title = titleForRoute(routeNow)
+        )
+        panel = null
+        featureRoute = null
+        startOpen = false
+    }
+
+    fun resumeMinimizedApp() {
+        val saved = minimizedApp ?: return
+        panel = saved.panel
+        featureRoute = saved.featureRoute
+        activeRoute = saved.route
+        minimizedApp = null
+        startOpen = false
+    }
+
+    fun dismissUpdatePanel() {
+        panel = panelBeforeUpdate
+        if (panel == null) startOpen = true
+        panelBeforeUpdate = null
+        vm.dismissUpdate()
+    }
+
+    BackHandler(enabled = panel != null || startOpen) {
+        when {
+            panel == "update" -> dismissUpdatePanel()
+            panel != null -> closeCurrentApp()
+            else -> startOpen = false
+        }
+    }
+
+    val shellTitle = titleForRoute(currentRoute())
+
     fun homeTileLines(entry: Catalog.Entry): List<String> = when (entry.id) {
         "nearby" -> listOf(
             "NFC · Grape Link · Bluetooth · Wi-Fi Direct",
@@ -309,247 +393,50 @@ fun MainScreen(vm: MainViewModel) {
             if (hasUpdate) "новая версия доступна" else "обновлений сейчас нет",
             updateStatus.ifBlank { "проверка через GitHub" }
         )
+        "diag" -> listOf(
+            if (hadCrash) "был сбой — отчёт уже готов" else "сбоёв не зафиксировано",
+            "журнал, отчёты и отправка"
+        )
         "agent" -> listOf(
             if (agentUnseen > 0) "новых ответов: " + agentUnseen else "связь через GitHub",
             "вопросы и ответы агента"
         )
         "lowlevel", "registers" -> listOf("HEX · биты · BE/LE", "IP · A/B/C · флаги", "CRC32 · SHA-256 · дампы")
+        "lifeauto" -> listOf("07:00 школа — тихо и приглушённо", "15:00 дом — YouTube ярко и громко", "12 готовых наборов правил")
+        "settings" -> listOf("автопилот и доступы", "обновления и внешний вид", "отдельное Metro-приложение")
+        "smartdecode" -> listOf("слой за слоем до исходного текста", "одинаковый шифр несколько раз — не проблема")
         else -> buildList {
             add(entry.subtitle)
-            if (entry.fresh) add("новое в GSYNK 5.1")
+            if (entry.fresh) add("новое в GSYNK 5.2")
             add(entry.group.hint)
         }
     }
 
     Box(Modifier.fillMaxSize()) {
-    AnimatedGrapeBackground {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars)
-        ) {
-            LazyColumn(
-                Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    top = 8.dp,
-                    bottom = 140.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item { HomeHeader(model = profile.model, onSettings = { panel = "settings" }, vm = vm) }
-
-                item {
-                    AnimatedVisibility(
-                        visible = hadCrash,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        CrashBanner(onClick = { panel = "diagnostics" })
-                    }
-                }
-
-                item {
-                    AnimatedVisibility(
-                        visible = agentUnseen > 0,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        AgentMailBanner(unseen = agentUnseen, onClick = { panel = "page:agent" })
-                    }
-                }
-
-                item {
-                    AnimatedVisibility(
-                        visible = hasUpdate,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        UpdateBanner(
-                            subtitle = updateStatus.ifBlank { "Нажмите, чтобы обновить приложение" },
-                            onClick = {
-                                vm.noteUpdatePanelShown()
-                                panel = "update"
-                            }
-                        )
-                    }
-                }
-
-                // ————— новости релиза: фирменная иллюстрация и пункты прямо с главного —————
-                item {
-                    SurfaceCard(Modifier.fillMaxWidth(), onClick = { panel = "page:news" }) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(R.drawable.grapescript_logo),
-                                contentDescription = "Логотип Grape Script",
-                                modifier = Modifier.width(112.dp),
-                                contentScale = ContentScale.Fit
-                            )
-                            Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    text = "новости GSYNK 5.1",
-                                    color = TextPrimary,
-                                    fontSize = Gioui.Type.tileLive,
-                                    fontWeight = FontWeight.Light
-                                )
-                                Text(
-                                    text = "шифры до процессора · анонимность · живые плитки",
-                                    color = TextSecondary,
-                                    fontSize = Gioui.Type.caption
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        ReleaseNews.items.take(3).forEach { news ->
-                            Row(Modifier.padding(vertical = 2.dp)) {
-                                Text("•", color = GrapeGreen, fontSize = Gioui.Type.body, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.width(8.dp))
-                                Text(news.title, color = TextSecondary, fontSize = Gioui.Type.caption)
-                            }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Text("открыть все пункты с картинками →", color = GrapeGreen, fontSize = Gioui.Type.caption, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                // ————— GIOUI: поиск по всем функциям —————
-                item {
-                    GrapeTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        label = "Найти функцию: шифр, пульс, nfc, нагрузка…",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                if (!permissions.allGranted) {
-                    item {
-                        PermissionsCard(
-                            snapshot = permissions,
-                            onOpen = { id -> Permissions.open(context, id) }
-                        )
-                    }
-                }
-
-                item {
-                    ScheduleSummaryCard(
-                        active = rules.count { it.enabled },
-                        total = rules.size,
-                        next = nextRule,
-                        autopilot = settings.autopilot,
-                        onOpen = { panel = "schedule" }
-                    )
-                }
-
-                // ————— GIOUI: поиск показывает результат сразу, без лишних экранов —————
-                if (query.isNotBlank()) {
-                    val found = Catalog.ALL.filter { it.matches(query) }.sortedByDescending { it.hot }
-                    item {
-                        SectionTitle("найдено: " + found.size)
-                        if (found.isEmpty()) {
-                            Text(
-                                text = "Ничего такого нет — попробуй другое слово: «шифр», «пульс», «nfc», «звук».",
-                                color = TextDim, fontSize = Gioui.Type.caption
-                            )
-                        } else {
-                            GioGrid(Modifier.fillMaxWidth()) {
-                                found.forEach { entry ->
-                                    GioCard(
-                                        title = entry.title,
-                                        subtitle = entry.subtitle,
-                                        size = entry.size,
-                                        color = entry.color,
-                                        icon = ImageVector.vectorResource(entry.iconRes),
-                                        liveLines = homeTileLines(entry),
-                                        badge = when {
-                                            entry.fresh -> "новое"
-                                            entry.id in favorites -> "моё"
-                                            else -> null
-                                        },
-                                        onClick = { Catalog.open(context, entry) },
-                                        onLongClick = {
-                                            favorites = if (entry.id in favorites) favorites - entry.id else favorites + entry.id
-                                            Catalog.saveFavorites(context, favorites)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    // ————— категории сразу на главном: вертикальная лента живых плиток —————
-                    Catalog.Group.entries.forEach { grp ->
-                        val entries = Catalog.ALL
-                            .filter { it.group == grp }
-                            .sortedByDescending { it.hot }
-                        if (entries.isNotEmpty()) {
-                            stickyHeader(key = "home-group-" + grp.name) {
-                                Box(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .clip(skinShape("card"))
-                                        .background(CardBg.copy(alpha = 0.9f))
-                                        .border(1.dp, CardBorder, skinShape("card"))
-                                        .padding(horizontal = 14.dp, vertical = 4.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            GioGroup(grp.title)
-                                            Text(grp.hint, color = TextDim, fontSize = Gioui.Type.caption)
-                                        }
-                                        TagChip(text = entries.size.toString() + " функций")
-                                    }
-                                }
-                            }
-                            item(key = "home-grid-" + grp.name) {
-                                GioGrid(Modifier.fillMaxWidth()) {
-                                    entries.forEach { entry ->
-                                        GioCard(
-                                            title = entry.title,
-                                            subtitle = entry.subtitle,
-                                            size = entry.size,
-                                            color = entry.color,
-                                            icon = ImageVector.vectorResource(entry.iconRes),
-                                            liveLines = homeTileLines(entry),
-                                            badge = when {
-                                                entry.fresh -> "5.1"
-                                                entry.id in favorites -> "моё"
-                                                else -> null
-                                            },
-                                            onClick = { Catalog.open(context, entry) },
-                                            onLongClick = {
-                                                favorites = if (entry.id in favorites) favorites - entry.id else favorites + entry.id
-                                                Catalog.saveFavorites(context, favorites)
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-            }
-
-            SnackbarHost(
-                hostState = snackbar,
-                snackbar = { data ->
-                    Snackbar(
-                        snackbarData = data,
-                        shape = skinShape("sheet"),
-                        containerColor = CardBgAlt,
-                        contentColor = TextPrimary
-                    )
+        if (startOpen) {
+            StartMenuScreen(
+                query = query,
+                onQueryChange = { query = it },
+                favorites = favorites,
+                minimizedRoute = minimizedApp?.route,
+                liveLinesFor = { entry -> homeTileLines(entry) },
+                onOpen = { entry ->
+                    activeRoute = entry.route
+                    Catalog.open(context, entry)
                 },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(bottom = 12.dp)
+                onToggleFavorite = { entry ->
+                    favorites = if (entry.id in favorites) favorites - entry.id else favorites + entry.id
+                    Catalog.saveFavorites(context, favorites)
+                },
+                onCloseHome = { startOpen = false }
+            )
+        } else {
+            EmptyHomeScreen(
+                onOpenStart = { startOpen = true },
+                minimizedTitle = minimizedApp?.title,
+                onResumeMinimized = { resumeMinimizedApp() }
             )
         }
-    }
 
     if (creating || editing != null) {
         RuleEditorSheet(
@@ -567,396 +454,230 @@ fun MainScreen(vm: MainViewModel) {
     }
 
     if (panel == "settings") {
-        SettingsSheet(
-            vm = vm,
-            onDismiss = { panel = null },
-            onOpenTools = {
-                panel = null
-                panel = "tools"
-            }
-        )
+        MetroAppShell(
+            title = shellTitle,
+            onClose = { closeCurrentApp() },
+            onMinimize = { minimizeCurrentApp() }
+        ) {
+            SettingsScreen(vm = vm, onBack = { closeCurrentApp() })
+        }
     }
 
     if (panel == "schedule") {
-        ScheduleScreen(
-            vm = vm,
-            onBack = { panel = null },
-            onCreate = { creating = true },
-            onEdit = { editing = it }
-        )
+        MetroAppShell(
+            title = shellTitle,
+            onClose = { closeCurrentApp() },
+            onMinimize = { minimizeCurrentApp() }
+        ) {
+            ScheduleScreen(
+                vm = vm,
+                onBack = { closeCurrentApp() },
+                onCreate = { creating = true },
+                onEdit = { editing = it }
+            )
+        }
     }
 
-    if (panel == "tools") {
-        ToolsScreen(
-            vm = vm,
-            onBack = { panel = null },
-            openTool = pendingTool,
-            openFlag = pendingFlag,
-            openLab = pendingLab,
-            onOpened = {
-                pendingTool = null
-                pendingFlag = null
-                pendingLab = null
-            },
-            // Единственная пользовательская дверь к Grape Link — кнопка NFC внутри «GSYNK рядом».
-            onOpenNfc = { panel = "nfc" },
-            // «GSYNK рядом» умеет передать игру в те же экраны, что и NFC
-            onHostGame = {
-                coopInvite = null
-                coopAutoHost = true
-                panel = null
-                panel = "coop"
-            },
-            onJoinGame = { invite ->
-                coopInvite = invite
-                coopRole = com.gsynk.app.core.WifiCoop.Role.GUEST
-                rogueInvite = NfcLinkInvite(invite.seed, invite.from.ifBlank { "второй телефон" })
-                panel = null
-                panel = "rogue"
+    if (panel == "feature") {
+        val routeNow = featureRoute
+        if (routeNow != null) {
+            MetroAppShell(
+                title = shellTitle,
+                onClose = { closeCurrentApp() },
+                onMinimize = { minimizeCurrentApp() }
+            ) {
+                DirectFeatureScreen(
+                    route = routeNow,
+                    vm = vm,
+                    onBack = { closeCurrentApp() },
+                    onOpenNfc = {
+                        activeRoute = "tool:nearby"
+                        panel = "nfc"
+                    },
+                    onHostGame = {
+                        coopInvite = null
+                        coopAutoHost = true
+                        panel = "coop"
+                    },
+                    onJoinGame = { invite ->
+                        coopInvite = invite
+                        coopRole = com.gsynk.app.core.WifiCoop.Role.GUEST
+                        rogueInvite = NfcLinkInvite(invite.seed, invite.from.ifBlank { "второй телефон" })
+                        panel = "rogue"
+                    }
+                )
             }
-        )
+        }
     }
 
-    // Страницы GIOUI: эффекты, скругления, каждый день, шифры, анонимность, новости, ИИ, бенчмарк.
+    if (panel == "lifeauto") {
+        MetroAppShell(
+            title = shellTitle,
+            onClose = { closeCurrentApp() },
+            onMinimize = { minimizeCurrentApp() }
+        ) {
+            LifeAutomationsScreen(
+                vm = vm,
+                onBack = { closeCurrentApp() },
+                onOpenSchedule = { panel = "schedule" }
+            )
+        }
+    }
+
     panel?.takeIf { it.startsWith("page:") }?.let { name ->
-        val page = name.removePrefix("page:")
-        if (GiouiPage(page, vm, onBack = { panel = null })) return@let
-        if (GiouiExtraPage(page, vm, onBack = { panel = null })) return@let
-        panel = null
+        MetroAppShell(
+            title = shellTitle,
+            onClose = { closeCurrentApp() },
+            onMinimize = { minimizeCurrentApp() }
+        ) {
+            val page = name.removePrefix("page:")
+            val handled = GiouiPage(page, vm, onBack = { closeCurrentApp() }) ||
+                GiouiExtraPage(page, vm, onBack = { closeCurrentApp() })
+            if (!handled) {
+                GrapeScreen(title = "плитка", subtitle = "страница не найдена", onBack = { closeCurrentApp() }) {
+                    SurfaceCard {
+                        Text("Страница «$page» удалена вместе со старыми интерфейсами. Закройте плитку кнопкой × в статус-баре.", color = TextPrimary, fontSize = Gioui.Type.body)
+                    }
+                }
+            }
+        }
     }
 
     if (panel == "diagnostics") {
-        DiagnosticsScreen(vm = vm, onBack = { panel = null })
+        MetroAppShell(title = shellTitle, onClose = { closeCurrentApp() }, onMinimize = { minimizeCurrentApp() }) {
+            DiagnosticsScreen(vm = vm, onBack = { closeCurrentApp() })
+        }
     }
 
     if (panel == "scenes") {
-        ScenesScreen(onBack = { panel = null })
+        MetroAppShell(title = shellTitle, onClose = { closeCurrentApp() }, onMinimize = { minimizeCurrentApp() }) {
+            ScenesScreen(onBack = { closeCurrentApp() })
+        }
     }
 
     if (panel == "games") {
-        GamesScreen(
-            onBack = { panel = null },
-            onDungeon = { coop ->
-                panel = null
-                if (coop) {
-                    coopInvite = null
-                    coopAutoHost = true
-                    panel = "coop"
-                } else {
-                    rogueInvite = null
-                    coopRole = null
-                    panel = "rogue"
+        MetroAppShell(title = shellTitle, onClose = { closeCurrentApp() }, onMinimize = { minimizeCurrentApp() }) {
+            GamesScreen(
+                onBack = { closeCurrentApp() },
+                onDungeon = { coop ->
+                    if (coop) {
+                        coopInvite = null
+                        coopAutoHost = true
+                        panel = "coop"
+                    } else {
+                        rogueInvite = null
+                        coopRole = null
+                        panel = "rogue"
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 
     if (panel == "nfc") {
-        NfcLinkScreen(
-            onBack = { panel = null },
-            // касание в режиме «мой телефон отдаёт» — сразу открываем комнату и игру
-            onHostGame = {
-                coopInvite = null
-                coopAutoHost = true
-                panel = null
-                panel = "coop"
-            },
-            // касание с чужим приглашением — подключаемся и сразу играем
-            onJoinGame = { invite ->
-                coopInvite = invite
-                coopRole = com.gsynk.app.core.WifiCoop.Role.GUEST
-                rogueInvite = NfcLinkInvite(invite.seed, invite.from.ifBlank { "второй телефон" })
-                panel = null
-                panel = "rogue"
-            },
-            // «Передать обновление по NFC»: APK в метку не влезет, поэтому уезжает
-            // описание релиза — версия и прямая ссылка, а второй телефон скачает сам.
-            provideUpdateShare = {
-                val tag = vm.update.value?.latestTag?.takeIf { it.isNotBlank() }
-                    ?: ("v" + com.gsynk.app.BuildConfig.VERSION_NAME)
-                com.gsynk.app.core.UpdateShare.Share(
-                    version = tag,
-                    url = vm.update.value?.apkUrl?.takeIf { it.isNotBlank() }
-                        ?: com.gsynk.app.core.UpdateShare.apkUrl(settings.updateRepo, tag),
-                    sha256 = vm.update.value?.sha256.orEmpty(),
-                    from = profile.model
-                )
-            },
-            onCheckUpdate = {
-                vm.checkUpdate(silent = true)
-                panelBeforeUpdate = "nfc"
-                panel = "update"
-            }
-        )
+        MetroAppShell(title = shellTitle, onClose = { closeCurrentApp() }, onMinimize = { minimizeCurrentApp() }) {
+            NfcLinkScreen(
+                onBack = { closeCurrentApp() },
+                onHostGame = {
+                    coopInvite = null
+                    coopAutoHost = true
+                    panel = "coop"
+                },
+                onJoinGame = { invite ->
+                    coopInvite = invite
+                    coopRole = com.gsynk.app.core.WifiCoop.Role.GUEST
+                    rogueInvite = NfcLinkInvite(invite.seed, invite.from.ifBlank { "второй телефон" })
+                    panel = "rogue"
+                },
+                provideUpdateShare = {
+                    val tag = vm.update.value?.latestTag?.takeIf { it.isNotBlank() }
+                        ?: ("v" + com.gsynk.app.BuildConfig.VERSION_NAME)
+                    com.gsynk.app.core.UpdateShare.Share(
+                        version = tag,
+                        url = vm.update.value?.apkUrl?.takeIf { it.isNotBlank() }
+                            ?: com.gsynk.app.core.UpdateShare.apkUrl(settings.updateRepo, tag),
+                        sha256 = vm.update.value?.sha256.orEmpty(),
+                        from = profile.model
+                    )
+                },
+                onCheckUpdate = {
+                    vm.checkUpdate(silent = true)
+                    panelBeforeUpdate = "nfc"
+                    panel = "update"
+                }
+            )
+        }
     }
 
     if (panel == "coop") {
-        CoopScreen(
-            onBack = {
-                panel = null
-                coopInvite = null
-                coopAutoHost = false
-            },
-            autoInvite = coopInvite,
-            autoHost = coopAutoHost,
-            onPlay = { role, seed ->
-                coopRole = role
-                coopAutoHost = false
-                rogueInvite = NfcLinkInvite(seed, profile.model.ifBlank { "второй телефон" })
-                panel = null
-                panel = "rogue"
-            }
-        )
+        MetroAppShell(title = shellTitle, onClose = { closeCurrentApp() }, onMinimize = { minimizeCurrentApp() }) {
+            CoopScreen(
+                onBack = { closeCurrentApp() },
+                autoInvite = coopInvite,
+                autoHost = coopAutoHost,
+                onPlay = { role, seed ->
+                    coopRole = role
+                    coopAutoHost = false
+                    rogueInvite = NfcLinkInvite(seed, profile.model.ifBlank { "второй телефон" })
+                    panel = "rogue"
+                }
+            )
+        }
     }
 
     if (panel == "rogue") {
-        RogueScreen(
-            onBack = {
-                if (coopRole != null) com.gsynk.app.core.WifiCoop.stop()
-                coopRole = null
-                panel = null
-            },
-            invite = rogueInvite,
-            onInviteByNfc = {
-                pendingTool = "nearby"
-                panel = "tools"
-            },
-            coop = coopRole,
-            onCoopSetup = {
-                panel = null
-                coopInvite = null
-                panel = "coop"
-            }
-        )
+        MetroAppShell(title = shellTitle, onClose = { closeCurrentApp() }, onMinimize = { minimizeCurrentApp() }) {
+            RogueScreen(
+                onBack = { closeCurrentApp() },
+                invite = rogueInvite,
+                onInviteByNfc = {
+                    activeRoute = "tool:nearby"
+                    featureRoute = "tool:nearby"
+                    panel = "feature"
+                },
+                coop = coopRole,
+                onCoopSetup = {
+                    coopInvite = null
+                    panel = "coop"
+                }
+            )
+        }
     }
 
         // ————— слои поверх всего —————
+        SnackbarHost(
+            hostState = snackbar,
+            snackbar = { data ->
+                Snackbar(
+                    snackbarData = data,
+                    shape = skinShape("sheet"),
+                    containerColor = CardBgAlt,
+                    contentColor = TextPrimary
+                )
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(bottom = 12.dp)
+        )
         // Панель разрешений обязательна и перекрывает приложение, пока всё не выдано.
         PermissionGate()
         // «Показ по касанию»: салют, сердечки, надпись от второго телефона.
         NfcShowHost()
         // Обновление — самый верхний слой: вылезает само и закрывает прочие панели.
         if (panel == "update") {
-            UpdateSheet(vm = vm, onDismiss = {
-                panel = panelBeforeUpdate
-                panelBeforeUpdate = null
-                vm.dismissUpdate()
-            })
-        }
-    }
-}
-
-
-@Composable
-private fun ScheduleSummaryCard(
-    active: Int,
-    total: Int,
-    next: ZonedDateTime?,
-    autopilot: Boolean,
-    onOpen: () -> Unit
-) {
-    SurfaceCard(Modifier.fillMaxWidth(), onClick = onOpen) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("расписание", color = TextPrimary, fontSize = Gioui.Type.groupHeader, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = "активны " + active + " из " + total + " · автопилот " + if (autopilot) "включён" else "выключен",
-                    color = TextSecondary,
-                    fontSize = Gioui.Type.caption
-                )
-                Text(
-                    text = next?.let {
-                        "ближайшее: " + it.format(DateTimeFormatter.ofPattern("d MMM, HH:mm")) +
-                            " · через " + humanDelta(ZonedDateTime.now(), it)
-                    } ?: "ближайшего изменения нет",
-                    color = TextDim,
-                    fontSize = Gioui.Type.caption
-                )
-            }
-            Text("→", color = GrapeGreen, fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
-        }
-    }
-}
-
-// ————————————————————————————————————————————————
-//  Заголовок и живая строка состояния
-// ————————————————————————————————————————————————
-
-@Composable
-private fun HomeHeader(model: String, onSettings: () -> Unit, vm: MainViewModel? = null) {
-    // нажатие на логотип рассыпает виноградную гроздь — простая радость, ничего лишнего
-    var logoBurst by remember { mutableIntStateOf(0) }
-    val logoContext = LocalContext.current
-    Column(Modifier.padding(top = 6.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(R.drawable.grapescript_logo),
-                contentDescription = "Логотип Grape Script",
-                modifier = Modifier.width(92.dp),
-                contentScale = ContentScale.Fit
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Box {
-                    GradientText(
-                        text = "GSYNK",
-                        style = MaterialTheme.typography.displaySmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light),
-                        brush = GrapeGradient,
-                        modifier = Modifier.clickable {
-                            logoBurst++
-                            com.gsynk.app.core.AutomationActions.vibrate(logoContext, 28L)
-                            // Пасхалка «семь касаний»: счётчик живёт в настройках,
-                            // поэтому её можно найти и потерять только по своей воле.
-                            val (taps, opened) = com.gsynk.app.core.Eggs.tapLogo(logoContext)
-                            if (opened) {
-                                vm?.showMessage("Пасхалка: " + (com.gsynk.app.core.Eggs.byId("logo7")?.title ?: ""))
-                            } else if (taps % 7 == 3) {
-                                vm?.showMessage("Уже " + taps + " касаний…")
-                            }
-                        }
-                    )
-                    GrapeLogoBurst(
-                        trigger = logoBurst,
-                        modifier = Modifier
-                            .size(180.dp)
-                            .offset(x = (-24).dp, y = (-46).dp)
-                    )
-                }
-                Text(
-                    text = model.ifBlank { "мультитул для телефона" },
-                    color = TextDim,
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
-                )
-            }
-            Box(
-                Modifier
-                    .size(42.dp)
-                    .clip(skinShape("card"))
-                    .background(CardBg)
-                    .border(1.dp, ChipBorder, skinShape("card"))
-                    .clickable { onSettings() },
-                contentAlignment = Alignment.Center
+            MetroAppShell(
+                title = "обновление",
+                onClose = { dismissUpdatePanel() },
+                onMinimize = { minimizeCurrentApp() }
             ) {
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_tune),
-                    contentDescription = "Настройки",
-                    tint = TextPrimary,
-                    modifier = Modifier.size(20.dp)
-                )
+                UpdateSheet(vm = vm, onDismiss = { dismissUpdatePanel() })
             }
         }
     }
 }
 
-/** Сообщение о том, что приложение закрывалось с ошибкой: отчёт уже готов. */
-@Composable
-private fun CrashBanner(onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(skinShape("card"))
-            .background(GioBrush.Red)
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = "Был сбой",
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
-            )
-            Text(
-                text = "Отчёт собран — нажмите, чтобы посмотреть и отправить",
-                color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
-            )
-        }
-        Text("→", color = Color.White, style = MaterialTheme.typography.headlineSmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light))
-    }
-}
 
-/** Панель обновления: выезжает сама, ничего искать не нужно. */
-@Composable
-private fun UpdateBanner(subtitle: String, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(skinShape("card"))
-            .background(GioBrush.Green)
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = "Доступно обновление",
-                color = Color(0xFF052E1F),
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
-            )
-            Text(
-                text = subtitle,
-                color = Color(0xFF052E1F).copy(alpha = 0.75f),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
-            )
-        }
-        Text("→", color = Color(0xFF052E1F), style = MaterialTheme.typography.headlineSmall.copy(fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light))
-    }
-}
-
-@Composable
-private fun PermissionsCard(
-    snapshot: Permissions.Snapshot,
-    onOpen: (String) -> Unit
-) {
-    SurfaceCard(borderColor = GrapeViolet.copy(alpha = 0.5f)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            PulseDot(color = GrapeViolet)
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = "Нужны доступы",
-                color = TextPrimary,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = snapshot.items.count { !it.granted }.toString(),
-                color = GrapeVioletSoft,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "Откройте и выдайте — иначе часть функций не работает",
-            color = TextDim,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
-        )
-        Spacer(Modifier.height(8.dp))
-        snapshot.items.filter { !it.granted }.take(6).forEach { item ->
-            PermissionRow(item = item, onClick = { onOpen(item.id) })
-        }
-    }
-}
-
-@Composable
-private fun PermissionRow(item: Permissions.Item, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(skinShape("card"))
-            .clickable { onClick() }
-            .padding(vertical = 9.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = item.title,
-            color = TextSecondary,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal),
-            modifier = Modifier.weight(1f)
-        )
-        Text("выдать →", color = GrapeVioletSoft, style = MaterialTheme.typography.labelMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
-    }
-}
 
 // ————————————————————————————————————————————————
 //  Карточка правила (компактнее и мягче прежней)
@@ -1022,6 +743,8 @@ internal fun RuleCard(
                             tint = GrapeGreenSoft
                         )
                     }
+                    if (rule.silentMode == 1) TagChip(text = "тишина вкл.")
+                    if (rule.silentMode == 0) TagChip(text = "тишина выкл.")
                 }
             }
 

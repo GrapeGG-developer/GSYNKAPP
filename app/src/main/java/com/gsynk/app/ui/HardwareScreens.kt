@@ -82,60 +82,69 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
- * Лаборатория: низкоуровневые опыты с железом телефона.
+ * Железо телефона: низкоуровневые опыты без промежуточных хабов.
  *
  * Всё, что здесь есть, крутит настоящие железки: панель экрана, вибромотор-катушку,
  * динамик, магнитный датчик, инфракрасный порт и системные экраны, спрятанные от
  * обычного пользователя. Собрано то, чего нет в магазинах приложений, но сделано
  * так, чтобы телефон нельзя было испортить: загрузчик, прошивка и разделы не трогаются.
  */
+/**
+ * Прямой запуск одного железного опыта из Пуска.
+ *
+ * Старого промежуточного экрана «Лаборатория» больше нет: каждая плитка
+ * открывает именно свой полноэкранный опыт, а закрытие возвращает в Пуск.
+ */
 @Composable
-fun LabScreen(onBack: () -> Unit, initial: String? = null) {
+fun HardwareFeatureScreen(id: String, onBack: () -> Unit): Boolean {
     val context = LocalContext.current
-    val profile = remember { DeviceProfile.detect(context) }
-    var tool by remember { mutableStateOf(initial) }
-    var dimmerPercent by remember { mutableIntStateOf(0) }
 
     DisposableEffect(Unit) {
         onDispose { ScreenDimmer.hide() }
     }
 
-    // Расширенные экраны GIOUI живут в отдельных файлах: сначала спрашиваем у них.
-    if (tool != null && LabExtraScreen(tool!!, onBack = { tool = null })) return
+    if (LabExtraScreen(id, onBack = onBack)) return true
 
-    when (tool) {
-        "lowlevel" -> LowLevelScreen(onBack = { tool = null })
-        "strobe" -> StrobeScreen(onBack = { tool = null })
-        "screen" -> ScreenTestScreen(onBack = { tool = null })
-        "sensors" -> SensorsScreen(onBack = { tool = null })
-        "coils" -> CoilsScreen(onBack = { tool = null })
-        "music" -> ComposerScreen(onBack = { tool = null })
-        "tone" -> ToneLabScreen(onBack = { tool = null })
-        "metal" -> InductionScreen(onBack = { tool = null })
-        "torch" -> TorchStrobeScreen(onBack = { tool = null })
-        "codes" -> DialCodesScreen(onBack = { tool = null })
+    when (id) {
+        "lowlevel" -> LowLevelScreen(onBack = onBack)
+        "strobe" -> StrobeScreen(onBack = onBack)
+        "screen" -> ScreenTestScreen(onBack = onBack)
+        "sensors" -> SensorsScreen(onBack = onBack)
+        "coils" -> CoilsScreen(onBack = onBack)
+        "music" -> ComposerScreen(onBack = onBack)
+        "tone" -> ToneLabScreen(onBack = onBack)
+        "metal" -> InductionScreen(onBack = onBack)
+        "torch" -> TorchStrobeScreen(onBack = onBack)
+        "codes" -> DialCodesScreen(onBack = onBack)
+        "dimmer" -> ScreenDimmerScreen(onBack = onBack)
         "ir" -> if (DeviceLab.hasIr(context)) {
-            IrRemoteScreen(onBack = { tool = null })
+            IrRemoteScreen(onBack = onBack)
         } else {
-            GrapeScreen(title = "ИК-пульт", onBack = { tool = null }) {
+            GrapeScreen(title = "ИК-пульт", onBack = onBack) {
                 SurfaceCard(borderColor = GrapeRed.copy(alpha = 0.5f)) {
                     Text("Инфракрасного излучателя нет", color = GrapeRed, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                     Spacer(Modifier.height(6.dp))
                     Text(
                         text = "На этом телефоне нет ИК-порта. Он есть у Poco X3 Pro и большинства " +
-                            "старых Xiaomi — там ПУЛЬТ появится сам.",
+                            "старых Xiaomi — там пульт появится сам.",
                         color = TextDim,
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
                 }
             }
         }
+        else -> return false
     }
-    if (tool != null) return
+    return true
+}
 
+@Composable
+private fun ScreenDimmerScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    var dimmerPercent by remember { mutableIntStateOf(0) }
     GrapeScreen(
-        title = "Лаборатория",
-        subtitle = "железо телефона без прикрас · ${profile.tierLabel}",
+        title = "AMOLED-затемнение",
+        subtitle = "темнее системного минимума",
         onBack = onBack
     ) {
         SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.45f)) {
@@ -144,134 +153,6 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
             Text(DeviceLab.SAFETY_NOTE, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
         }
         Spacer(Modifier.height(12.dp))
-
-        TileRow {
-            NavTile(
-                title = "Низкий уровень",
-                subtitle = "байты, endian, регистры CPU",
-                iconRes = com.gsynk.app.R.drawable.ic_bolt,
-                brush = GioBrush.Cyan,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "lowlevel" }
-            )
-            NavTile(
-                title = "Регистры и флаги",
-                subtitle = "IP, A/B/C, трассировка",
-                iconRes = com.gsynk.app.R.drawable.ic_tune,
-                brush = GioBrush.Violet,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "lowlevel" }
-            )
-        }
-        Spacer(Modifier.height(11.dp))
-        TileRow {
-            NavTile(
-                title = "Стробоскоп",
-                subtitle = "мигание экраном, 4 частоты",
-                iconRes = com.gsynk.app.R.drawable.ic_bolt,
-                brush = GioBrush.Amber,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "strobe" }
-            )
-            NavTile(
-                title = "Фонарик-строб",
-                subtitle = "вспышка камеры в такт",
-                iconRes = com.gsynk.app.R.drawable.ic_brightness,
-                brush = GioBrush.Ink,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "torch" }
-            )
-        }
-        Spacer(Modifier.height(11.dp))
-        TileRow {
-            NavTile(
-                title = "Экран",
-                subtitle = "AMOLED, ШИМ, мультитач",
-                iconRes = com.gsynk.app.R.drawable.ic_tune,
-                brush = GioBrush.Violet,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "screen" }
-            )
-            NavTile(
-                title = "Датчики",
-                subtitle = "все, что есть живьём",
-                iconRes = com.gsynk.app.R.drawable.ic_schedule,
-                brush = GioBrush.Cyan,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "sensors" }
-            )
-        }
-        Spacer(Modifier.height(11.dp))
-        TileRow {
-            NavTile(
-                title = "Катушки",
-                subtitle = "вибромотор и звук",
-                iconRes = com.gsynk.app.R.drawable.ic_volume,
-                brush = GioBrush.Pink,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "coils" }
-            )
-            NavTile(
-                title = "Индукция",
-                subtitle = "металл, поля, зарядка",
-                iconRes = com.gsynk.app.R.drawable.ic_shield,
-                brush = GioBrush.Blue,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "metal" }
-            )
-        }
-        Spacer(Modifier.height(11.dp))
-        TileRow {
-            // Списки «скрытых экранов Android» и разделов HyperOS убраны по итогам отчёта
-            // с телефона: на Android 16 и HyperOS они не открываются и ничего не прячут.
-            // Вместо них — то, что действительно работает с железом.
-            NavTile(
-                title = "Композитор",
-                subtitle = "музыка из частот",
-                iconRes = com.gsynk.app.R.drawable.ic_volume,
-                brush = GioBrush.Green,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "music" }
-            )
-            NavTile(
-                title = "Камертон",
-                subtitle = "держу — играет частота",
-                iconRes = com.gsynk.app.R.drawable.ic_tune,
-                brush = GioBrush.Amber,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "tone" }
-            )
-        }
-        Spacer(Modifier.height(11.dp))
-        TileRow {
-            NavTile(
-                title = "ИК-пульт",
-                subtitle = if (DeviceLab.hasIr(context)) "телевизор одним касанием" else "нет излучателя",
-                iconRes = com.gsynk.app.R.drawable.ic_bolt,
-                brush = if (DeviceLab.hasIr(context)) GioBrush.Red else GioBrush.Ink,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "ir" }
-            )
-            NavTile(
-                title = "Коды",
-                subtitle = "инженерные меню и тесты",
-                iconRes = com.gsynk.app.R.drawable.ic_copy,
-                brush = GioBrush.Ink,
-                modifier = Modifier.weight(1f),
-                onClick = { tool = "codes" }
-            )
-        }
-
-        // ————— расширенная лаборатория GIOUI —————
-        Spacer(Modifier.height(18.dp))
-        SectionTitle("Ещё опыты с железом")
-        Spacer(Modifier.height(6.dp))
-        LabExtrasGrid(onOpen = { tool = it })
-
-        // ————— затемнение ниже системного минимума: настоящая AMOLED-регулировка —————
-        Spacer(Modifier.height(16.dp))
-        SectionTitle("AMOLED-затемнение")
-        Spacer(Modifier.height(6.dp))
         Text(
             text = "Штатная яркость Android не опускается ниже десятой части, а ночью хочется темнее. " +
                 "Слой гасит свет поверх всего экрана: чёрные пиксели AMOLED не светятся, поэтому " +
@@ -291,27 +172,11 @@ fun LabScreen(onBack: () -> Unit, initial: String? = null) {
                     ) {
                         dimmerPercent = value
                         ScreenDimmer.apply(context, value)
-                        AppLog.event("Лаборатория", "затемнение экрана: $value проц.")
+                        AppLog.event("Железо", "затемнение экрана: $value проц.")
                     }
                 }
             }
         }
-
-        Spacer(Modifier.height(16.dp))
-        SurfaceCard(borderColor = CardBorder) {
-            Text("Что открылось для этого телефона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
-            Spacer(Modifier.height(6.dp))
-            InfoRow("Модель", profile.model)
-            InfoRow("Экран", profile.width.toString() + "×" + profile.height)
-            InfoRow("Android", profile.androidLabel + " (SDK " + profile.androidSdk + ")")
-            InfoRow("Уровень", profile.tierLabel, GrapeVioletSoft)
-            InfoRow("ИК-порт", if (profile.hasIr) "есть" else "нет", if (profile.hasIr) GrapeGreen else TextDim)
-            InfoRow("NFC", if (profile.hasNfc) "есть" else "нет", if (profile.hasNfc) GrapeGreen else TextDim)
-            InfoRow("HyperOS", if (profile.isHyperOs) "да" else "нет", if (profile.isHyperOs) GrapeAmber else TextDim)
-            Spacer(Modifier.height(6.dp))
-            Text(profile.reason, color = TextDim, style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal))
-        }
-        Spacer(Modifier.height(20.dp))
     }
 }
 
@@ -399,7 +264,7 @@ private fun StrobeScreen(onBack: () -> Unit) {
             text = "Запустить мигание",
             onClick = {
                 running = true
-                AppLog.event("Лаборатория", "стробоскоп: " + strobe.label)
+                AppLog.event("Железо", "стробоскоп: " + strobe.label)
             },
             modifier = Modifier.fillMaxWidth()
         )
@@ -733,7 +598,7 @@ private fun SensorsScreen(onBack: () -> Unit) {
         val skipped = sensors.size - allowed.size
         if (skipped > 0) {
             AppLog.event(
-                "Лаборатория",
+                "Железо",
                 "датчики: пропущено системных — " + skipped + " из " + sensors.size +
                     " (" + sensors.filterNot { it in allowed }.joinToString(", ") { it.name } + ")"
             )
@@ -880,7 +745,7 @@ private fun CoilsScreen(onBack: () -> Unit) {
         // Раньше вибрация молчала на HyperOS: система глушит её без явного назначения.
         // Haptics играет как «сигнал» (USAGE_ALARM) и имеет запасные дорожки.
         val ok = Haptics.play(context, pattern, Haptics.Use.ALARM)
-        if (!ok) AppLog.warn("Лаборатория", "вибромотор не ответил", null)
+        if (!ok) AppLog.warn("Железо", "вибромотор не ответил", null)
     }
 
     DisposableEffect(Unit) {
@@ -912,7 +777,7 @@ private fun CoilsScreen(onBack: () -> Unit) {
                             borderColor = CardBorder,
                             onClick = {
                                 buzz(DeviceLab.buzzPattern(option))
-                                AppLog.event("Лаборатория", "вибро-шаблон: " + option.label)
+                                AppLog.event("Железо", "вибро-шаблон: " + option.label)
                             }
                         ) {
                             Text(option.label, color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
@@ -981,7 +846,7 @@ private fun CoilsScreen(onBack: () -> Unit) {
                         .border(1.dp, ChipBorder, RectangleShape)
                         .clickable {
                             AutomationActions.playTone(toneHz)
-                            AppLog.event("Лаборатория", "тон " + toneHz + " Гц")
+                            AppLog.event("Железо", "тон " + toneHz + " Гц")
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1005,7 +870,7 @@ private fun CoilsScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(10.dp))
             ToneHoldPanel(initialHz = toneHz.toDouble()) { hz ->
-                AppLog.event("Лаборатория", "удержание: " + hz.toInt() + " Гц")
+                AppLog.event("Железо", "удержание: " + hz.toInt() + " Гц")
             }
             Spacer(Modifier.height(8.dp))
             Text(
@@ -1409,7 +1274,7 @@ fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
                     .border(1.dp, ChipBorder, RectangleShape)
                     .clickable {
                         collected = (collected + hz).takeLast(64)
-                        AppLog.event("Лаборатория", "в мотив: " + hz.toInt() + " Гц")
+                        AppLog.event("Железо", "в мотив: " + hz.toInt() + " Гц")
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -1426,7 +1291,7 @@ fun ToneHoldPanel(initialHz: Double, onHold: (Double) -> Unit = {}) {
                         if (collected.isNotEmpty()) {
                             ToneSynth.stop()
                             ToneSynth.playSequence(Melody.fromFrequencies(collected, 320L))
-                            AppLog.event("Лаборатория", "мотив из " + collected.size + " частот")
+                            AppLog.event("Железо", "мотив из " + collected.size + " частот")
                         }
                     },
                 contentAlignment = Alignment.Center
@@ -1556,7 +1421,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                                             remember4(listOf(Melody.Note(noteHz, gap)))
                                             lastTap = now
                                         }
-                                        AppLog.event("Лаборатория", "нота " + Melody.nameOf(noteHz))
+                                        AppLog.event("Железо", "нота " + Melody.nameOf(noteHz))
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -1603,7 +1468,7 @@ private fun ComposerScreen(onBack: () -> Unit) {
                             if (melody.isNotEmpty()) {
                                 ToneSynth.stop()
                                 ToneSynth.playSequence(melody)
-                                AppLog.event("Лаборатория", "играю мотив: " + melody.size + " нот")
+                                AppLog.event("Железо", "играю мотив: " + melody.size + " нот")
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -1785,69 +1650,5 @@ private fun ComposerScreen(onBack: () -> Unit) {
             }
         }
         Spacer(Modifier.height(20.dp))
-    }
-}
-
-
-/** Опыты GIOUI: короткий список для плиток — имя маршрута, подпись и цвет. */
-private val extrasLab: List<Triple<String, String, Int>> = listOf(
-    Triple("cores", "ядра и частоты", 0),
-    Triple("thermal", "термощуп", 1),
-    Triple("charge", "заряд и ток", 2),
-    Triple("gpu", "ускоритель", 3),
-    Triple("memory", "память и диск", 4),
-    Triple("sensors", "все датчики", 5),
-    Triple("shake", "акселерограф", 6),
-    Triple("compass", "компас", 7),
-    Triple("baro", "барометр", 8),
-    Triple("prox", "приближение", 9),
-    Triple("light", "люксметр", 10),
-    Triple("steps", "шаги", 11),
-    Triple("latency", "латентность экрана", 12),
-    Triple("multitouch", "мультитач", 13),
-    Triple("pwm", "мерцание (ШИМ)", 14),
-    Triple("oscope", "осциллограф", 15),
-    Triple("spectrum", "спектр звука", 16),
-    Triple("sweep", "свип-тон", 17),
-    Triple("haptic", "вибро-орган", 18),
-    Triple("ble", "ble-радар", 19),
-    Triple("wifi", "каналы wi-fi", 0),
-    Triple("wifisig", "сигнал wi-fi", 1),
-    Triple("usb", "usb и otg", 2),
-    Triple("lowlevel", "байты и CPU", 3)
-)
-
-/** Плитки расширенной лаборатории: тот же экран, без углубления в подменю. */
-@androidx.compose.runtime.Composable
-fun LabExtrasGrid(onOpen: (String) -> Unit, modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier) {
-    androidx.compose.foundation.layout.Column(modifier) {
-        androidx.compose.material3.Text(
-            text = "24 опыта с железом: от частот ядер до мерцания экрана. Всё только читает " +
-                "датчики и ничего не пишет в систему.",
-            color = com.gsynk.app.ui.theme.TextDim,
-            style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
-        )
-        androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(10.dp))
-        extrasLab.chunked(4).forEach { row ->
-            androidx.compose.foundation.layout.Row(
-                androidx.compose.ui.Modifier.fillMaxWidth(),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Gioui.gutter)
-            ) {
-                row.forEach { (id, title, tone) ->
-                    GioCard(
-                        title = title,
-                        subtitle = "опыт",
-                        size = Gioui.Size.SMALL,
-                        color = Gioui.Palette.tiles[tone % Gioui.Palette.tiles.size],
-                        modifier = androidx.compose.ui.Modifier.weight(1f),
-                        onClick = { onOpen(id) }
-                    )
-                }
-                repeat(4 - row.size) {
-                    androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.weight(1f))
-                }
-            }
-            androidx.compose.foundation.layout.Spacer(androidx.compose.ui.Modifier.height(Gioui.gutter))
-        }
     }
 }

@@ -74,7 +74,7 @@ fun ChronicleScreen(onBack: () -> Unit) {
                 )
                 SummaryCell(
                     value = summary.tools.toString(),
-                    label = "инструменты",
+                    label = "функции",
                     color = GrapeBlue,
                     modifier = Modifier.weight(1f)
                 )
@@ -109,7 +109,7 @@ fun ChronicleScreen(onBack: () -> Unit) {
             SurfaceCard {
                 Text(
                     text = "Пока пусто. Хроника заполняется сама: как только сработает правило " +
-                        "или вы откроете инструмент, запись появится здесь.",
+                        "или вы откроете функцию из Пуска, запись появится здесь.",
                     color = TextDim,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
                 )

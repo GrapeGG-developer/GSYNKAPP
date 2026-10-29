@@ -54,9 +54,9 @@ fun NewsScreen(onBack: () -> Unit) {
                 )
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("GSYNK 5.1", color = TextPrimary, fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
+                    Text("GSYNK 5.2", color = TextPrimary, fontSize = Gioui.Type.tileLive, fontWeight = FontWeight.Light)
                     Text(
-                        "Шифры до процессорного уровня, анонимность и живой главный экран.",
+                        "Metro-«Пуск», автоматизации жизни и 42 шифра.",
                         color = TextDim,
                         fontSize = Gioui.Type.caption
                     )

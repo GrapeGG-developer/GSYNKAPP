@@ -148,11 +148,17 @@ fun ScenesScreen(onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         ) {
             scope.launch {
-                withContext(Dispatchers.IO) {
-                    AutomationActions.startSiren()
-                    AutomationActions.vibrate(context, 600L)
+                val wasRunning = withContext(Dispatchers.IO) {
+                    val running = AutomationActions.isSirenRunning()
+                    if (running) {
+                        AutomationActions.stopSiren()
+                    } else {
+                        AutomationActions.startSiren()
+                        AutomationActions.vibrate(context, 600L)
+                    }
+                    running
                 }
-                status = "Сирена включена — откройте «Инструменты», чтобы выключить"
+                status = if (wasRunning) "Сирена выключена" else "Сирена включена — нажмите ещё раз, чтобы выключить"
             }
         }
 

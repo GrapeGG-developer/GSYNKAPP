@@ -167,7 +167,7 @@ fun RuleEditorSheet(
                 // ————— время —————
                 SectionTitle("Время срабатывания")
                 Spacer(Modifier.height(8.dp))
-                SurfaceCard(corner = 20.dp, onClick = { timePickerFor = PickerTarget.MAIN }) {
+                SurfaceCard(onClick = { timePickerFor = PickerTarget.MAIN }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = ImageVector.vectorResource(R.drawable.ic_schedule),
@@ -265,7 +265,7 @@ fun RuleEditorSheet(
                 Spacer(Modifier.height(18.dp))
 
                 // ————— повтор интервалом —————
-                SurfaceCard(corner = 20.dp) {
+                SurfaceCard() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = ImageVector.vectorResource(R.drawable.ic_bolt),
@@ -290,7 +290,7 @@ fun RuleEditorSheet(
 
                     if (draft.useInterval) {
                         Spacer(Modifier.height(12.dp))
-                        SurfaceCard(corner = 16.dp, contentPadding = PaddingValues(12.dp), onClick = { timePickerFor = PickerTarget.INTERVAL_START }) {
+                        SurfaceCard(contentPadding = PaddingValues(12.dp), onClick = { timePickerFor = PickerTarget.INTERVAL_START }) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Первый раз в", color = TextSecondary, style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal))
                                 Spacer(Modifier.weight(1f))
@@ -357,6 +357,22 @@ fun RuleEditorSheet(
                     onEnabledChange = { draft = draft.copy(useVolume = it) },
                     onValueChange = { draft = draft.copy(volume = it) }
                 )
+
+                Spacer(Modifier.height(18.dp))
+
+                SectionTitle("Режим «Не беспокоить»")
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Для школьных правил удобно включить тишину, а для дома — снова выключить.",
+                    color = TextDim,
+                    fontSize = Gioui.Type.caption
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TagChip("Не трогать", selected = draft.silentMode == -1) { draft = draft.copy(silentMode = -1) }
+                    TagChip("Выключить", selected = draft.silentMode == 0) { draft = draft.copy(silentMode = 0) }
+                    TagChip("Включить", selected = draft.silentMode == 1) { draft = draft.copy(silentMode = 1) }
+                }
 
                 Spacer(Modifier.height(20.dp))
 
@@ -568,7 +584,7 @@ private fun ValueBlock(
     onEnabledChange: (Boolean) -> Unit,
     onValueChange: (Int) -> Unit
 ) {
-    SurfaceCard(corner = 20.dp) {
+    SurfaceCard() {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(10.dp))

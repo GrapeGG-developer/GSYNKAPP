@@ -30,7 +30,7 @@ import com.gsynk.app.ui.theme.TextPrimary
 @Composable
 fun LowLevelScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    var input by remember { mutableStateOf("GSYNK 5.1 · байты, регистры и процессор") }
+    var input by remember { mutableStateOf("GSYNK 5.2 · байты, регистры и процессор") }
     var mode by remember { mutableStateOf("hex") }
     var status by remember { mutableStateOf("") }
 

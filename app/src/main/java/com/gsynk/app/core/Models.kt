@@ -31,7 +31,9 @@ data class Rule(
     val volume: Int = 30,
     val useBrightness: Boolean = true,
     val useVolume: Boolean = true,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    /** -1 — не трогать «Не беспокоить», 0 — выключить, 1 — включить. Старые JSON без поля читаются как -1. */
+    val silentMode: Int = -1
 ) {
     val timeLabel: String
         get() = "%02d:%02d".format(hour, minute)

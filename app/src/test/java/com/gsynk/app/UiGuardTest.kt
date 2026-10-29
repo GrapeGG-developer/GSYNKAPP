@@ -26,35 +26,41 @@ class UiGuardTest {
     }
 
     @Test
-    fun heaviestPanelsEndWithReturn() {
-        val tools = read("ToolsScreen.kt")
+    fun metroPanelsAreDirectAndClosedByShell() {
+        assertTrue("старый хаб ToolsScreen вернулся", !File(ui, "ToolsScreen.kt").exists())
+        val main = read("MainScreen.kt")
         listOf(
-            "if (showTurbo)",
-            "if (showChronicle)",
-            "if (showDiagnostics)",
-            "if (showChat)",
-            "if (showScreensaver)",
-            "if (showUpdate)"
+            "MetroAppShell(",
+            "DirectFeatureScreen(",
+            "fun closeCurrentApp()",
+            "fun minimizeCurrentApp()",
+            "panel == \"feature\"",
+            "EmptyHomeScreen(",
+            "StartMenuScreen("
         ).forEach { marker ->
-            assertTrue("панель «$marker» без return — содержимое закроет её и съест нажатия", panelReturns(tools, marker))
+            assertTrue("прямой Metro-маршрут потерялся: $marker", main.contains(marker))
         }
+        assertTrue("pending-маршруты старого хаба вернулись", !main.contains("pendingTool") && !main.contains("ToolsScreen("))
     }
 
     @Test
     fun panelRoutingHasNoLeftovers() {
-        val tools = read("ToolsScreen.kt")
-        // Каждое открытие дополнительного экрана должно существовать в маршрутизации.
-        Regex("openExtra = \"(\\w+)\"").findAll(tools).map { it.groupValues[1] }.toSet().forEach { key ->
-            assertTrue("маршрут «$key» не объявлен", tools.contains("\"$key\" -> "))
-        }
+        val host = read("FeatureHost.kt")
+        listOf("\"quick\" ->", "\"nearby\" ->", "\"diagnostics\" ->", "\"screensaver\" ->", "\"turbo\" ->")
+            .forEach { marker -> assertTrue("прямой маршрут не объявлен: $marker", host.contains(marker)) }
+        val hardware = read("HardwareScreens.kt")
+        listOf("\"lowlevel\" ->", "\"strobe\" ->", "\"dimmer\" ->", "\"ir\" ->")
+            .forEach { marker -> assertTrue("железный маршрут не объявлен: $marker", hardware.contains(marker)) }
+        assertTrue("старый экран-хаб LabScreen вернулся", !hardware.contains("fun LabScreen("))
     }
 
     @Test
     fun screensRespectStatusBar() {
         val components = read("Components.kt")
+        val shell = read("StartScreen.kt")
         assertTrue(
-            "GrapeScreen обязан оставлять место строке состояния",
-            components.contains("windowInsetsPadding(WindowInsets.statusBars)")
+            "Metro-оболочка обязана оставлять место строке состояния",
+            shell.contains("windowInsetsPadding(WindowInsets.statusBars)")
         )
         assertTrue(
             "GrapeScreen обязан оставлять место панели навигации",
@@ -91,7 +97,7 @@ class UiGuardTest {
     @Test
     fun noHiddenSystemSectionsLeft() {
         // По отчёту с телефона: на Android 16 и HyperOS эти разделы ничего не открывают.
-        val lab = read("LabScreen.kt")
+        val lab = read("HardwareScreens.kt")
         assertTrue("раздел «Скрытое Android» убран", !lab.contains("HiddenScreensScreen"))
         assertTrue("раздел HyperOS убран", !lab.contains("HyperOsScreen"))
         val labCore = File("src/main/java/com/gsynk/app/core/DeviceLab.kt").readText()
@@ -143,7 +149,7 @@ class UiGuardTest {
         ).forEach { field ->
             assertTrue("настройка «$field» потерялась", settings.contains(field))
         }
-        val sheet = read("SettingsSheet.kt")
+        val sheet = read("SettingsScreen.kt")
         assertTrue("в настройках нет раздела кастомизации", sheet.contains("Кастомизация"))
         assertTrue("акцент не применяется", read("Tweaks.kt").contains("accentBrush"))
         assertTrue("фон не читает скорость", read("Components.kt").contains("UiTweaks.breathMs"))

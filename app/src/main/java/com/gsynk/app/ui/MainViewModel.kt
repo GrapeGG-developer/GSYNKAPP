@@ -10,6 +10,7 @@ import com.gsynk.app.core.Rule
 import com.gsynk.app.core.RuleEngine
 import com.gsynk.app.core.AgentMail
 import com.gsynk.app.core.Keys
+import com.gsynk.app.core.LifeAutomations
 import com.gsynk.app.core.UpdateJobs
 import com.gsynk.app.core.RuleRepository
 import com.gsynk.app.core.ReportUploader
@@ -154,6 +155,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val parts = buildList {
             if (result.brightness) add("яркость ${rule.brightness}%")
             if (result.volume) add("громкость ${rule.volume}%")
+            if (result.silent) add(if (rule.silentMode == 1) "не беспокоить вкл." else "не беспокоить выкл.")
         }
         _message.value = when {
             parts.isNotEmpty() -> "Применено: " + parts.joinToString(", ")
@@ -174,6 +176,66 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val volumeOk = !rule.useVolume ||
             abs(RuleEngine.volumePercent(app()) - rule.volume) <= 2
         return brightnessOk && volumeOk
+    }
+
+    /** Включить готовый набор повседневной автоматизации одним сохранением. */
+    fun installLifeAutomation(packId: String) = viewModelScope.launch {
+        guarded {
+            val pack = LifeAutomations.byId(packId) ?: return@guarded
+            val generated = LifeAutomations.rules(pack)
+            val merged = repository.currentRules().associateBy { it.id }.toMutableMap()
+            generated.forEach { merged[it.id] = it }
+            persist(merged.values.toList())
+            val settings = repository.currentSettings()
+            if (!settings.autopilot) {
+                repository.saveSettings(settings.copy(autopilot = true))
+            }
+            rescheduleAll()
+            AppLog.event("Автоматизация", "включён набор «" + pack.title + "»")
+            _message.value = "«" + pack.title + "»: включено правил — " + generated.size
+        }
+    }
+
+    /** Выключить только правила конкретного набора, не трогая ручные правила. */
+    fun setLifeAutomationEnabled(packId: String, enabled: Boolean) = viewModelScope.launch {
+        guarded {
+            val pack = LifeAutomations.byId(packId) ?: return@guarded
+            val ids = LifeAutomations.rules(pack).map { it.id }.toSet()
+            val updated = repository.currentRules().map { rule ->
+                if (rule.id in ids) rule.copy(enabled = enabled) else rule
+            }
+            persist(updated)
+            if (enabled) {
+                val settings = repository.currentSettings()
+                if (!settings.autopilot) repository.saveSettings(settings.copy(autopilot = true))
+                rescheduleAll()
+            } else {
+                updated.filter { it.id in ids }.forEach { rule -> RuleScheduler.cancel(app(), rule.id) }
+            }
+            _message.value = "«" + pack.title + "» " + if (enabled) "включён" else "выключен"
+        }
+    }
+
+    /** Сразу применить последнюю уже наступившую сцену набора, не дожидаясь следующего будильника. */
+    fun applyLifeAutomationNow(packId: String) = viewModelScope.launch {
+        guarded {
+            val pack = LifeAutomations.byId(packId) ?: return@guarded
+            val ids = LifeAutomations.rules(pack).map { it.id }.toSet()
+            val installed = repository.currentRules().filter { it.id in ids }
+            val candidates = installed.ifEmpty { LifeAutomations.rules(pack) }
+            val current = LifeAutomations.currentRule(candidates, pack)
+            if (current == null) {
+                _message.value = "Для «" + pack.title + "» пока нет наступившей сцены"
+                return@guarded
+            }
+            val result = RuleEngine.apply(app(), current)
+            _message.value = if (result.brightness || result.volume || result.silent) {
+                "Применено сейчас: «" + current.name + "»"
+            } else {
+                "Не удалось применить «" + current.name + "» — проверьте доступы"
+            }
+            AppLog.event("Автоматизация", "вручную применена сцена «" + current.name + "»")
+        }
     }
 
     // ————— готовые сценарии (быстрое создание правил) —————

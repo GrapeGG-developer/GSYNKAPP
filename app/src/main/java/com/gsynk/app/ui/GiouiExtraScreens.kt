@@ -565,7 +565,7 @@ private fun PhaseDisplayScreen(onBack: () -> Unit) {
         SurfaceCard(borderColor = CardBorder) {
             SectionTitle("отклик касания")
             Text(
-                text = "Задержку «касание → свет» измеряет отдельный опыт в лаборатории: " +
+                text = "Задержку «касание → свет» измеряет прямая плитка в группе «железо»: " +
                     "там же видно, сколько кадров уходит на ответ.",
                 color = TextSecondary,
                 fontSize = Gioui.Type.body
@@ -681,7 +681,7 @@ private fun PhaseRadioScreen(onBack: () -> Unit) {
             Text(wifiNote, color = TextPrimary, fontSize = Gioui.Type.body)
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Каналы и загрузку эфира показывает опыт «каналы wi-fi» в лаборатории: " +
+                text = "Каналы и загрузку эфира показывает прямая плитка «каналы wi-fi» в группе «железо»: " +
                     "там же видно, какой канал забит соседями.",
                 color = TextDim,
                 fontSize = Gioui.Type.caption

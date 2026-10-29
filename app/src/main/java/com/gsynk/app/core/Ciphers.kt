@@ -12,6 +12,7 @@ import java.security.spec.ECGenParameterSpec
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
+import java.math.BigInteger
 import java.util.zip.DataFormatException
 import java.util.zip.Deflater
 import java.util.zip.Inflater
@@ -24,7 +25,7 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 /**
- * «Шифраторы» GSYNK (GIOUI / 5.0): один универсальный набор обратимых преобразований текста.
+ * «Шифраторы» GSYNK (GIOUI / 5.2): один универсальный набор обратимых преобразований текста.
  *
  * Семьи:
  *  * популярные (Base64, HEX, URL, морзе, Цезарь, XOR по ключу);
@@ -62,6 +63,13 @@ object Ciphers {
         Info("morse", "Азбука Морзе", Family.POPULAR, "точки и тире: латиница и цифры"),
         Info("caesar", "Цезарь +7", Family.POPULAR, "сдвиг букв русского и английского алфавитов"),
         Info("xor", "XOR с ключом", Family.POPULAR, "простое перемешивание байтов по парольной фразе", needsKey = true),
+        Info("base32", "Base32", Family.POPULAR, "стандартный алфавит A–Z и 2–7: длиннее Base64, зато без похожих символов"),
+        Info("base58", "Base58", Family.POPULAR, "биткоин-алфавит без 0, O, I и l; компактно и удобно переписывать"),
+        Info("ascii85", "Ascii85", Family.POPULAR, "плотная печатная упаковка: каждые 4 байта — 5 символов"),
+        Info("quoted", "Quoted-Printable", Family.POPULAR, "почтовый вид =XX для байтов, пробел — подчёркиванием"),
+        Info("rot13", "ROT13", Family.POPULAR, "классический сдвиг английского алфавита на 13"),
+        Info("atbash", "Атбаш", Family.POPULAR, "зеркальный алфавит для английского и русского"),
+        Info("vigenere", "Виженер", Family.POPULAR, "буквенный шифр по ключевой фразе для русского и английского", needsKey = true),
 
         Info("bin", "Двоичный код", Family.SYMBOLS, "каждый байт восемью битами 0 и 1"),
         Info("d67", "Цифры 6 и 7", Family.SYMBOLS, "двоичный код цифрами: главная 6 — единица, 7 — ноль"),
@@ -72,6 +80,17 @@ object Ciphers {
         Info("emoji", "Эмодзи 😡 и 😏", Family.SYMBOLS, "двоичный код лицами: первое — ноль, второе — единица"),
         Info("fruit", "Виноград и банан", Family.SYMBOLS, "фирменный фруктовый: банан — ноль, виноград — единица"),
         Info("pig", "Поросята 🐷", Family.SYMBOLS, "двоичный код поросятами: 🐽 — ноль, 🐷 — единица"),
+        Info("cats", "Коты 🐱", Family.SYMBOLS, "длинный двоичный код котами: 🐱 — ноль, 😼 — единица", heavy = true),
+        Info("moon", "Луны 🌙", Family.SYMBOLS, "компактнее бинарного: каждые полбайта — одна из 16 лун"),
+        Info("chess", "Шахматные круги", Family.SYMBOLS, "двоичный код кругами: ⚪ — ноль, ⚫ — единица", heavy = true),
+        Info("braille", "Брайль", Family.SYMBOLS, "один байт — один знак Брайля: очень компактная символьная запись"),
+        Info("runes", "Руны", Family.SYMBOLS, "каждые полбайта — руна из набора из 16 знаков"),
+        Info("dna", "ДНК A/C/G/T", Family.SYMBOLS, "каждый байт — четыре основания ДНК по два бита"),
+        Info("decimal", "Десятичные байты", Family.SYMBOLS, "каждый байт обычным числом 0–255 через дефис"),
+        Info("octal", "Восьмеричный", Family.SYMBOLS, "каждый байт тремя восьмеричными цифрами"),
+        Info("ternary", "Троичный", Family.SYMBOLS, "длинный числовой вид: каждый байт шестью цифрами 0, 1 и 2", heavy = true),
+        Info("quaternary", "Четверичный", Family.SYMBOLS, "каждый байт четырьмя цифрами 0–3"),
+        Info("roman", "Римские числа", Family.SYMBOLS, "каждый байт римским числом, ноль — N", heavy = true),
 
         Info("bytecode", "Байт-код", Family.MACHINE, "текст как поток байтов 0x00…0xFF с заголовком GSYNK BYTECODE"),
         Info("asm", "Ассемблер", Family.MACHINE, "каждый байт — команда MOV и вызов emit_byte в x86-стиле", heavy = true),
@@ -139,6 +158,24 @@ object Ciphers {
                 "bytecode" -> bytecodeEncode(bytes)
                 "asm" -> asmEncode(bytes)
                 "cpu" -> cpuEncode(bytes)
+                "base32" -> base32Encode(bytes)
+                "base58" -> "B58:" + base58Encode(bytes)
+                "ascii85" -> "A85:" + ascii85Encode(bytes)
+                "quoted" -> "QP:" + quotedPrintableEncode(bytes)
+                "rot13" -> rot13(plain)
+                "atbash" -> atbash(plain)
+                "vigenere" -> vigenere(plain, key, decrypt = false)
+                "cats" -> emojiEncode(bytes, CAT_ZERO, CAT_ONE)
+                "moon" -> nibbleTokenEncode(bytes, MOON_TOKENS)
+                "chess" -> emojiEncode(bytes, CHESS_ZERO, CHESS_ONE)
+                "braille" -> brailleEncode(bytes)
+                "runes" -> runesEncode(bytes)
+                "dna" -> "DNA:" + dnaEncode(bytes)
+                "decimal" -> "DEC:" + bytes.joinToString("-") { (it.toInt() and 0xFF).toString() }
+                "octal" -> "OCT:" + fixedRadixEncode(bytes, 8, 3)
+                "ternary" -> "B3:" + fixedRadixEncode(bytes, 3, 6)
+                "quaternary" -> "B4:" + fixedRadixEncode(bytes, 4, 4)
+                "roman" -> "ROMAN:" + bytes.joinToString("-") { romanEncode(it.toInt() and 0xFF) }
                 "gs32" -> "GS32:" + baseNEncode(withLength(bytes), GS32)
                 "g85" -> "G85:" + g85Encode(withLength(bytes))
                 "vine" -> vineEncode(bytes)
@@ -178,6 +215,24 @@ object Ciphers {
                 "bytecode" -> strictUtf8(bytecodeDecode(input))
                 "asm" -> strictUtf8(asmDecode(input))
                 "cpu" -> strictUtf8(cpuDecode(input))
+                "base32" -> strictUtf8(base32Decode(input))
+                "base58" -> strictUtf8(base58Decode(removePrefixOnce(input, "B58:")))
+                "ascii85" -> strictUtf8(ascii85Decode(removePrefixOnce(input, "A85:")))
+                "quoted" -> strictUtf8(quotedPrintableDecode(removePrefixOnce(input, "QP:")))
+                "rot13" -> rot13(input)
+                "atbash" -> atbash(input)
+                "vigenere" -> vigenere(input, key, decrypt = true)
+                "cats" -> strictUtf8(emojiDecode(input, CAT_ZERO, CAT_ONE))
+                "moon" -> strictUtf8(nibbleTokenDecode(input, MOON_TOKENS))
+                "chess" -> strictUtf8(emojiDecode(input, CHESS_ZERO, CHESS_ONE))
+                "braille" -> strictUtf8(brailleDecode(input))
+                "runes" -> strictUtf8(runesDecode(input))
+                "dna" -> strictUtf8(dnaDecode(removePrefixOnce(input, "DNA:")))
+                "decimal" -> strictUtf8(decimalDecode(removePrefixOnce(input, "DEC:")))
+                "octal" -> strictUtf8(fixedRadixDecode(removePrefixOnce(input, "OCT:"), 8, 3))
+                "ternary" -> strictUtf8(fixedRadixDecode(removePrefixOnce(input, "B3:"), 3, 6))
+                "quaternary" -> strictUtf8(fixedRadixDecode(removePrefixOnce(input, "B4:"), 4, 4))
+                "roman" -> strictUtf8(romanDecode(removePrefixOnce(input, "ROMAN:")))
                 "gs32" -> strictUtf8(withoutLength(baseNDecode(removePrefixOnce(input, "GS32:"), GS32)))
                 "g85" -> strictUtf8(withoutLength(g85Decode(removePrefixOnce(input, "G85:"))))
                 "vine" -> strictUtf8(vineDecode(input))
@@ -218,6 +273,20 @@ object Ciphers {
         if (input.startsWith("GS32:")) return ok("gs32", "начало GS32: — родной алфавит GSYNK") ?: byId("gs32") to "начало GS32:"
         if (input.startsWith("G85:")) return ok("g85", "начало G85: — компактная упаковка") ?: byId("g85") to "начало G85:"
         if (input.startsWith("XOR1.")) return byId("xor") to "начало XOR1. — нужен ключ"
+        if (input.startsWith("B58:")) return ok("base58", "начало B58: — популярный Base58") ?: byId("base58") to "начало B58:"
+        if (input.startsWith("A85:")) return ok("ascii85", "начало A85: — плотный Ascii85") ?: byId("ascii85") to "начало A85:"
+        if (input.startsWith("QP:")) return ok("quoted", "начало QP: — Quoted-Printable") ?: byId("quoted") to "начало QP:"
+        if (input.startsWith("DNA:")) return ok("dna", "начало DNA: и основания A/C/G/T") ?: byId("dna") to "начало DNA:"
+        if (input.startsWith("DEC:")) return ok("decimal", "начало DEC: — байты десятичными числами") ?: byId("decimal") to "начало DEC:"
+        if (input.startsWith("OCT:")) return ok("octal", "начало OCT: — байты восьмеричными тройками") ?: byId("octal") to "начало OCT:"
+        if (input.startsWith("B3:")) return ok("ternary", "начало B3: — троичные байты") ?: byId("ternary") to "начало B3:"
+        if (input.startsWith("B4:")) return ok("quaternary", "начало B4: — четверичные байты") ?: byId("quaternary") to "начало B4:"
+        if (input.startsWith("ROMAN:")) return ok("roman", "начало ROMAN: — байты римскими числами") ?: byId("roman") to "начало ROMAN:"
+        if (input.any { it.code in 0x2800..0x28FF }) return ok("braille", "состоит из знаков Брайля")
+        if (input.any { it in RUNES }) return ok("runes", "состоит из рун")
+        if (MOON_TOKENS.any { input.contains(it) }) return ok("moon", "состоит из лунных фаз")
+        if (input.contains(CAT_ZERO) || input.contains(CAT_ONE)) return ok("cats", "состоит из котов 🐱 и 😼")
+        if (input.contains(CHESS_ZERO) || input.contains(CHESS_ONE)) return ok("chess", "состоит из белых и чёрных кругов")
         // слова лозы
         val words = input.split('-', ' ', '\n').filter { it.isNotBlank() }
         if (words.size >= 4 && words.all { it.lowercase() in VINE }) return ok("vine", "все слова — из виноградного набора «Лозы»")
@@ -241,11 +310,61 @@ object Ciphers {
         if (compact.length >= 6 && compact.length % 3 == 0 && compact.all { it in '1'..'9' }) ok("nat9", "цифры 1–9 без нуля тройками")?.let { return it }
         // hex
         if (compact.length >= 4 && compact.length % 2 == 0 && compact.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) ok("hex", "чётная длина и только шестнадцатеричные цифры")?.let { return it }
+        // Base32 проверяем до Base64: у него узкий алфавит A-Z2-7 и добивка '='.
+        val base32Compact = compact.uppercase()
+        if (base32Compact.length >= 8 && base32Compact.length % 8 == 0 && base32Compact.all { it in 'A'..'Z' || it in '2'..'7' || it == '=' }) {
+            ok("base32", "алфавит A–Z/2–7 и длина кратна восьми")?.let { return it }
+        }
         // base64 — в самом конце, он слишком похож на обычный текст
         if (compact.length >= 8 && compact.length % 4 == 0 && compact.all { it.isLetterOrDigit() || it == '+' || it == '/' || it == '=' }) {
             ok("base64", "похоже на Base64 и честно распаковывается в текст")?.let { return it }
         }
         return null
+    }
+
+    data class LayerStep(val cipherId: String, val title: String, val why: String)
+
+    sealed class LayerOutcome {
+        data class Ok(val text: String, val steps: List<LayerStep>) : LayerOutcome()
+        data class Err(val message: String, val steps: List<LayerStep> = emptyList()) : LayerOutcome()
+    }
+
+    /**
+     * Умная многослойная расшифровка: определяет внешний шифр, снимает его,
+     * затем снова смотрит на результат. Так сообщение вида
+     * Base64(Base64(🐽🐷(...))) открывается целиком, а не по одному слою.
+     */
+    fun decodeLayers(coded: String, key: String = "", maxLayers: Int = 16): LayerOutcome {
+        val input = coded.trim()
+        if (input.isEmpty()) return LayerOutcome.Ok("", emptyList())
+        val steps = ArrayList<LayerStep>()
+        val seen = mutableSetOf(input)
+        var current = input
+        while (steps.size < maxLayers.coerceIn(1, 32)) {
+            val detected = detect(current) ?: break
+            val (info, why) = detected
+            val decoded = decode(info.id, current, key)
+            if (decoded is Outcome.Err) {
+                return if (steps.isEmpty()) {
+                    LayerOutcome.Err(decoded.message)
+                } else {
+                    LayerOutcome.Err(
+                        "Снял слоёв: " + steps.size + ", следующий «" + info.title + "» не открылся: " + decoded.message,
+                        steps.toList()
+                    )
+                }
+            }
+            val next = (decoded as Outcome.Ok).text
+            if (next.isEmpty() || next == current || next in seen) break
+            steps += LayerStep(info.id, info.title, why)
+            seen += next
+            current = next
+        }
+        return if (steps.isEmpty()) {
+            LayerOutcome.Err("Не узнал ни один слой шифра — попробуйте выбрать шифр вручную.")
+        } else {
+            LayerOutcome.Ok(current, steps.toList())
+        }
     }
 
     // ——————————————————— помощники ———————————————————
@@ -369,6 +488,17 @@ object Ciphers {
     private const val GRAPE = "\uD83C\uDF47"      // 🍇
     private const val PIG_NOSE = "\uD83D\uDC3D"   // 🐽
     private const val PIG_FACE = "\uD83D\uDC37"   // 🐷
+    private const val CAT_ZERO = "\uD83D\uDC31"   // 🐱
+    private const val CAT_ONE = "\uD83D\uDE3C"    // 😼
+    private const val CHESS_ZERO = "\u26AA"        // ⚪
+    private const val CHESS_ONE = "\u26AB"         // ⚫
+    private val MOON_TOKENS = listOf(
+        "\uD83C\uDF11", "\uD83C\uDF12", "\uD83C\uDF13", "\uD83C\uDF14",
+        "\uD83C\uDF15", "\uD83C\uDF16", "\uD83C\uDF17", "\uD83C\uDF18",
+        "\uD83C\uDF19", "\uD83C\uDF1A", "\uD83C\uDF1B", "\uD83C\uDF1C",
+        "\uD83C\uDF1D", "\uD83C\uDF1E", "\u2B50", "\uD83C\uDF1F"
+    )
+    private const val RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊ"
 
     private fun emojiEncode(bytes: ByteArray, zero: String, one: String): String {
         val sb = StringBuilder()
@@ -629,6 +759,379 @@ object Ciphers {
         return out
     }
 
+
+    // ————— 5.2: популярные компактные коды, числа и символьные наборы —————
+
+    private const val BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+    private const val BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
+    private fun base32Encode(bytes: ByteArray): String {
+        val out = StringBuilder()
+        var buffer = 0
+        var liveBits = 0
+        for (b in bytes) {
+            buffer = (buffer shl 8) or (b.toInt() and 0xFF)
+            liveBits += 8
+            while (liveBits >= 5) {
+                liveBits -= 5
+                out.append(BASE32_ALPHABET[(buffer shr liveBits) and 0x1F])
+            }
+        }
+        if (liveBits > 0) out.append(BASE32_ALPHABET[(buffer shl (5 - liveBits)) and 0x1F])
+        while (out.length % 8 != 0) out.append('=')
+        return out.toString()
+    }
+
+    private fun base32Decode(input: String): ByteArray {
+        val clean = input.uppercase().filterNot { it.isWhitespace() }.trimEnd('=')
+        if (clean.isEmpty()) throw CipherProblem("пустой Base32")
+        val out = ArrayList<Byte>()
+        var buffer = 0
+        var liveBits = 0
+        for (c in clean) {
+            val value = BASE32_ALPHABET.indexOf(c)
+            if (value < 0) throw CipherProblem("символ «" + c + "» не из Base32")
+            buffer = (buffer shl 5) or value
+            liveBits += 5
+            if (liveBits >= 8) {
+                liveBits -= 8
+                out += ((buffer shr liveBits) and 0xFF).toByte()
+            }
+        }
+        return out.toByteArray()
+    }
+
+    private fun base58Encode(bytes: ByteArray): String {
+        if (bytes.isEmpty()) return ""
+        val zeros = bytes.takeWhile { it.toInt() == 0 }.size
+        if (zeros == bytes.size) return "1".repeat(zeros)
+        var value = BigInteger(1, bytes)
+        val radix = BigInteger.valueOf(58)
+        val chars = ArrayList<Char>()
+        while (value > BigInteger.ZERO) {
+            val divRem = value.divideAndRemainder(radix)
+            chars += BASE58_ALPHABET[divRem[1].toInt()]
+            value = divRem[0]
+        }
+        return "1".repeat(zeros) + chars.asReversed().joinToString("")
+    }
+
+    private fun base58Decode(input: String): ByteArray {
+        val clean = input.filterNot { it.isWhitespace() }
+        if (clean.isEmpty()) throw CipherProblem("пустой Base58")
+        val zeros = clean.takeWhile { it == '1' }.length
+        var value = BigInteger.ZERO
+        val radix = BigInteger.valueOf(58)
+        for (c in clean) {
+            val digit = BASE58_ALPHABET.indexOf(c)
+            if (digit < 0) throw CipherProblem("символ «" + c + "» не из Base58")
+            value = value.multiply(radix).add(BigInteger.valueOf(digit.toLong()))
+        }
+        val raw = if (value == BigInteger.ZERO) ByteArray(0) else value.toByteArray().let {
+            if (it.isNotEmpty() && it[0].toInt() == 0) it.copyOfRange(1, it.size) else it
+        }
+        return ByteArray(zeros) + raw
+    }
+
+    private fun ascii85Encode(bytes: ByteArray): String {
+        val out = StringBuilder()
+        var i = 0
+        while (i < bytes.size) {
+            val count = minOf(4, bytes.size - i)
+            var value = 0L
+            for (k in 0 until 4) {
+                value = value * 256 + if (k < count) (bytes[i + k].toInt() and 0xFF) else 0
+            }
+            val chars = CharArray(5)
+            var rest = value
+            for (k in 4 downTo 0) {
+                chars[k] = ('!'.code + (rest % 85).toInt()).toChar()
+                rest /= 85
+            }
+            out.append(chars, 0, count + 1)
+            i += count
+        }
+        return out.toString()
+    }
+
+    private fun ascii85Decode(input: String): ByteArray {
+        val clean = input.filterNot { it.isWhitespace() }
+        if (clean.isEmpty()) throw CipherProblem("пустой Ascii85")
+        val out = ArrayList<Byte>()
+        var i = 0
+        while (i < clean.length) {
+            val count = minOf(5, clean.length - i)
+            if (count == 1) throw CipherProblem("последний блок Ascii85 обрезан")
+            var value = 0L
+            for (k in 0 until 5) {
+                val digit = if (k < count) {
+                    val d = clean[i + k].code - '!'.code
+                    if (d !in 0..84) throw CipherProblem("символ «" + clean[i + k] + "» не из Ascii85")
+                    d
+                } else 84
+                value = value * 85 + digit
+            }
+            if (value > 0xFFFF_FFFFL) throw CipherProblem("блок Ascii85 больше четырёх байт")
+            val block = ByteArray(4) { index -> ((value shr (8 * (3 - index))) and 0xFF).toByte() }
+            repeat(count - 1) { index -> out += block[index] }
+            i += count
+        }
+        return out.toByteArray()
+    }
+
+    private fun quotedPrintableEncode(bytes: ByteArray): String {
+        val out = StringBuilder()
+        for (b in bytes) {
+            val v = b.toInt() and 0xFF
+            when {
+                v == 0x20 -> out.append('_')
+                v in 0x21..0x7E && v != 0x3D && v != 0x5F -> out.append(v.toChar())
+                else -> out.append('=').append("%02X".format(v))
+            }
+        }
+        return out.toString()
+    }
+
+    private fun quotedPrintableDecode(input: String): ByteArray {
+        val out = ArrayList<Byte>()
+        var i = 0
+        while (i < input.length) {
+            val c = input[i]
+            when {
+                c.isWhitespace() -> i++
+                c == '_' -> { out += 0x20.toByte(); i++ }
+                c == '=' -> {
+                    if (i + 2 >= input.length) throw CipherProblem("после = нужны две HEX-цифры")
+                    val value = input.substring(i + 1, i + 3).toIntOrNull(16)
+                        ?: throw CipherProblem("битый код =XX в Quoted-Printable")
+                    out += value.toByte()
+                    i += 3
+                }
+                c.code in 0x21..0x7E -> { out += c.code.toByte(); i++ }
+                else -> throw CipherProblem("символ «" + c + "» надо было записать как =XX")
+            }
+        }
+        return out.toByteArray()
+    }
+
+    private fun rot13(text: String): String = buildString(text.length) {
+        for (c in text) {
+            append(
+                when (c) {
+                    in 'a'..'z' -> 'a' + (c - 'a' + 13) % 26
+                    in 'A'..'Z' -> 'A' + (c - 'A' + 13) % 26
+                    else -> c
+                }
+            )
+        }
+    }
+
+    private fun mirrorIn(c: Char, alphabet: String): Char {
+        val index = alphabet.indexOf(c)
+        return if (index < 0) c else alphabet[alphabet.lastIndex - index]
+    }
+
+    private fun atbash(text: String): String = buildString(text.length) {
+        for (c in text) {
+            append(
+                when (c) {
+                    in EN_LOW -> mirrorIn(c, EN_LOW)
+                    in EN_UP -> mirrorIn(c, EN_UP)
+                    in RU_LOW -> mirrorIn(c, RU_LOW)
+                    in RU_UP -> mirrorIn(c, RU_UP)
+                    else -> c
+                }
+            )
+        }
+    }
+
+    private fun alphabetOf(c: Char): String? = when (c) {
+        in EN_LOW -> EN_LOW
+        in EN_UP -> EN_UP
+        in RU_LOW -> RU_LOW
+        in RU_UP -> RU_UP
+        else -> null
+    }
+
+    private fun vigenere(text: String, key: String, decrypt: Boolean): String {
+        val shifts = key.mapNotNull { c ->
+            alphabetOf(c)?.indexOf(c)?.takeIf { it >= 0 }
+        }
+        if (shifts.isEmpty()) throw CipherProblem("для Виженера нужен ключ из русских или английских букв")
+        var keyIndex = 0
+        return buildString(text.length) {
+            for (c in text) {
+                val alphabet = alphabetOf(c)
+                if (alphabet == null) {
+                    append(c)
+                } else {
+                    val index = alphabet.indexOf(c)
+                    val shift = shifts[keyIndex % shifts.size] * if (decrypt) -1 else 1
+                    keyIndex++
+                    val n = alphabet.length
+                    append(alphabet[((index + shift) % n + n) % n])
+                }
+            }
+        }
+    }
+
+    private fun nibbleTokenEncode(bytes: ByteArray, tokens: List<String>): String {
+        require(tokens.size == 16)
+        return bytes.toList().chunked(16).joinToString(" ") { chunk ->
+            chunk.joinToString("") { b ->
+                val v = b.toInt() and 0xFF
+                tokens[v shr 4] + tokens[v and 0x0F]
+            }
+        }
+    }
+
+    private fun nibbleTokenDecode(input: String, tokens: List<String>): ByteArray {
+        val ordered = tokens.withIndex().sortedByDescending { it.value.length }
+        val nibbles = ArrayList<Int>()
+        var i = 0
+        while (i < input.length) {
+            if (input[i].isWhitespace()) {
+                i++
+                continue
+            }
+            val found = ordered.firstOrNull { input.startsWith(it.value, i) }
+                ?: throw CipherProblem("чужой символ на позиции " + (i + 1))
+            nibbles += found.index
+            i += found.value.length
+        }
+        if (nibbles.isEmpty() || nibbles.size % 2 != 0) throw CipherProblem("полубайтов должно быть чётное число")
+        return ByteArray(nibbles.size / 2) { index -> ((nibbles[index * 2] shl 4) or nibbles[index * 2 + 1]).toByte() }
+    }
+
+    private fun brailleEncode(bytes: ByteArray): String =
+        bytes.toList().chunked(32).joinToString(" ") { chunk ->
+            chunk.joinToString("") { (0x2800 + (it.toInt() and 0xFF)).toChar().toString() }
+        }
+
+    private fun brailleDecode(input: String): ByteArray {
+        val chars = input.filterNot { it.isWhitespace() }
+        if (chars.isEmpty() || chars.any { it.code !in 0x2800..0x28FF }) throw CipherProblem("в Брайле допустимы только знаки ⠀–⣿")
+        return ByteArray(chars.length) { (chars[it].code - 0x2800).toByte() }
+    }
+
+    private fun runesEncode(bytes: ByteArray): String {
+        return bytes.toList().chunked(32).joinToString(" ") { chunk ->
+            chunk.joinToString("") { b ->
+                val v = b.toInt() and 0xFF
+                RUNES[v shr 4].toString() + RUNES[v and 0x0F]
+            }
+        }
+    }
+
+    private fun runesDecode(input: String): ByteArray {
+        val chars = input.filterNot { it.isWhitespace() }
+        if (chars.isEmpty() || chars.length % 2 != 0) throw CipherProblem("рун должно быть чётное число — по две на байт")
+        return ByteArray(chars.length / 2) { index ->
+            val hi = RUNES.indexOf(chars[index * 2])
+            val lo = RUNES.indexOf(chars[index * 2 + 1])
+            if (hi < 0 || lo < 0) throw CipherProblem("встретилась чужая руна")
+            ((hi shl 4) or lo).toByte()
+        }
+    }
+
+    private val DNA = charArrayOf('A', 'C', 'G', 'T')
+
+    private fun dnaEncode(bytes: ByteArray): String = buildString(bytes.size * 4) {
+        for (b in bytes) {
+            val v = b.toInt() and 0xFF
+            append(DNA[(v shr 6) and 3]).append(DNA[(v shr 4) and 3]).append(DNA[(v shr 2) and 3]).append(DNA[v and 3])
+        }
+    }
+
+    private fun dnaDecode(input: String): ByteArray {
+        val clean = input.uppercase().filterNot { it.isWhitespace() }
+        if (clean.isEmpty() || clean.length % 4 != 0) throw CipherProblem("в ДНК-шифре по четыре основания на байт")
+        return ByteArray(clean.length / 4) { index ->
+            var value = 0
+            for (k in 0 until 4) {
+                val digit = DNA.indexOf(clean[index * 4 + k])
+                if (digit < 0) throw CipherProblem("основание «" + clean[index * 4 + k] + "» не A/C/G/T")
+                value = (value shl 2) or digit
+            }
+            value.toByte()
+        }
+    }
+
+    private fun decimalDecode(input: String): ByteArray {
+        val tokens = input.split('-', ' ', '\n', ',').filter { it.isNotBlank() }
+        if (tokens.isEmpty()) throw CipherProblem("нет десятичных байтов")
+        return ByteArray(tokens.size) { index ->
+            val value = tokens[index].toIntOrNull() ?: throw CipherProblem("«" + tokens[index] + "» — не число")
+            if (value !in 0..255) throw CipherProblem("число " + value + " больше байта")
+            value.toByte()
+        }
+    }
+
+    private fun fixedRadixEncode(bytes: ByteArray, radix: Int, digits: Int): String {
+        val alphabet = "0123456789"
+        return bytes.joinToString(" ") { b ->
+            var value = b.toInt() and 0xFF
+            val chars = CharArray(digits) { '0' }
+            for (index in digits - 1 downTo 0) {
+                chars[index] = alphabet[value % radix]
+                value /= radix
+            }
+            chars.concatToString()
+        }
+    }
+
+    private fun fixedRadixDecode(input: String, radix: Int, digits: Int): ByteArray {
+        val clean = input.filterNot { it.isWhitespace() }
+        if (clean.isEmpty() || clean.length % digits != 0) throw CipherProblem("нужно по " + digits + " цифр на байт")
+        return ByteArray(clean.length / digits) { index ->
+            var value = 0
+            for (k in 0 until digits) {
+                val digit = clean[index * digits + k].digitToIntOrNull()
+                    ?: throw CipherProblem("встретилась не цифра")
+                if (digit !in 0 until radix) throw CipherProblem("цифра " + digit + " не подходит для основания " + radix)
+                value = value * radix + digit
+            }
+            if (value > 255) throw CipherProblem("группа № " + (index + 1) + " больше байта")
+            value.toByte()
+        }
+    }
+
+    private val ROMAN_TABLE = listOf(
+        100 to "C", 90 to "XC", 50 to "L", 40 to "XL", 10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I"
+    )
+
+    private fun romanEncode(value: Int): String {
+        if (value == 0) return "N"
+        var rest = value
+        val out = StringBuilder()
+        for ((amount, symbol) in ROMAN_TABLE) {
+            while (rest >= amount) {
+                out.append(symbol)
+                rest -= amount
+            }
+        }
+        return out.toString()
+    }
+
+    private fun romanValue(token: String): Int {
+        if (token == "N") return 0
+        var index = 0
+        var value = 0
+        while (index < token.length) {
+            val pair = ROMAN_TABLE.firstOrNull { token.startsWith(it.second, index) }
+                ?: throw CipherProblem("«" + token + "» — не римское число")
+            value += pair.first
+            index += pair.second.length
+        }
+        if (value !in 0..255 || romanEncode(value) != token) throw CipherProblem("«" + token + "» — неканоничное римское число")
+        return value
+    }
+
+    private fun romanDecode(input: String): ByteArray {
+        val tokens = input.uppercase().split('-', ' ', '\n', ',').filter { it.isNotBlank() }
+        if (tokens.isEmpty()) throw CipherProblem("нет римских чисел")
+        return ByteArray(tokens.size) { romanValue(tokens[it]).toByte() }
+    }
 
     // ————— машинные представления: обратимые текстовые виды тех же байтов —————
 

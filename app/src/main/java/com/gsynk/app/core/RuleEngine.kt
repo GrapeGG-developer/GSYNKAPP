@@ -11,7 +11,8 @@ object RuleEngine {
 
     data class Applied(
         val brightness: Boolean = false,
-        val volume: Boolean = false
+        val volume: Boolean = false,
+        val silent: Boolean = false
     )
 
     // ——— чистая математика (покрыта юнит-тестами) ———
@@ -112,6 +113,11 @@ object RuleEngine {
         if (rule.useBrightness) {
             brightnessDone = setBrightnessPercent(context, rule.brightness)
         }
-        return Applied(brightnessDone, volumeDone)
+        val silentDone = if (rule.silentMode == 0 || rule.silentMode == 1) {
+            AutomationActions.setDnd(context, rule.silentMode == 1)
+        } else {
+            false
+        }
+        return Applied(brightnessDone, volumeDone, silentDone)
     }
 }

@@ -78,7 +78,7 @@ class SensorGuardTest {
 
     @Test
     fun bulkSensorListIsFilteredBeforeRegister() {
-        val text = File(ui, "LabScreen.kt").readText()
+        val text = File(ui, "HardwareScreens.kt").readText()
         assertTrue(
             "список всех датчиков обязан фильтроваться до подписки",
             text.contains("getSensorList(Sensor.TYPE_ALL)") &&

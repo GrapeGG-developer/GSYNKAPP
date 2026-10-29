@@ -108,7 +108,7 @@ object DeviceLab {
             ?: return false
         if (!manager.hasIrEmitter()) return false
         manager.transmit(command.carrier, command.pattern)
-        AppLog.event("Лаборатория", "ИК-команда отправлена, несущая " + command.carrier + " Гц")
+        AppLog.event("Железо", "ИК-команда отправлена, несущая " + command.carrier + " Гц")
         true
     }.getOrDefault(false)
 

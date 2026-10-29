@@ -69,6 +69,12 @@ fun ScheduleScreen(
             ThinDivider()
             InfoRow("Активно правил", rules.count { it.enabled }.toString() + " из " + rules.size)
             InfoRow("Ближайшее", coming?.format(DateTimeFormatter.ofPattern("d MMM, HH:mm")) ?: "—")
+            Spacer(Modifier.height(10.dp))
+            SecondaryButton(
+                text = "Готовые автоматизации: школа, дом, учёба",
+                onClick = { Router.panel("lifeauto") },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
         Spacer(Modifier.height(12.dp))
 
