@@ -170,6 +170,6 @@ class Metro52Test {
         val settings = File(ui, "SettingsScreen.kt").readText()
         assertFalse(settings.contains("ModalBottomSheet"))
         assertFalse(settings.contains("Мультитул"))
-        assertEquals("5.1", ReleaseNews.VERSION)
+        assertEquals("5.0", ReleaseNews.VERSION)
     }
 }

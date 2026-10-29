@@ -286,14 +286,22 @@ fun MainScreen(vm: MainViewModel) {
     // Автопроверка почаще: при возвращении в приложение, если прошло больше 15 минут.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                vm.checkUpdateIfStale()
-                // Заодно смотрим, не ответил ли агент: ответ появится обычным уведомлением в приложении.
-                vm.checkAgentMail(silent = true)
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    vm.setUpdateForeground(true)
+                    vm.checkUpdateIfStale()
+                    // Заодно смотрим, не ответил ли агент: ответ появится обычным уведомлением в приложении.
+                    vm.checkAgentMail(silent = true)
+                }
+                Lifecycle.Event.ON_PAUSE -> vm.setUpdateForeground(false)
+                else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            vm.setUpdateForeground(false)
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     val nextRule = remember(rules) { nextOccurrence(rules) }

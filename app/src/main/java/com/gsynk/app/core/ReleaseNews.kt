@@ -10,9 +10,22 @@ data class ReleaseNewsItem(
 )
 
 object ReleaseNews {
-    const val VERSION = "5.1"
+    const val VERSION = "5.0"
 
     val items: List<ReleaseNewsItem> = listOf(
+        ReleaseNewsItem(
+            id = "auto-update-cleanup",
+            title = "Автообновление без мусорных APK",
+            body = "Сторож обновлений теперь просыпается каждые 200 мс. Когда выходит новая версия, GSYNK сам скачивает APK и открывает системную установку; в фоне файл может заранее скачаться по Wi-Fi.",
+            points = listOf(
+                "проверка срока обновления каждые 200 мс",
+                "APK скачивается сам и проверяется по SHA-256",
+                "Android показывает только системное подтверждение установки",
+                "при первом запуске новой версии временный APK удаляется",
+                "веб-версия GSYNK удалена, сайт загрузки последней Android-версии сохранён"
+            ),
+            iconKey = "update"
+        ),
         ReleaseNewsItem(
             id = "landscape-launch",
             title = "Запуск только горизонтально",

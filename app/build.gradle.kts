@@ -15,7 +15,7 @@ android {
         applicationId = "com.gsynk.app"
         minSdk = 30
         targetSdk = 36
-        versionCode = 23
+        versionCode = 24
         versionName = "5.2.1"
 
         // Локальная модель тянет тяжёлые нативные библиотеки MediaPipe.

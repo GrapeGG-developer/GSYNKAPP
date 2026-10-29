@@ -9,6 +9,8 @@ import android.app.job.JobService
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.core.app.NotificationCompat
 import com.gsynk.app.GSYNKApp
 import com.gsynk.app.ui.MainActivity
@@ -56,12 +58,37 @@ object UpdateJobs {
 
     private const val NOTIFICATION_ID = 7301
 
+    /** Пауза между фоновыми попытками скачать один и тот же APK. */
+    const val AUTO_DOWNLOAD_RETRY_MS = 20 * 60 * 1000L
+
     /** Нужно ли вообще что-то показывать: не показываем то, что уже показали или пропустили. */
     fun shouldNotify(available: Boolean, tag: String, notifiedTag: String, skippedTag: String): Boolean {
         if (!available || tag.isBlank()) return false
         if (tag == notifiedTag) return false
         if (tag == skippedTag) return false
         return true
+    }
+
+    /**
+     * Фон может сам скачать APK, но не должен жечь мобильный трафик и качать одну
+     * версию бесконечно. Запуск системного установщика из фона Android не гарантирует,
+     * поэтому готовый файл подхватит foreground при открытии приложения/уведомления.
+     */
+    fun shouldDownloadInBackground(
+        available: Boolean,
+        webOnly: Boolean,
+        hasApk: Boolean,
+        unmetered: Boolean,
+        tag: String,
+        skippedTag: String,
+        lastDownloadTag: String,
+        lastDownloadAt: Long,
+        now: Long
+    ): Boolean {
+        if (!available || webOnly || !hasApk || !unmetered) return false
+        if (tag.isBlank() || tag == skippedTag) return false
+        if (tag != lastDownloadTag) return true
+        return now - lastDownloadAt >= AUTO_DOWNLOAD_RETRY_MS
     }
 
     /** Поставить задачу в очередь системы: сеть обязательна, перезагрузка не страшна. */
@@ -91,6 +118,7 @@ object UpdateJobs {
      * человека, и показать уведомление. Возвращает true, если проверка удалась.
      */
     fun runCheck(context: Context): Boolean {
+        UpdateChecker.cleanupDownloadedUpdates(context)
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val repo = prefs.getString(KEY_REPO, "").orEmpty().ifBlank { Keys.REPO }
         val auto = prefs.getBoolean(KEY_AUTO, true)
@@ -103,14 +131,65 @@ object UpdateJobs {
         }
         val notified = prefs.getString(KEY_NOTIFIED, "").orEmpty()
         val skipped = prefs.getString(KEY_SKIPPED, "").orEmpty()
+
+        var downloadedReady = false
+        if (result.updateAvailable && result.latestTag != skipped) {
+            downloadedReady = UpdateChecker.downloadedUpdate(
+                context = context,
+                expectedTag = result.latestTag,
+                sha256 = result.sha256
+            ) != null
+            val now = System.currentTimeMillis()
+            val shouldDownload = !downloadedReady && shouldDownloadInBackground(
+                available = result.updateAvailable,
+                webOnly = result.webOnly,
+                hasApk = result.apkUrl.isNotBlank(),
+                unmetered = isOnUnmeteredNetwork(context),
+                tag = result.latestTag,
+                skippedTag = skipped,
+                lastDownloadTag = prefs.getString(KEY_BG_DOWNLOAD_TAG, "").orEmpty(),
+                lastDownloadAt = prefs.getLong(KEY_BG_DOWNLOAD_AT, 0L),
+                now = now
+            )
+            if (shouldDownload) {
+                prefs.edit()
+                    .putString(KEY_BG_DOWNLOAD_TAG, result.latestTag)
+                    .putLong(KEY_BG_DOWNLOAD_AT, now)
+                    .apply()
+                val download = UpdateChecker.download(
+                    context = context,
+                    url = result.apkUrl,
+                    expectedTag = result.latestTag,
+                    sha256 = result.sha256
+                )
+                downloadedReady = download.file != null
+                AppLog.event(
+                    "Обновление",
+                    if (downloadedReady) {
+                        "APK " + result.latestTag + " скачан в фоне и ждёт подтверждения установки"
+                    } else {
+                        "фоновая загрузка " + result.latestTag + " не удалась: " + download.message
+                    }
+                )
+            }
+        }
+
         if (!shouldNotify(result.updateAvailable, result.latestTag, notified, skipped)) {
             return true
         }
         prefs.edit().putString(KEY_NOTIFIED, result.latestTag).apply()
-        notify(context, result)
+        notify(context, result, downloadedReady)
         AppLog.event("Обновление", "фоновая проверка нашла " + result.latestTag)
         return true
     }
+
+    private fun isOnUnmeteredNetwork(context: Context): Boolean = runCatching {
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return@runCatching false
+        val network = manager.activeNetwork ?: return@runCatching false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return@runCatching false
+        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    }.getOrDefault(false)
 
     /** Настройки, которые ставит приложение: репозиторий и включена ли автопроверка. */
     fun remember(context: Context, repo: String, auto: Boolean) {
@@ -126,7 +205,7 @@ object UpdateJobs {
     }
 
     /** Уведомление «вышла новая версия» — нажатие открывает приложение и панель обновления. */
-    private fun notify(context: Context, result: UpdateChecker.Result) {
+    private fun notify(context: Context, result: UpdateChecker.Result, downloadedReady: Boolean = false) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         val intent = Intent(context, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -137,10 +216,10 @@ object UpdateJobs {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val text = if (result.webOnly) {
-            "Новая версия " + result.latestTag + " ждёт на странице релиза"
-        } else {
-            "Новая версия " + result.latestTag + " — нажмите, чтобы обновить"
+        val text = when {
+            downloadedReady -> "APK " + result.latestTag + " уже скачан — нажмите, чтобы подтвердить установку"
+            result.webOnly -> "Новая версия " + result.latestTag + " ждёт на странице релиза"
+            else -> "Новая версия " + result.latestTag + " — нажмите, чтобы обновить"
         }
         val notification = NotificationCompat.Builder(context, GSYNKApp.CHANNEL_UPDATES)
             .setSmallIcon(R.drawable.ic_bolt)
@@ -159,4 +238,6 @@ object UpdateJobs {
     private const val KEY_AUTO = "auto"
     private const val KEY_NOTIFIED = "notified_tag"
     private const val KEY_SKIPPED = "skipped_tag"
+    private const val KEY_BG_DOWNLOAD_TAG = "bg_download_tag"
+    private const val KEY_BG_DOWNLOAD_AT = "bg_download_at"
 }

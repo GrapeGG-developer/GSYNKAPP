@@ -116,8 +116,8 @@ fun SettingsScreen(
             SectionTitle("Обновления")
             Spacer(Modifier.height(8.dp))
             SettingRow(
-                title = "Проверять автоматически",
-                subtitle = "панель появится сама, когда выйдет новая версия",
+                title = "Обновлять автоматически",
+                subtitle = "APK скачается сам; Android покажет только системное подтверждение установки",
                 checked = settings.updateAuto,
                 onChange = { vm.setUpdateAuto(it) }
             )

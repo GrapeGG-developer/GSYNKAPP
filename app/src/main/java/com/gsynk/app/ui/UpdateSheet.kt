@@ -194,13 +194,21 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                     )
                     Spacer(Modifier.height(14.dp))
 
+                    if (settings.updateAuto && !update!!.webOnly) {
+                        Text(
+                            text = if (downloading) "Автообновление уже идёт" else "Автообновление включено: скачивание начнётся само",
+                            color = GrapeCyan,
+                            fontSize = Gioui.Type.caption
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
                     if (downloading) {
                         Text("Скачиваю: $progress%", color = GrapeVioletSoft, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                         Spacer(Modifier.height(8.dp))
                         BarIndicator(percent = progress, brush = GioBrush.Green)
                     } else {
                         PrimaryButton(
-                            text = if (update!!.webOnly) "Открыть страницу релиза" else "Скачать и обновить",
+                            text = if (update!!.webOnly) "Открыть страницу релиза" else "Скачать и обновить сейчас",
                             onClick = { vm.downloadAndInstall() },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -220,7 +228,8 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = "Установка «поверх» сохранит все правила, настройки и игры — " +
-                                "подпись та же, данные не теряются.",
+                                "подпись та же, данные не теряются. Скачанный APK лежит только во временном " +
+                                "кэше GSYNK и сам удалится при первом запуске новой версии.",
                             color = TextDim,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                         )
@@ -282,18 +291,18 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
         }
 
         Spacer(Modifier.height(14.dp))
-        SectionTitle("Автопроверка")
+        SectionTitle("Автообновление")
         Spacer(Modifier.height(9.dp))
         SurfaceCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = if (settings.updateAuto) "Проверять автоматически" else "Проверять вручную",
+                        text = if (settings.updateAuto) "Обновлять автоматически" else "Только вручную",
                         color = TextPrimary,
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium)
                     )
                     Text(
-                        text = "Раз в минуту, с токеном и меткой ETag — лимит GitHub не тратится",
+                        text = "Сторож каждые 200 мс; сетевой ETag-запрос по расписанию. APK качается сам, после установки временный файл удаляется",
                         color = TextDim,
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
@@ -326,8 +335,8 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = update?.notes?.takeIf { it.isNotBlank() }
-                    ?: "5.1 — запуск только горизонтально без лишних касаний; " +
-                    "5.2 — Metro-«Пуск», автоматизации жизни и 42 шифра.",
+                    ?: "5.0 — автообновление: APK скачивается сам и удаляется после установки; " +
+                    "5.1 — запуск только горизонтально без лишних касаний.",
                 color = TextDim,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
             )

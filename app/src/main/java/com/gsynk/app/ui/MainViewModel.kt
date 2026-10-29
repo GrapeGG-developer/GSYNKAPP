@@ -338,6 +338,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     object UpdatePolicy {
 
+        /** Сторож обновлений просыпается каждые 200 мс и проверяет, не пора ли идти в сеть. */
+        const val POLL_INTERVAL_MS = 200L
+
+        /** После неудачной/отменённой автоустановки не дёргаем системный установщик 20 минут. */
+        const val AUTO_INSTALL_RETRY_MS = 20 * 60 * 1000L
+
+        /** Пора ли делать сетевую проверку по расписанию сторожа. */
+        fun isDue(now: Long, nextCheckAt: Long): Boolean = nextCheckAt <= 0L || now >= nextCheckAt
+
         /** Пора ли показать панель обновления прямо сейчас. */
         fun shouldPrompt(
             available: Boolean,
@@ -355,6 +364,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         fun shouldRemind(available: Boolean, acked: Boolean, lastNoticeAt: Long, now: Long): Boolean {
             if (!available || acked) return false
             return now - lastNoticeAt >= REMIND_NOTICE_MS
+        }
+
+        /**
+         * Можно ли прямо сейчас без нажатия пользователя начать скачивание и установку.
+         * Системный Android всё равно покажет свой экран подтверждения установки, но
+         * повторять его каждую минуту после отмены нельзя — поэтому есть пауза по тегу.
+         */
+        fun shouldAutoInstall(
+            available: Boolean,
+            autoEnabled: Boolean,
+            acked: Boolean,
+            webOnly: Boolean,
+            hasApk: Boolean,
+            downloading: Boolean,
+            foreground: Boolean,
+            tag: String,
+            lastTag: String,
+            lastAttemptAt: Long,
+            postponedUntil: Long,
+            now: Long
+        ): Boolean {
+            if (!available || !autoEnabled || acked || webOnly || !hasApk || downloading || !foreground) return false
+            if (tag.isBlank() || now < postponedUntil) return false
+            if (tag != lastTag) return true
+            return now - lastAttemptAt >= AUTO_INSTALL_RETRY_MS
         }
 
         /**
@@ -421,32 +455,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var updateFailures = 0
     private var nextCheckAt = 0L
+    private var awaitingInstallPermission = false
+
+    /**
+     * GSYNK сейчас на переднем плане. Скачивать в фоне можно отдельной системной
+     * задачей, а вот системный установщик поверх другого приложения сам не открываем.
+     */
+    @Volatile
+    private var isUpdateForeground: Boolean = true
+
+    fun setUpdateForeground(foreground: Boolean) {
+        isUpdateForeground = foreground
+    }
 
     init {
         initUpdateCheck()
     }
 
     /**
-     * Автопроверка обновлений: сразу при запуске, дальше каждые 2 минуты,
-     * плюс отдельный пинок при возвращении в приложение ([checkUpdateIfStale]) —
-     * раньше проверка была раз в 6 часов, и обновление ждало ручного нажатия.
+     * Автообновление: сторож просыпается каждые 200 мс, сразу замечает наступивший срок,
+     * возвращение из настроек установки и найденную версию. Сам сетевой запрос при этом
+     * делается не чаще безопасного ETag-расписания [UpdatePolicy.nextDelayMs] (обычно раз
+     * в минуту): пять HTTP-запросов в секунду быстро упёрлись бы в лимит GitHub, держали
+     * бы радио включённым и разряжали телефон, не ускоряя появление релиза на сервере.
      */
     private fun initUpdateCheck() {
         viewModelScope.launch {
+            withContext(Dispatchers.IO) { UpdateChecker.cleanupDownloadedUpdates(app()) }
             val current = repository.currentSettings()
             // Первая проверка — сразу: человек открыл приложение, значит хочет знать.
             if (current.updateAuto) checkUpdate(silent = true)
-            var circles = 0
+            var networkCircles = 0
             while (true) {
-                val now = System.currentTimeMillis()
-                val delayMs = UpdatePolicy.nextDelayMs(updateFailures, _update.value?.rateLimitedUntil ?: 0L, now)
-                nextCheckAt = now + delayMs
+                kotlinx.coroutines.delay(UpdatePolicy.POLL_INTERVAL_MS)
                 refreshUpdateStatus()
-                kotlinx.coroutines.delay(delayMs)
-                if (repository.currentSettings().updateAuto) checkUpdate(silent = true)
+                remindAboutUpdate()
+                val now = System.currentTimeMillis()
+                if (!settings.value.updateAuto || _updateChecking.value || _updateDownloading.value) {
+                    continue
+                }
+                if (!UpdatePolicy.isDue(now, nextCheckAt)) continue
+                nextCheckAt = now + UpdatePolicy.nextDelayMs(
+                    updateFailures,
+                    _update.value?.rateLimitedUntil ?: 0L,
+                    now
+                )
+                checkUpdate(silent = true)
                 // Переписку проверяем реже обновлений: там мгновенности и не обещали.
-                circles++
-                if (circles % 4 == 0) checkAgentMail(silent = true)
+                networkCircles++
+                if (networkCircles % 4 == 0) checkAgentMail(silent = true)
             }
         }
     }
@@ -520,8 +577,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun checkUpdateIfStale() = viewModelScope.launch {
         // Напоминания работают даже без автопроверки: версию уже нашли раньше.
         remindAboutUpdate()
+        if (awaitingInstallPermission && UpdateChecker.canInstall(app())) {
+            awaitingInstallPermission = false
+            if (_update.value?.updateAvailable == true) {
+                downloadAndInstall(automatic = true)
+                return@launch
+            }
+        }
         val current = repository.currentSettings()
         if (!current.updateAuto) return@launch
+        // Если версию уже нашли/скачали до ухода приложения в фон, при возвращении
+        // не ждём следующую сетевую проверку: сразу продолжаем установку.
+        _update.value?.let { maybeAutoInstall(it) }
+        if (_updateDownloading.value) return@launch
         if (System.currentTimeMillis() - current.lastUpdateCheck < STALE_INTERVAL_MS) return@launch
         checkUpdate(silent = true)
     }
@@ -531,7 +599,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      * в час на всех за общим адресом оператора и отвечает 403) и с меткой ETag, поэтому
      * повторные ответы «ничего не изменилось» лимит не тратят вообще.
      */
-    fun checkUpdate(silent: Boolean = false, force: Boolean = false) = viewModelScope.launch {
+    fun checkUpdate(silent: Boolean = false, force: Boolean = false) {
+        if (_updateChecking.value) return
+        _updateChecking.value = true
+        viewModelScope.launch {
+            try {
         val current = settings.value
         val repo = current.updateRepo.ifBlank { Keys.REPO }
         if (repo.isBlank()) {
@@ -551,6 +623,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         nextCheckAt = System.currentTimeMillis() +
             UpdatePolicy.nextDelayMs(updateFailures, result.rateLimitedUntil, System.currentTimeMillis())
         refreshUpdateStatus()
+        if (result.ok && !result.updateAvailable) {
+            // Если это первый запуск после установки, временный APK уже устарел.
+            withContext(Dispatchers.IO) { UpdateChecker.cleanupDownloadedUpdates(app()) }
+        }
 
         if (!result.ok) {
             // Ошибку показываем даже в тихом режиме: молча ждать человек не должен.
@@ -576,9 +652,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             // Панель открывается сама — это и есть «обновление пришло».
             _updatePrompt.value = _updatePrompt.value + 1
             lastPromptAt = System.currentTimeMillis()
+            if (current.updateAuto) maybeAutoInstall(result)
         } else if (!result.updateAvailable && result.latestTag.isNotBlank()) {
             _updateAnnounce.value = null
         }
+            } finally {
+                _updateChecking.value = false
+            }
+        }
+    }
+
+    /** Одна авто-попытка на версию и пауза после отмены системного установщика. */
+    private fun maybeAutoInstall(result: UpdateChecker.Result) {
+        val now = System.currentTimeMillis()
+        val should = UpdatePolicy.shouldAutoInstall(
+            available = result.updateAvailable,
+            autoEnabled = settings.value.updateAuto,
+            acked = result.latestTag == settings.value.seenVersion,
+            webOnly = result.webOnly,
+            hasApk = result.apkUrl.isNotBlank(),
+            downloading = _updateDownloading.value,
+            foreground = isUpdateForeground,
+            tag = result.latestTag,
+            lastTag = UpdateChecker.autoInstallTag(app()),
+            lastAttemptAt = UpdateChecker.autoInstallAttemptAt(app()),
+            postponedUntil = postponedUntil,
+            now = now
+        )
+        if (!should) return
+        UpdateChecker.rememberAutoInstallAttempt(app(), result.latestTag, now)
+        AppLog.event("Обновление", "автоматически качаю и ставлю " + result.latestTag)
+        downloadAndInstall(automatic = true)
     }
 
     /**
@@ -620,6 +724,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun unskipUpdate() = viewModelScope.launch {
         guarded {
             repository.saveSettings(repository.currentSettings().copy(seenVersion = ""))
+            UpdateChecker.clearAutoInstallAttempt(app(), _update.value?.latestTag.orEmpty())
             checkUpdate(silent = true, force = true)
         }
     }
@@ -630,6 +735,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.saveSettings(current.copy(updateAuto = enabled))
             // Фоновая проверка живёт ровно столько, сколько разрешил человек.
             UpdateJobs.remember(app(), current.updateRepo.ifBlank { Keys.REPO }, enabled)
+            if (enabled) nextCheckAt = 0L
         }
     }
 
@@ -637,56 +743,101 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         guarded { repository.saveSettings(repository.currentSettings().copy(updateRepo = repo.trim())) }
     }
 
-    /** Скачать и установить обновление с показом прогресса. */
-    fun downloadAndInstall() = viewModelScope.launch {
+    /** Скачать APK и сразу открыть системную установку; ручной вызов обходит авто-паузу. */
+    fun downloadAndInstall(automatic: Boolean = false) {
+        if (_updateDownloading.value) return
         val result = _update.value
         val url = result?.apkUrl.orEmpty()
         val tag = result?.latestTag.orEmpty()
         if (url.isBlank()) {
-            // Ссылки нет, если версию увидели по странице релиза: ведём в браузер.
+            // Ссылки нет, если версию увидели по странице релиза: вручную ведём в браузер,
+            // а автоматика не должна сама выбрасывать человека из приложения.
             val page = result?.pageUrl.orEmpty()
-            if (page.isNotBlank()) {
+            if (!automatic && page.isNotBlank()) {
                 UpdateChecker.open(app(), page)
                 _message.value = "Открываю страницу релиза в браузере"
             } else {
                 _message.value = "Нет ссылки на APK — попробуйте проверить ещё раз"
             }
-            return@launch
+            return
         }
+        if (automatic && System.currentTimeMillis() < postponedUntil) return
+
         _updateDownloading.value = true
-        _updateProgress.value = 0
-        surfaceNotice("GSYNK " + tag, "качаю 0%", progress = 0)
-        val download = withContext(Dispatchers.IO) {
-            UpdateChecker.download(
-                context = app(),
-                url = url,
-                sha256 = result?.sha256.orEmpty()
-            ) { percent ->
-                _updateProgress.value = percent
-                // Существующее состояние прогресса идёт за настоящей загрузкой.
-                surfaceNotice("GSYNK " + tag, "качаю " + percent.toString() + "%", progress = percent)
+        viewModelScope.launch {
+            try {
+                _updateProgress.value = 0
+                surfaceNotice("GSYNK " + tag, "качаю 0%", progress = 0)
+
+                var failureMessage = ""
+                val ready = withContext(Dispatchers.IO) {
+                    UpdateChecker.downloadedUpdate(
+                        context = app(),
+                        expectedTag = tag,
+                        sha256 = result?.sha256.orEmpty()
+                    )
+                }
+                val file = if (ready != null) {
+                    _updateProgress.value = 100
+                    surfaceNotice("GSYNK " + tag, "уже скачано", progress = 100)
+                    ready
+                } else {
+                    val download = withContext(Dispatchers.IO) {
+                        UpdateChecker.download(
+                            context = app(),
+                            url = url,
+                            expectedTag = tag,
+                            sha256 = result?.sha256.orEmpty()
+                        ) { percent ->
+                            _updateProgress.value = percent
+                            // Существующее состояние прогресса идёт за настоящей загрузкой.
+                            surfaceNotice("GSYNK " + tag, "качаю " + percent.toString() + "%", progress = percent)
+                        }
+                    }
+                    failureMessage = download.message
+                    download.file
+                }
+
+                if (file == null) {
+                    // Причину показываем как есть: «не скачалось» без объяснения бесполезно.
+                    _message.value = "Обновление не скачалось: " + failureMessage
+                    surfaceNotice("GSYNK " + tag, "не скачалось")
+                    AppLog.event("Обновление", "скачивание не удалось: " + failureMessage)
+                    return@launch
+                }
+
+                if (automatic && (!settings.value.updateAuto || tag == settings.value.seenVersion)) {
+                    UpdateChecker.clearAutoInstallAttempt(app(), tag)
+                    _message.value = "Автообновление остановлено настройкой; APK останется во временном кэше для ручной установки"
+                    return@launch
+                }
+                if (automatic && !isUpdateForeground) {
+                    UpdateChecker.clearAutoInstallAttempt(app(), tag)
+                    _message.value = "Обновление скачано — установщик откроется при возвращении в GSYNK"
+                    return@launch
+                }
+                if (automatic && System.currentTimeMillis() < postponedUntil) {
+                    UpdateChecker.clearAutoInstallAttempt(app(), tag)
+                    _message.value = "Обновление скачано — напомню об установке позже"
+                    return@launch
+                }
+
+                surfaceNotice("GSYNK " + tag, "скачано, ставлю")
+                if (!UpdateChecker.canInstall(app())) {
+                    awaitingInstallPermission = true
+                    _message.value = "Разрешите установку из GSYNK — сейчас открою настройки"
+                    UpdateChecker.openInstallSettings(app())
+                    return@launch
+                }
+                awaitingInstallPermission = false
+                if (UpdateChecker.install(app(), file)) {
+                    _message.value = "Запускаю установку… после обновления временный APK удалится сам"
+                } else {
+                    _message.value = "Не удалось запустить установку — нажмите «Скачать и обновить» ещё раз"
+                }
+            } finally {
+                _updateDownloading.value = false
             }
-        }
-        _updateDownloading.value = false
-        val file = download.file
-        if (file == null) {
-            // Причину показываем как есть: «не скачалось» без объяснения бесполезно.
-            _message.value = "Обновление не скачалось: " + download.message
-            surfaceNotice("GSYNK " + tag, "не скачалось")
-            AppLog.event("Обновление", "скачивание не удалось: " + download.message)
-            return@launch
-        }
-        surfaceNotice("GSYNK " + tag, "скачано, ставлю")
-        if (!UpdateChecker.canInstall(app())) {
-            _message.value = "Разрешите установку из GSYNK — сейчас открою настройки"
-            UpdateChecker.openInstallSettings(app())
-            return@launch
-        }
-        if (UpdateChecker.install(app(), file)) {
-            _message.value = "Запускаю установку…"
-        } else {
-            _message.value = "Не удалось запустить установку — откройте файл вручную"
-            UpdateChecker.openInstallSettings(app())
         }
     }
 

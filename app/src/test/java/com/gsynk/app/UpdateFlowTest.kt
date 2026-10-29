@@ -259,6 +259,109 @@ class UpdateFlowTest {
         assertTrue(app.contains("UpdateJobs.schedule(this)"))
     }
 
+    // ————— автообновление 5.0 —————
+
+    @Test
+    fun watchdogPollsEvery200MsButNetworkStaysOnSafeSchedule() {
+        assertEquals(200L, MainViewModel.UpdatePolicy.POLL_INTERVAL_MS)
+        assertEquals(60_000L, MainViewModel.UpdatePolicy.nextDelayMs(0, 0L, now))
+        assertTrue(MainViewModel.UpdatePolicy.isDue(now, 0L))
+        assertTrue(MainViewModel.UpdatePolicy.isDue(now, now))
+        assertFalse(MainViewModel.UpdatePolicy.isDue(now, now + 1L))
+        val vm = java.io.File("src/main/java/com/gsynk/app/ui/MainViewModel.kt").readText()
+        assertTrue(vm.contains("delay(UpdatePolicy.POLL_INTERVAL_MS)"))
+        assertTrue(vm.contains("downloadAndInstall(automatic = true)"))
+    }
+
+    @Test
+    fun autoInstallStartsForNewTagAndWaitsAfterCancellation() {
+        val policy = MainViewModel.UpdatePolicy
+        fun ask(tag: String, lastTag: String, lastAt: Long, downloading: Boolean = false): Boolean =
+            policy.shouldAutoInstall(
+                available = true,
+                autoEnabled = true,
+                acked = false,
+                webOnly = false,
+                hasApk = true,
+                downloading = downloading,
+                foreground = true,
+                tag = tag,
+                lastTag = lastTag,
+                lastAttemptAt = lastAt,
+                postponedUntil = 0L,
+                now = now
+            )
+        assertTrue(ask("v5.0", "", 0L))
+        assertTrue(ask("v5.0", "v5.1", now))
+        assertFalse(ask("v5.0", "v5.0", now - 60_000L))
+        assertTrue(ask("v5.0", "v5.0", now - 21 * 60_000L))
+        assertFalse(ask("v5.0", "", 0L, downloading = true))
+        assertFalse(
+            policy.shouldAutoInstall(
+                available = true, autoEnabled = true, acked = false, webOnly = false,
+                hasApk = true, downloading = false, foreground = false, tag = "v5.0",
+                lastTag = "", lastAttemptAt = 0L, postponedUntil = 0L, now = now
+            )
+        )
+        assertFalse(
+            policy.shouldAutoInstall(
+                available = true, autoEnabled = false, acked = false, webOnly = false,
+                hasApk = true, downloading = false, foreground = true, tag = "v5.0", lastTag = "",
+                lastAttemptAt = 0L, postponedUntil = 0L, now = now
+            )
+        )
+        assertFalse(
+            policy.shouldAutoInstall(
+                available = true, autoEnabled = true, acked = false, webOnly = false,
+                hasApk = true, downloading = false, foreground = true, tag = "v5.0", lastTag = "",
+                lastAttemptAt = 0L, postponedUntil = now + 60_000L, now = now
+            )
+        )
+    }
+
+    @Test
+    fun backgroundDownloadUsesOnlyUnmeteredNetworkAndDoesNotSpam() {
+        val jobs = com.gsynk.app.core.UpdateJobs
+        fun ask(unmetered: Boolean, lastTag: String, lastAt: Long): Boolean =
+            jobs.shouldDownloadInBackground(
+                available = true,
+                webOnly = false,
+                hasApk = true,
+                unmetered = unmetered,
+                tag = "v5.0",
+                skippedTag = "",
+                lastDownloadTag = lastTag,
+                lastDownloadAt = lastAt,
+                now = now
+            )
+        assertTrue(ask(unmetered = true, lastTag = "", lastAt = 0L))
+        assertFalse(ask(unmetered = false, lastTag = "", lastAt = 0L))
+        assertFalse(ask(unmetered = true, lastTag = "v5.0", lastAt = now - 60_000L))
+        assertTrue(ask(unmetered = true, lastTag = "v5.0", lastAt = now - 21 * 60_000L))
+    }
+
+    @Test
+    fun downloadedInstallerIsDeletedAfterItBecomesInstalled() {
+        val own = "com.gsynk.app.debug"
+        // Новая версия уже стоит: её собственный установщик и любой старый APK не нужны.
+        assertTrue(UpdateChecker.isObsoleteDownload(24L, 24L, own, own))
+        assertTrue(UpdateChecker.isObsoleteDownload(24L, 23L, own, own))
+        // APK новее установленной версии ещё нужен системному установщику.
+        assertFalse(UpdateChecker.isObsoleteDownload(23L, 24L, own, own))
+        // Чужой или битый файл в нашем слоте тоже мусор.
+        assertTrue(UpdateChecker.isObsoleteDownload(23L, 24L, "com.example.other", own))
+        assertTrue(UpdateChecker.isObsoleteDownload(23L, null, own, own))
+        assertTrue(UpdateChecker.isStalePartial(now - 8L * 24L * 60L * 60L * 1000L, now))
+        assertFalse(UpdateChecker.isStalePartial(now - 60_000L, now))
+
+        val app = java.io.File("src/main/java/com/gsynk/app/GSYNKApp.kt").readText()
+        assertTrue(app.contains("UpdateChecker.cleanupDownloadedUpdates(this)"))
+        val checker = java.io.File("src/main/java/com/gsynk/app/core/UpdateChecker.kt").readText()
+        assertTrue(checker.contains("fun deleteDownloadedUpdate"))
+        assertTrue(checker.contains("fun downloadedUpdate"))
+        assertTrue(checker.contains("gsynk-update.part"))
+    }
+
     // ————— сверка скачанного файла —————
 
     @Test

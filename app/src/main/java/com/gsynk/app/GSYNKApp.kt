@@ -22,6 +22,15 @@ class GSYNKApp : Application() {
         // поэтому держим ссылку на приложение в одном месте
         com.gsynk.app.core.AppContextHolder.install(this)
         com.gsynk.app.core.Skin.load(this)
+        // Первый запуск уже установленной новой версии: скачанный ею же APK больше
+        // не нужен и не должен лежать в кэше. Уборка в отдельном потоке, чтобы не
+        // тормозить старт приложения чтением архивного манифеста.
+        Thread {
+            runCatching { com.gsynk.app.core.UpdateChecker.cleanupDownloadedUpdates(this) }
+        }.apply {
+            name = "gsynk-update-cleanup"
+            start()
+        }
         // Фоновая проверка обновлений: система будит приложение раз в полчаса,
         // чтобы новая версия находила телефон даже с закрытым приложением.
         com.gsynk.app.core.UpdateJobs.schedule(this)

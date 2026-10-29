@@ -77,6 +77,16 @@ object UpdateChecker {
     private const val PREFS = "gsynk_update"
     private const val KEY_ETAG = "etag"
     private const val KEY_CACHE = "cache"
+    private const val KEY_AUTO_INSTALL_TAG = "auto_install_tag"
+    private const val KEY_AUTO_INSTALL_AT = "auto_install_at"
+    private const val KEY_PARTIAL_TAG = "partial_tag"
+    private const val KEY_PARTIAL_URL = "partial_url"
+
+    private const val UPDATE_APK_NAME = "gsynk-update.apk"
+    private const val UPDATE_PART_NAME = "gsynk-update.part"
+
+    /** Недокачанный кусок старше недели уже не помогает продолжению, а место занимает. */
+    internal const val STALE_PARTIAL_MS = 7L * 24L * 60L * 60L * 1000L
 
     // ————————————————————— проверка —————————————————————
 
@@ -257,6 +267,180 @@ object UpdateChecker {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0"
     }.getOrDefault("0")
 
+    internal fun currentVersionCode(context: Context): Long = runCatching {
+        context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode
+    }.getOrDefault(0L)
+
+    /**
+     * Чистое правило уборки скачанного установщика: файл больше не нужен, если это не наш
+     * пакет, если его нельзя прочитать или если установленная версия уже не старше него.
+     * Именно так новая версия при первом запуске удаляет APK, которым сама установилась.
+     */
+    internal fun isObsoleteDownload(
+        installedVersionCode: Long,
+        downloadedVersionCode: Long?,
+        downloadedPackage: String?,
+        ownPackage: String
+    ): Boolean {
+        if (downloadedVersionCode == null) return true
+        if (downloadedPackage.isNullOrBlank() || downloadedPackage != ownPackage) return true
+        return downloadedVersionCode <= installedVersionCode
+    }
+
+    internal fun isStalePartial(lastModified: Long, now: Long): Boolean =
+        lastModified <= 0L || now - lastModified > STALE_PARTIAL_MS
+
+    private fun downloadedFile(context: Context): File = File(context.cacheDir, UPDATE_APK_NAME)
+
+    private fun partialFile(context: Context): File = File(context.cacheDir, UPDATE_PART_NAME)
+
+    private fun archiveInfo(context: Context, file: File) = runCatching {
+        context.packageManager.getPackageArchiveInfo(file.absolutePath, 0)?.also { info ->
+            info.applicationInfo?.let { appInfo ->
+                appInfo.sourceDir = file.absolutePath
+                appInfo.publicSourceDir = file.absolutePath
+            }
+        }
+    }.getOrNull()
+
+    /** Уже скачанный и ещё актуальный установщик для [expectedTag], если он есть. */
+    fun downloadedUpdate(
+        context: Context,
+        expectedTag: String = "",
+        sha256: String = ""
+    ): File? {
+        val target = downloadedFile(context)
+        if (!target.exists()) return null
+        val archive = archiveInfo(context, target)
+        if (
+            isObsoleteDownload(
+                installedVersionCode = currentVersionCode(context),
+                downloadedVersionCode = archive?.longVersionCode,
+                downloadedPackage = archive?.packageName,
+                ownPackage = context.packageName
+            )
+        ) {
+            deleteDownloadedUpdate(context)
+            return null
+        }
+        if (
+            expectedTag.isNotBlank() &&
+            compareVersions(archive?.versionName.orEmpty(), expectedTag) != 0
+        ) {
+            // В единственном слоте лежит другая версия: не даём старому APK засорять кэш.
+            deleteDownloadedUpdate(context)
+            return null
+        }
+        if (sha256.isNotBlank() && !sha256.equals(digestOf(target), ignoreCase = true)) {
+            deleteDownloadedUpdate(context)
+            return null
+        }
+        return target
+    }
+
+    /**
+     * Удаляет временный APK и недокачанный кусок. Возвращает число реально удалённых файлов.
+     * Старую установленную версию Android заменяет сам установщик; здесь мы убираем именно
+     * скачанный установщик, который иначе остался бы лежать в кэше приложения.
+     */
+    fun deleteDownloadedUpdate(context: Context): Int {
+        var deleted = 0
+        val target = downloadedFile(context)
+        val partial = partialFile(context)
+        if (target.exists() && target.delete()) deleted++
+        if (partial.exists() && partial.delete()) deleted++
+        clearPartialMarker(context)
+        return deleted
+    }
+
+    /**
+     * Стартовая уборка после обновления и защита от старых кусков загрузки.
+     * Актуальный APK новее установленной версии не трогаем: он ещё нужен установщику.
+     */
+    fun cleanupDownloadedUpdates(context: Context): Int {
+        var deleted = 0
+        val target = downloadedFile(context)
+        val partial = partialFile(context)
+        if (target.exists()) {
+            val archive = archiveInfo(context, target)
+            if (
+                isObsoleteDownload(
+                    installedVersionCode = currentVersionCode(context),
+                    downloadedVersionCode = archive?.longVersionCode,
+                    downloadedPackage = archive?.packageName,
+                    ownPackage = context.packageName
+                )
+            ) {
+                deleted += deleteDownloadedUpdate(context)
+            }
+        }
+        if (partial.exists() && !target.exists()) {
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val partialTag = prefs.getString(KEY_PARTIAL_TAG, "").orEmpty()
+            val partialAlreadyInstalled = partialTag.isNotBlank() &&
+                compareVersions(partialTag, currentVersion(context)) <= 0
+            if (partialAlreadyInstalled || isStalePartial(partial.lastModified(), System.currentTimeMillis())) {
+                if (partial.delete()) deleted++
+                clearPartialMarker(context)
+            }
+        }
+        return deleted
+    }
+
+    fun autoInstallTag(context: Context): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_AUTO_INSTALL_TAG, "").orEmpty()
+
+    fun autoInstallAttemptAt(context: Context): Long =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getLong(KEY_AUTO_INSTALL_AT, 0L)
+
+    /** Запомнить авто-попытку, чтобы отменённый системный установщик не выскакивал каждую минуту. */
+    fun rememberAutoInstallAttempt(context: Context, tag: String, now: Long = System.currentTimeMillis()) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_AUTO_INSTALL_TAG, tag)
+            .putLong(KEY_AUTO_INSTALL_AT, now)
+            .apply()
+    }
+
+    /**
+     * Забыть авто-попытку, если установщик фактически не открывался: приложение ушло
+     * в фон, автообновление выключили или человек отложил панель во время загрузки.
+     */
+    fun clearAutoInstallAttempt(context: Context, tag: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (tag.isBlank() || prefs.getString(KEY_AUTO_INSTALL_TAG, "") != tag) return
+        prefs.edit().remove(KEY_AUTO_INSTALL_TAG).remove(KEY_AUTO_INSTALL_AT).apply()
+    }
+
+    private fun partialMatches(context: Context, url: String, tag: String): Boolean {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val savedUrl = prefs.getString(KEY_PARTIAL_URL, "").orEmpty()
+        val savedTag = prefs.getString(KEY_PARTIAL_TAG, "").orEmpty()
+        if (savedUrl.isNotBlank() && savedUrl != url) return false
+        if (tag.isNotBlank() && savedTag.isNotBlank() && compareVersions(savedTag, tag) != 0) return false
+        // Куски от старых версий приложения не помечены: безопаснее начать файл заново,
+        // чем продолжить чужую загрузку и получить сшитый из двух APK мусор.
+        return savedUrl.isNotBlank() || savedTag.isNotBlank()
+    }
+
+    private fun rememberPartial(context: Context, url: String, tag: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_PARTIAL_URL, url)
+            .putString(KEY_PARTIAL_TAG, tag)
+            .apply()
+    }
+
+    private fun clearPartialMarker(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY_PARTIAL_URL)
+            .remove(KEY_PARTIAL_TAG)
+            .apply()
+    }
+
     /** Сравнение версий вида 1.3.0 / v1.3 / 1.3.0-beta. */
     fun compareVersions(a: String, b: String): Int {
         fun parts(raw: String): List<Int> = raw.trim()
@@ -287,15 +471,25 @@ object UpdateChecker {
      * Скачать APK. Три попытки, продолжение с места обрыва и проверка того, что скачался
      * настоящий APK: первая пара байт у любого zip-архива — «PK».
      */
+    @Synchronized
     fun download(
         context: Context,
         url: String,
+        expectedTag: String = "",
         sha256: String = "",
         onProgress: (Int) -> Unit = {}
     ): Download {
         if (url.isBlank()) return Download(null, "нет ссылки на APK")
-        val target = File(context.cacheDir, "gsynk-update.apk")
-        val partial = File(context.cacheDir, "gsynk-update.part")
+        downloadedUpdate(context, expectedTag, sha256)?.let { ready ->
+            onProgress(100)
+            return Download(ready, "уже скачано " + (ready.length() / 1024 / 1024) + " МБ")
+        }
+        val target = downloadedFile(context)
+        val partial = partialFile(context)
+        if (partial.exists() && !partialMatches(context, url, expectedTag)) {
+            partial.delete()
+        }
+        rememberPartial(context, url, expectedTag)
         var lastNote = "не удалось скачать"
 
         repeat(3) { attempt ->
@@ -314,6 +508,7 @@ object UpdateChecker {
             }.getOrDefault("")
             if (head != "PK") {
                 partial.delete()
+                clearPartialMarker(context)
                 lastNote = "скачался не APK (сеть подменила содержимое)"
                 return@repeat
             }
@@ -323,18 +518,19 @@ object UpdateChecker {
             }
             if (sha256.isNotBlank() && !sha256.equals(digestOf(partial), ignoreCase = true)) {
                 partial.delete()
+                clearPartialMarker(context)
                 lastNote = "сумма файла не совпала с GitHub — качаю заново"
                 return@repeat
             }
             if (target.exists()) target.delete()
             if (partial.renameTo(target)) {
+                clearPartialMarker(context)
                 onProgress(100)
                 return Download(target, "скачано " + (target.length() / 1024 / 1024) + " МБ")
             }
             lastNote = "не удалось сохранить файл"
         }
 
-        partial.delete()
         return Download(null, lastNote)
     }
 
