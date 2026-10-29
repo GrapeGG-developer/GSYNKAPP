@@ -369,6 +369,7 @@ class CipherTest {
         assertEquals(4, values.button)
         assertEquals(6, values.toggle)
         assertEquals(14, values.capsule)
+        assertEquals("prg", values.glass)
         // старые круглые формы через clamp не просочатся: Metro остаётся резким
         val clamped = Skin.clamp(Skin.Values(tile = 500, card = 500, button = 500, toggle = 500, sheet = 500, capsule = 500))
         assertTrue(clamped.tile <= 10 && clamped.card <= 14 && clamped.button <= 12 && clamped.sheet <= 18 && clamped.capsule <= 22)

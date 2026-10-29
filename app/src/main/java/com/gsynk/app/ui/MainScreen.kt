@@ -427,7 +427,7 @@ fun MainScreen(vm: MainViewModel) {
         "smartdecode" -> listOf("слой за слоем до исходного текста", "одинаковый шифр несколько раз — не проблема")
         else -> buildList {
             add(entry.subtitle)
-            if (entry.fresh) add("новое в GSYNK 5.2")
+            if (entry.fresh) add("новое в GSYNKPRG")
             add(entry.group.hint)
         }
     }

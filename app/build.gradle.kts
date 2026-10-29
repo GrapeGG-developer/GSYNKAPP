@@ -15,8 +15,8 @@ android {
         applicationId = "com.gsynk.app"
         minSdk = 30
         targetSdk = 36
-        versionCode = 25
-        versionName = "5.3.1"
+        versionCode = 26
+        versionName = "5.4.0"
 
         // Локальная модель тянет тяжёлые нативные библиотеки MediaPipe.
         // Оставляем процессоры телефонов: x86/x86_64 — эмуляторы, на них APK

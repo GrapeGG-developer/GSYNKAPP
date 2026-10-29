@@ -47,6 +47,7 @@ object Glass {
 
     /** Плотность стекла: чем больше — тем плотнее матовый слой. */
     enum class Kind(val title: String) {
+        PRG("GSYNKPRG"),
         MATTE("матовое"),
         LIQUID("жидкое"),
         FROST("морозное"),
@@ -64,6 +65,7 @@ object Glass {
 
     fun recipe(kind: Kind, accent: Color = Gioui.Palette.Purple, radius: Dp = Gioui.Radius.card): Recipe =
         when (kind) {
+            Kind.PRG -> Recipe(accent, 0.18f, Color.White.copy(alpha = 0.34f), radius, 14.dp)
             Kind.MATTE -> Recipe(accent, 0.16f, Color.White.copy(alpha = 0.14f), radius, 0.dp)
             Kind.LIQUID -> Recipe(accent, 0.22f, Color.White.copy(alpha = 0.22f), radius, 6.dp)
             Kind.FROST -> Recipe(Color.White, 0.10f, Color.White.copy(alpha = 0.30f), radius, 10.dp)
@@ -78,34 +80,32 @@ object Glass {
 @Composable
 fun GlassPanel(
     modifier: Modifier = Modifier,
-    kind: Glass.Kind = Glass.Kind.MATTE,
+    kind: Glass.Kind = Glass.Kind.PRG,
     accent: Color = Gioui.Palette.Purple,
     shape: Shape = Gioui.Shapes.card,
     contentPadding: Dp = Gioui.unit * 1.5f,
     content: @Composable BoxScope.() -> Unit
 ) {
-    val effects = LocalGiouiEffects.current
+    val skin = LocalSkinValues.current
     val recipe = Glass.recipe(kind, accent, Gioui.Radius.card)
-    val blurAmount = when (effects) {
-        Gioui.Effects.FULL -> recipe.blur
-        Gioui.Effects.LIGHT -> if (Build.VERSION.SDK_INT >= 31) recipe.blur / 2 else 0.dp
-        Gioui.Effects.PLAIN -> 0.dp
-    }
+    val density = skin.prgOpacity.coerceIn(5, 90) / 100f
     Box(modifier) {
-        Box(Modifier.fillMaxSize().clip(shape).let {
-            if (blurAmount > 0.dp && Build.VERSION.SDK_INT >= 31) {
-                it.blur(blurAmount, BlurredEdgeTreatment.Unbounded)
-            } else {
-                it
-            }
-        })
         Box(
             Modifier
                 .fillMaxSize()
                 .clip(shape)
-                .background(recipe.tint.copy(alpha = recipe.alpha))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.10f + 0.08f * (1f - density)),
+                            recipe.tint.copy(alpha = 0.08f + recipe.alpha * density),
+                            Color(0xFF090614).copy(alpha = 0.16f + 0.42f * density)
+                        )
+                    )
+                )
                 .border(1.dp, recipe.border, shape)
         )
+        PrgGlassSheen(Modifier.matchParentSize(), accent = recipe.tint, seed = kind.ordinal * 131)
         Box(
             Modifier
                 .fillMaxSize()

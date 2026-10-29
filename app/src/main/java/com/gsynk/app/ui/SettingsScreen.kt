@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gsynk.app.BuildConfig
 import com.gsynk.app.core.Permissions
+import com.gsynk.app.core.Skin
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.ChipBorder
@@ -59,6 +61,7 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val skin by Skin.values.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     AnimatedGrapeBackground {
@@ -66,28 +69,30 @@ fun SettingsScreen(
             Modifier
                 .fillMaxSize()
                 .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
-                .padding(horizontal = 18.dp)
+                .padding(horizontal = 12.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 12.dp),
+                    .height(34.dp)
+                    .padding(top = 2.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = "настройки",
-                        color = TextPrimary,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Light
-                    )
-                    Text(
-                        text = "GSYNK ${BuildConfig.VERSION_NAME} · Metro-приложение",
-                        color = TextDim,
-                        fontSize = Gioui.Type.caption
-                    )
-                }
+                Text(
+                    text = "настройки",
+                    color = TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Light
+                )
+                Spacer(Modifier.width(9.dp))
+                Text(
+                    text = "GSYNK ${BuildConfig.VERSION_NAME} · GSYNKPRG",
+                    color = TextDim,
+                    fontSize = Gioui.Type.caption,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f)
+                )
                 SecondaryButton(text = "Назад", onClick = onBack)
             }
 
@@ -136,9 +141,12 @@ fun SettingsScreen(
 
             // ————— кастомизация: как выглядит и отзывается приложение —————
             Spacer(Modifier.height(16.dp))
-            SectionTitle("Кастомизация")
+            SectionTitle("GSYNKPRG — дизайн")
             Spacer(Modifier.height(8.dp))
             SurfaceCard(borderColor = CardBorder) {
+                Text("GSYNKPRG · Premium Realtime Glass", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
+                Text("один UI для всего приложения: прозрачное стекло, анимированный контур и блики", color = TextDim, fontSize = Gioui.Type.caption)
+                Spacer(Modifier.height(10.dp))
                 Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -166,6 +174,39 @@ fun SettingsScreen(
                         SortChip(label = name, selected = settings.tileScale == index + 1) {
                             vm.setTileScale(index + 1)
                         }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Text("Плотность стекла — " + skin.prgOpacity + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                ChipFlow {
+                    listOf(15, 30, 38, 55, 75).forEach { value ->
+                        SortChip(value.toString() + "%", skin.prgOpacity == value) { Skin.save(context, skin.copy(prgOpacity = value)) }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Контурное свечение — " + skin.prgGlow + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                ChipFlow {
+                    listOf(0, 25, 55, 80, 100).forEach { value ->
+                        SortChip(value.toString() + "%", skin.prgGlow == value) { Skin.save(context, skin.copy(prgGlow = value)) }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Блики — " + skin.prgGlare + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                ChipFlow {
+                    listOf(0, 25, 50, 65, 85, 100).forEach { value ->
+                        SortChip(value.toString() + "%", skin.prgGlare == value) { Skin.save(context, skin.copy(prgGlare = value)) }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Движение бликов — " + skin.prgMotion + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                ChipFlow {
+                    listOf(60, 100, 140, 200).forEach { value ->
+                        SortChip(value.toString() + "%", skin.prgMotion == value) { Skin.save(context, skin.copy(prgMotion = value)) }
                     }
                 }
             }
@@ -263,8 +304,10 @@ fun SettingRow(
         Modifier
             .fillMaxWidth()
             .clip(RectangleShape)
+            .background(Color.White.copy(alpha = 0.045f))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RectangleShape)
             .clickable { onChange(!checked) }
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {

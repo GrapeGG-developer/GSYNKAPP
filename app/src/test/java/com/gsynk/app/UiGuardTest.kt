@@ -150,7 +150,7 @@ class UiGuardTest {
             assertTrue("настройка «$field» потерялась", settings.contains(field))
         }
         val sheet = read("SettingsScreen.kt")
-        assertTrue("в настройках нет раздела кастомизации", sheet.contains("Кастомизация"))
+        assertTrue("в настройках нет раздела кастомизации", sheet.contains("GSYNKPRG — дизайн"))
         assertTrue("акцент не применяется", read("Tweaks.kt").contains("accentBrush"))
         assertTrue("фон не читает скорость", read("Components.kt").contains("UiTweaks.breathMs"))
     }

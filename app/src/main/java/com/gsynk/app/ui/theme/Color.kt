@@ -36,12 +36,12 @@ val GlowViolet = Color(0xFF7C3AED)
 val GlowGreen = Color(0xFF22C55E)
 
 // Поверхности
-val CardBg = Color(0xD9151327) // полупрозрачная: живой фон виден сквозь карточки
-val CardBgAlt = Color(0xE01E1A38)
-val CardBorder = Color(0xCC463D73)
-val ChipBg = Color(0xD91E1B33)
-val ChipBorder = Color(0xCC4A4070)
-val TrackBg = Color(0xD9221E3A)
+val CardBg = Color(0x7A151327) // полупрозрачная: живой фон виден сквозь карточки
+val CardBgAlt = Color(0x941E1A38)
+val CardBorder = Color(0x99463D73)
+val ChipBg = Color(0x701E1B33)
+val ChipBorder = Color(0x994A4070)
+val TrackBg = Color(0x66221E3A)
 val DividerColor = Color(0xFF262140)
 
 // Текст

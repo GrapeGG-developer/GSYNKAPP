@@ -3,11 +3,12 @@ package com.gsynk.app
 import com.gsynk.app.core.LifeAutomations
 import com.gsynk.app.core.ReleaseNews
 import com.gsynk.app.core.Rule
+import com.gsynk.app.core.Skin
 import com.gsynk.app.ui.Catalog
-import com.gsynk.app.ui.startCellDp
-import com.gsynk.app.ui.startLayoutForMaxRows
+import com.gsynk.app.ui.startCellWidthDp
+import com.gsynk.app.ui.startColumnsForWidth
 import com.gsynk.app.ui.startPlacements
-import com.gsynk.app.ui.startTargetRows
+import com.gsynk.app.ui.startDesiredCellDp
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -41,20 +42,23 @@ class Metro52Test {
     }
 
     @Test
-    fun landscapeStartLayoutFitsFewRowsWithoutOverlap() {
-        listOf(2, 3).forEach { maxRows ->
+    fun landscapeStartLayoutStaysInsideScreenWidthWithoutOverlap() {
+        listOf(640, 760, 840, 960).forEach { width ->
+            val columns = startColumnsForWidth(width)
+            val cell = startCellWidthDp(width, columns)
+            val occupiedWidth = cell * columns + 6 * (columns - 1)
+            assertTrue("сетка шире экрана $width", occupiedWidth <= width)
+            assertTrue("сетка не по центру: слишком большой остаток на $width", width - occupiedWidth <= columns)
             Catalog.Group.entries.forEach { group ->
                 val entries = Catalog.ALL.filter { it.group == group }
-                val layout = startLayoutForMaxRows(entries, maxRows)
-                assertEquals(entries.size, layout.placements.size)
-                assertTrue("группа " + group.title + " выше " + maxRows + " строк", layout.rows <= maxRows)
+                val placements = startPlacements(entries, columns)
                 val occupied = mutableSetOf<Pair<Int, Int>>()
-                layout.placements.forEach { placement ->
-                    assertTrue(placement.x >= 0 && placement.x + placement.w <= layout.columns)
-                    assertTrue(placement.y >= 0 && placement.y + placement.h <= layout.rows)
+                placements.forEach { placement ->
+                    assertTrue(placement.x >= 0 && placement.x + placement.w <= columns)
+                    assertTrue(placement.y >= 0)
                     for (r in placement.y until placement.y + placement.h) {
                         for (c in placement.x until placement.x + placement.w) {
-                            assertTrue("альбомные плитки наложились", occupied.add(r to c))
+                            assertTrue("плитки наложились", occupied.add(r to c))
                         }
                     }
                 }
@@ -63,29 +67,48 @@ class Metro52Test {
     }
 
     @Test
-    fun startHasNoSearchAndTilesUseFullLandscapeHeight() {
+    fun startHasNoSearchAndTilesAreCenteredInsideScreen() {
         val start = File("src/main/java/com/gsynk/app/ui/StartScreen.kt").readText()
         val main = File("src/main/java/com/gsynk/app/ui/MainScreen.kt").readText()
         assertFalse("поиск в «Пуске» должен быть удалён", start.contains("поиск в пуске"))
         assertFalse("текстовое поле поиска должно быть удалено", start.contains("GrapeTextField("))
         assertFalse("callback поиска должен быть удалён", start.contains("onQueryChange"))
         assertFalse("состояние запроса должно быть удалено", main.contains("var query"))
-        assertTrue("группа должна получать реальную высоту области плиток", start.contains("availableHeight ="))
-        assertTrue("группа должна занимать всю переданную высоту", start.contains(".height(availableHeight)"))
+        assertFalse("горизонтальная лента снова уводит плитки за экран", start.contains("LazyRow"))
+        assertTrue("плитки должны идти центрированной вертикальной мозаикой", start.contains("LazyColumn"))
+        assertTrue("группы должны центрироваться", start.contains("horizontalAlignment = Alignment.CenterHorizontally"))
+        assertTrue("шапка «Пуска» и строка приложения должны быть 34 dp", start.split(".height(34.dp)").size >= 3)
+        assertEquals(3, startColumnsForWidth(360))
+        assertEquals(7, startColumnsForWidth(840))
+        assertEquals(114, startCellWidthDp(840, 7))
+        assertEquals(96, startDesiredCellDp(1))
+        assertEquals(112, startDesiredCellDp(2))
+        assertEquals(128, startDesiredCellDp(3))
+    }
 
-        assertEquals(2, startTargetRows(180))
-        assertEquals(87, startCellDp(180, 2))
-        assertEquals(3, startTargetRows(280))
-        assertEquals(90, startCellDp(280, 3))
-        assertTrue(startCellDp(360, startTargetRows(360)) >= 116)
-
-        Catalog.Group.entries.forEach { group ->
-            val entries = Catalog.ALL.filter { it.group == group }
-            val layout = startLayoutForMaxRows(entries, startTargetRows(280))
-            val cell = startCellDp(280, layout.rows)
-            val occupiedHeight = cell * layout.rows + 5 * (layout.rows - 1).coerceAtLeast(0)
-            assertTrue("группа " + group.title + " снова сжалась в четверть экрана", occupiedHeight >= 250)
-        }
+    @Test
+    fun gsynkPrgIsTheSharedGlassUi() {
+        val components = File("src/main/java/com/gsynk/app/ui/Components.kt").readText()
+        val start = File("src/main/java/com/gsynk/app/ui/StartScreen.kt").readText()
+        val settings = File("src/main/java/com/gsynk/app/ui/SettingsScreen.kt").readText()
+        val effects = File("src/main/java/com/gsynk/app/ui/GiouiScreens.kt").readText()
+        assertTrue(components.contains("fun PrgGlassSurface("))
+        assertTrue(components.contains("fun PrgGlassSheen("))
+        assertTrue(components.contains("PrgGlassSurface(\n        modifier = modifier.fillMaxWidth()"))
+        assertTrue(start.contains("PrgGlassSheen"))
+        assertTrue(start.contains("AnimatedGrapeBackground"))
+        assertTrue(settings.contains("GSYNKPRG — дизайн"))
+        assertTrue(settings.contains("prgOpacity") && settings.contains("prgGlow") && settings.contains("prgGlare") && settings.contains("prgMotion"))
+        assertTrue(effects.contains("GSYNKPRG") && effects.contains("Плотность стекла") && effects.contains("Контурное свечение"))
+        val values = Skin.Values()
+        assertEquals("prg", values.glass)
+        assertEquals(38, values.prgOpacity)
+        assertTrue(values.prgGlow in 1..100 && values.prgGlare in 1..100 && values.prgMotion == 100)
+        val clamped = Skin.clamp(values.copy(prgOpacity = 999, prgGlow = -5, prgGlare = 999, prgMotion = 999))
+        assertEquals(90, clamped.prgOpacity)
+        assertEquals(0, clamped.prgGlow)
+        assertEquals(100, clamped.prgGlare)
+        assertEquals(200, clamped.prgMotion)
     }
 
     @Test
@@ -102,8 +125,9 @@ class Metro52Test {
         assertTrue(main.contains("LandscapeRequiredScreen()"))
         assertTrue(main.contains("isLandscape && (creating || editing != null)"))
         val start = File("src/main/java/com/gsynk/app/ui/StartScreen.kt").readText()
-        assertTrue(start.contains("телефон нужно повернуть горизонтально"))
-        assertTrue(start.contains("касаться экрана не нужно"))
+        assertTrue(start.contains("R.drawable.ic_phone_landscape"))
+        assertFalse(start.contains("телефон нужно повернуть горизонтально"))
+        assertFalse(start.contains("касаться экрана не нужно"))
         assertFalse(start.contains("портретный режим"))
     }
 
@@ -192,12 +216,12 @@ class Metro52Test {
         assertFalse(main.contains("ToolsScreen("))
         assertFalse(main.contains("SettingsSheet("))
         val start = File(ui, "StartScreen.kt").readText()
-        assertTrue(start.contains("Color(0xFF170326)") && start.contains("Color(0xFF2A0B45)") && start.contains("drawCircle"))
-        assertTrue(start.contains("LazyRow"))
+        assertTrue(start.contains("AnimatedGrapeBackground") && start.contains("PrgGlassSheen") && start.contains("GSYNKPRG"))
+        assertTrue(start.contains("LazyColumn"))
         assertTrue(start.contains("combinedClickable"))
         val settings = File(ui, "SettingsScreen.kt").readText()
         assertFalse(settings.contains("ModalBottomSheet"))
         assertFalse(settings.contains("Мультитул"))
-        assertEquals("5.3.1", ReleaseNews.VERSION)
+        assertEquals("5.4.0", ReleaseNews.VERSION)
     }
 }

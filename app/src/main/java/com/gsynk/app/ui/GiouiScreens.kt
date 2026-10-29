@@ -61,7 +61,7 @@ fun EffectsScreen(onBack: () -> Unit) {
     var glassSwitches by remember { mutableIntStateOf(0) }
     val profile = remember { DeviceProfile.detect(context) }
 
-    GrapeScreen(title = "Эффекты", subtitle = Skin.label(skin.level), onBack = onBack) {
+    GrapeScreen(title = "GSYNKPRG", subtitle = "Premium Realtime Glass · " + Skin.label(skin.level), onBack = onBack) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -78,10 +78,10 @@ fun EffectsScreen(onBack: () -> Unit) {
             }
             GlassPanel(modifier = Modifier.fillMaxSize(), kind = glassKind(skin.glass)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.Bottom) {
-                    Text("живьём", color = Color.White, fontSize = Gioui.Type.pageSubtitle)
+                    Text("GSYNKPRG живьём", color = Color.White, fontSize = Gioui.Type.pageSubtitle)
                     Text(
-                        text = "стекло: " + Skin.glassTitle(skin.glass) + ", размытие " + skin.blur + " dp, " +
-                            "лучей " + skin.rays + ", фон " + skin.speed + "%",
+                        text = "стекло " + skin.prgOpacity + "%, свечение " + skin.prgGlow + "%, блики " + skin.prgGlare + "%, " +
+                            "размытие " + skin.blur + " dp, движение " + skin.prgMotion + "%",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
                     )
@@ -108,15 +108,47 @@ fun EffectsScreen(onBack: () -> Unit) {
         )
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Стекло")
+        SectionTitle("Плотность стекла — " + skin.prgOpacity + "%")
         Spacer(Modifier.height(7.dp))
         ChipFlow {
-            Skin.GLASSES.forEach { (id, title) ->
-                SortChip(title, skin.glass == id) {
-                    Skin.save(context, skin.copy(glass = id))
+            listOf(10, 20, 30, 38, 55, 75, 90).forEach { value ->
+                SortChip(value.toString() + "%", skin.prgOpacity == value) {
+                    Skin.save(context, skin.copy(prgOpacity = value))
                     glassSwitches++
-                    // Пасхалка «три стекла»: переключил три раза подряд — открылась.
                     if (glassSwitches >= 3) Eggs.unlock(context, "glass3")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        SectionTitle("Контурное свечение — " + skin.prgGlow + "%")
+        Spacer(Modifier.height(7.dp))
+        ChipFlow {
+            listOf(0, 15, 35, 55, 75, 100).forEach { value ->
+                SortChip(value.toString() + "%", skin.prgGlow == value) {
+                    Skin.save(context, skin.copy(prgGlow = value))
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        SectionTitle("Анимированные блики — " + skin.prgGlare + "%")
+        Spacer(Modifier.height(7.dp))
+        ChipFlow {
+            listOf(0, 15, 35, 50, 65, 85, 100).forEach { value ->
+                SortChip(value.toString() + "%", skin.prgGlare == value) {
+                    Skin.save(context, skin.copy(prgGlare = value))
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        SectionTitle("Движение бликов — " + skin.prgMotion + "%")
+        Spacer(Modifier.height(7.dp))
+        ChipFlow {
+            listOf(40, 60, 100, 140, 200).forEach { value ->
+                SortChip(value.toString() + "%", skin.prgMotion == value) {
+                    Skin.save(context, skin.copy(prgMotion = value))
                 }
             }
         }
@@ -179,7 +211,7 @@ fun EffectsScreen(onBack: () -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text(title, color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                         Text(
-                            text = "стекло " + Skin.glassTitle(values.glass) + " · размытие " + values.blur +
+                            text = "GSYNKPRG " + values.prgOpacity + "% · свечение " + values.prgGlow + "% · блики " + values.prgGlare + "% · размытие " + values.blur +
                                 " · скругления " + values.card + "/" + values.toggle,
                             color = TextDim,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
@@ -202,7 +234,7 @@ fun RadiusScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val skin by Skin.values.collectAsStateWithLifecycle()
 
-    GrapeScreen(title = "Скругления", subtitle = "Единая система GIOUI", onBack = onBack) {
+    GrapeScreen(title = "Формы GSYNKPRG", subtitle = "Единая система Premium Realtime Glass", onBack = onBack) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -335,7 +367,7 @@ fun EverydayScreen(onBack: () -> Unit) {
                 .clip(Gioui.Shapes.card)
                 .background(Gioui.Palette.tiles[day.tone % Gioui.Palette.tiles.size])
         ) {
-            GlassPanel(modifier = Modifier.fillMaxSize(), kind = Glass.Kind.FROST) {
+            GlassPanel(modifier = Modifier.fillMaxSize(), kind = Glass.Kind.PRG) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         text = day.title,
@@ -587,7 +619,7 @@ fun SurpriseScreen(onBack: () -> Unit) {
                 .clip(Gioui.Shapes.card)
         ) {
             GrainField(Modifier.fillMaxSize(), accent = Gioui.Palette.Magenta, second = Gioui.Palette.Amber, speed = 1.4f)
-            GlassPanel(modifier = Modifier.fillMaxSize(), kind = Glass.Kind.AQUA) {
+            GlassPanel(modifier = Modifier.fillMaxSize(), kind = Glass.Kind.PRG) {
                 Column(
                     Modifier
                         .fillMaxSize()
@@ -718,9 +750,4 @@ fun checkDailyAchievements(context: android.content.Context) {
 }
 
 /** Уровень эффектов, применённый к коже: единая точка входа для экранов. */
-private fun glassKind(id: String): Glass.Kind = when (id) {
-    "matte" -> Glass.Kind.MATTE
-    "frost" -> Glass.Kind.FROST
-    "aqua" -> Glass.Kind.AQUA
-    else -> Glass.Kind.LIQUID
-}
+private fun glassKind(id: String): Glass.Kind = Glass.Kind.PRG

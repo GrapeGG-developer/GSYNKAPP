@@ -1,6 +1,17 @@
 package com.gsynk.app.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -13,6 +24,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -31,8 +43,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -40,6 +52,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,12 +63,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -67,12 +82,6 @@ import kotlinx.coroutines.delay
 import kotlin.math.max
 
 internal data class StartPlacement(val x: Int, val y: Int, val w: Int, val h: Int)
-
-internal data class StartLayout(
-    val columns: Int,
-    val rows: Int,
-    val placements: List<StartPlacement>
-)
 
 private data class StartGroupData(
     val key: String,
@@ -119,34 +128,23 @@ internal fun startPlacements(entries: List<Catalog.Entry>, columns: Int = 5): Li
     }
 }
 
-/**
- * Подбирает ширину группы под доступное число строк. В альбомной ориентации
- * высоты мало, поэтому группа становится шире и уезжает вправо внутри LazyRow,
- * а не обрезается снизу.
- */
-internal fun startLayoutForMaxRows(entries: List<Catalog.Entry>, maxRows: Int): StartLayout {
-    val safeMaxRows = maxRows.coerceAtLeast(2)
-    var fallback = StartLayout(5, 1, startPlacements(entries, 5))
-    for (columns in 5..40) {
-        val placements = startPlacements(entries, columns)
-        val rows = max(1, placements.maxOfOrNull { it.y + it.h } ?: 1)
-        fallback = StartLayout(columns, rows, placements)
-        if (rows <= safeMaxRows) return fallback
-    }
-    return fallback
+internal const val START_GAP_DP = 6
+
+/** Целевая ширина ячейки для выбранного размера плиток. */
+internal fun startDesiredCellDp(tileScale: Int): Int = when (tileScale.coerceIn(1, 3)) {
+    1 -> 96
+    3 -> 128
+    else -> 112
 }
 
-internal const val START_MIN_CELL_DP = 88
-internal const val START_MAX_CELL_DP = 132
+/** Сколько колонок целиком помещается в ширину экрана. */
+internal fun startColumnsForWidth(widthDp: Int, desiredCellDp: Int = 112, gapDp: Int = START_GAP_DP): Int =
+    ((widthDp + gapDp) / (desiredCellDp + gapDp)).coerceIn(3, 9)
 
-/** Сколько строк плиток должно занять всю доступную высоту альбомного экрана. */
-internal fun startTargetRows(gridHeightDp: Int, gapDp: Int = 5): Int =
-    ((gridHeightDp + gapDp) / (START_MIN_CELL_DP + gapDp)).coerceIn(2, 5)
-
-/** Размер одной ячейки: строки делят между собой всю высоту, а не четверть экрана. */
-internal fun startCellDp(gridHeightDp: Int, rows: Int, gapDp: Int = 5): Int {
-    val safeRows = rows.coerceAtLeast(1)
-    return ((gridHeightDp - gapDp * (safeRows - 1)) / safeRows).coerceIn(48, START_MAX_CELL_DP)
+/** Точная ячейка, при которой сетка не выходит за доступную ширину. */
+internal fun startCellWidthDp(widthDp: Int, columns: Int, gapDp: Int = START_GAP_DP): Int {
+    val safeColumns = columns.coerceAtLeast(1)
+    return ((widthDp - gapDp * (safeColumns - 1)) / safeColumns).coerceAtLeast(48)
 }
 
 /**
@@ -156,10 +154,28 @@ internal fun startCellDp(gridHeightDp: Int, rows: Int, gapDp: Int = 5): Int {
 @Composable
 fun LandscapeRequiredScreen() {
     AnimatedGrapeBackground {
+        val transition = rememberInfiniteTransition(label = "landscapePhone")
+        val rock by transition.animateFloat(
+            initialValue = -3f,
+            targetValue = 3f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1_600, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "phoneRock"
+        )
+        val pulse by transition.animateFloat(
+            initialValue = 0.97f,
+            targetValue = 1.04f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1_600, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "phonePulse"
+        )
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Color(0xFF12021E))
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .clickable(
@@ -173,48 +189,41 @@ fun LandscapeRequiredScreen() {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Image(
                         painter = painterResource(R.drawable.grapescript_logo),
-                        contentDescription = "Логотип Grape Script",
-                        modifier = Modifier.width(92.dp),
+                        contentDescription = null,
+                        modifier = Modifier.width(78.dp),
                         contentScale = ContentScale.Fit
                     )
-                    Spacer(Modifier.width(14.dp))
+                    Spacer(Modifier.width(12.dp))
                     Text(
                         "GSYNK",
                         color = TextPrimary,
-                        fontSize = 42.sp,
+                        fontSize = 38.sp,
                         fontWeight = FontWeight.Light,
                         letterSpacing = 2.sp
                     )
                 }
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(34.dp))
                 Box(
                     Modifier
-                        .width(112.dp)
-                        .height(66.dp)
-                        .border(2.dp, Color.White.copy(alpha = 0.78f), RectangleShape),
+                        .size(width = 282.dp, height = 150.dp)
+                        .graphicsLayer {
+                            rotationZ = rock
+                            scaleX = pulse
+                            scaleY = pulse
+                        }
+                        .clip(skinShape("sheet"))
+                        .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.03f))))
+                        .border(1.dp, Color.White.copy(alpha = 0.24f), skinShape("sheet")),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        Modifier
-                            .width(58.dp)
-                            .height(7.dp)
-                            .background(Color(0xFF8B5CF6), RectangleShape)
+                    PrgGlassSheen(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6), seed = 531)
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.ic_phone_landscape),
+                        contentDescription = "Горизонтальный телефон",
+                        tint = Color.White.copy(alpha = 0.96f),
+                        modifier = Modifier.size(width = 246.dp, height = 123.dp)
                     )
                 }
-                Spacer(Modifier.height(22.dp))
-                Text(
-                    "телефон нужно повернуть горизонтально",
-                    color = TextPrimary,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Light
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "GSYNK запустится сам только в альбомной ориентации — касаться экрана не нужно",
-                    color = Color.White.copy(alpha = 0.68f),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Light
-                )
             }
         }
     }
@@ -250,11 +259,12 @@ fun EmptyHomeScreen(
                         .width(132.dp)
                         .height(78.dp)
                         .clip(RectangleShape)
-                        .background(Color(0xFF4C1D95).copy(alpha = 0.92f))
+                        .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.13f), Color(0xFF4C1D95).copy(alpha = 0.58f))))
                         .border(1.dp, Color.White.copy(alpha = 0.45f), RectangleShape)
                         .clickable { onResumeMinimized() }
                         .padding(10.dp)
                 ) {
+                    PrgGlassSheen(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6), seed = 97)
                     Column {
                         Text("активный угол", color = Color.White.copy(alpha = 0.72f), fontSize = 10.sp)
                         Text(
@@ -317,7 +327,7 @@ fun EmptyHomeScreen(
     }
 }
 
-/** Windows 8 Start: группы идут вправо, заголовок категории стоит над её плитками. */
+/** GSYNKPRG Start: категории по центру экрана, сетка целиком внутри его ширины. */
 @Composable
 fun StartMenuScreen(
     favorites: Set<String>,
@@ -350,109 +360,79 @@ fun StartMenuScreen(
             }
         }
     }
-    Box(Modifier.fillMaxSize()) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawRect(
-                brush = Brush.verticalGradient(
-                    listOf(Color(0xFF170326), Color(0xFF2A0B45), Color(0xFF12021E))
-                )
-            )
-            val step = 54.dp.toPx()
-            var y = -step
-            var row = 0
-            while (y < size.height + step) {
-                var x = if (row % 2 == 0) -step * 0.3f else step * 0.2f
-                while (x < size.width + step) {
-                    drawCircle(
-                        color = Color(0xFF8B5CF6).copy(alpha = 0.075f),
-                        radius = step * 0.28f,
-                        center = Offset(x, y),
-                        style = Stroke(width = 1.2.dp.toPx())
-                    )
-                    drawRect(
-                        color = Color.White.copy(alpha = 0.026f),
-                        topLeft = Offset(x - step * 0.14f, y - step * 0.14f),
-                        size = androidx.compose.ui.geometry.Size(step * 0.28f, step * 0.28f),
-                        style = Stroke(width = 1.dp.toPx())
-                    )
-                    x += step
-                }
-                y += step
-                row++
-            }
-            drawCircle(
-                brush = Brush.radialGradient(
-                    listOf(Color(0xFF7C3AED).copy(alpha = 0.28f), Color.Transparent)
-                ),
-                radius = size.width * 0.72f,
-                center = Offset(size.width * 0.82f, size.height * 0.12f)
-            )
-        }
+    val desiredCell = startDesiredCellDp(UiTweaks.tileScale)
+    AnimatedGrapeBackground {
         Column(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
-            Row(
+            Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
-                    .padding(start = 10.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("пуск", color = TextPrimary, fontSize = 30.sp, fontWeight = FontWeight.Light)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        "GSYNK " + BuildConfig.VERSION_NAME + " · плитки на весь экран",
-                        color = Color.White.copy(alpha = 0.72f),
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                    .height(34.dp)
+                    .clip(RectangleShape)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.09f),
+                                Color(0xFF8B5CF6).copy(alpha = 0.16f),
+                                Color.White.copy(alpha = 0.04f)
+                            )
+                        )
                     )
+                    .border(1.dp, Color.White.copy(alpha = 0.13f), RectangleShape)
+            ) {
+                PrgGlassSheen(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6), seed = 11)
+                Row(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("пуск", color = TextPrimary, fontSize = 21.sp, fontWeight = FontWeight.Light)
+                    Spacer(Modifier.width(9.dp))
                     Text(
-                        "листайте вправо → · долгое нажатие — «моё»",
-                        color = Color.White.copy(alpha = 0.52f),
+                        "GSYNK " + BuildConfig.VERSION_NAME + " · GSYNKPRG · Premium Realtime Glass",
+                        color = Color.White.copy(alpha = 0.66f),
                         fontSize = 10.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
+                    Box(
+                        Modifier
+                            .size(30.dp)
+                            .clip(RectangleShape)
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .border(1.dp, Color.White.copy(alpha = 0.20f), RectangleShape)
+                            .clickable { onCloseHome() },
+                        contentAlignment = Alignment.Center
+                    ) { Text("⌂", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Light) }
                 }
-                Box(
-                    Modifier
-                        .size(38.dp)
-                        .clip(RectangleShape)
-                        .background(Color.White.copy(alpha = 0.09f))
-                        .border(1.dp, Color.White.copy(alpha = 0.2f), RectangleShape)
-                        .clickable { onCloseHome() },
-                    contentAlignment = Alignment.Center
-                ) { Text("⌂", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Light) }
             }
-            BoxWithConstraints(
-                Modifier
+            LazyColumn(
+                modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val tileViewportHeight = maxHeight
-                LazyRow(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 8.dp, end = 16.dp, top = 2.dp, bottom = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
-                    items(groups, key = { it.key }) { groupData ->
-                        StartGroup(
-                            title = groupData.title,
-                            hint = groupData.hint,
-                            entries = groupData.entries,
-                            availableHeight = (tileViewportHeight - 8.dp).coerceAtLeast(160.dp),
-                            favorites = favorites,
-                            minimizedRoute = minimizedRoute,
-                            liveLinesFor = liveLinesFor,
-                            onOpen = onOpen,
-                            onToggleFavorite = onToggleFavorite
-                        )
-                    }
+                itemsIndexed(groups, key = { _, group -> group.key }) { sectionIndex, groupData ->
+                    StartGroup(
+                        title = groupData.title,
+                        hint = groupData.hint,
+                        entries = groupData.entries,
+                        desiredCellDp = desiredCell,
+                        sectionIndex = sectionIndex,
+                        favorites = favorites,
+                        minimizedRoute = minimizedRoute,
+                        liveLinesFor = liveLinesFor,
+                        onOpen = onOpen,
+                        onToggleFavorite = onToggleFavorite
+                    )
                 }
             }
         }
@@ -464,60 +444,64 @@ private fun StartGroup(
     title: String,
     hint: String,
     entries: List<Catalog.Entry>,
-    availableHeight: Dp,
+    desiredCellDp: Int,
+    sectionIndex: Int,
     favorites: Set<String>,
     minimizedRoute: String?,
     liveLinesFor: (Catalog.Entry) -> List<String>,
     onOpen: (Catalog.Entry) -> Unit,
     onToggleFavorite: (Catalog.Entry) -> Unit
 ) {
-    val gap = 5.dp
-    val headingHeight = 44.dp
-    val gridAvailable = (availableHeight - headingHeight).coerceAtLeast(120.dp)
-    val targetRows = startTargetRows(gridAvailable.value.toInt())
-    val layout = remember(entries, targetRows) { startLayoutForMaxRows(entries, targetRows) }
-    val columns = layout.columns
-    val rows = layout.rows
-    val placements = layout.placements
-    val cell = startCellDp(gridAvailable.value.toInt(), rows).dp
-    val gridWidth = cell * columns + gap * (columns - 1).coerceAtLeast(0)
-    val gridHeight = cell * rows + gap * (rows - 1).coerceAtLeast(0)
+    val gap = START_GAP_DP.dp
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val availableWidth = maxWidth
+        val columns = remember(entries, availableWidth, desiredCellDp) {
+            startColumnsForWidth(availableWidth.value.toInt().coerceAtLeast(1), desiredCellDp)
+        }
+        val placements = remember(entries, columns) { startPlacements(entries, columns) }
+        val rows = max(1, placements.maxOfOrNull { it.y + it.h } ?: 1)
+        val cell = startCellWidthDp(availableWidth.value.toInt().coerceAtLeast(1), columns).dp
+        val gridWidth = cell * columns + gap * (columns - 1).coerceAtLeast(0)
+        val gridHeight = cell * rows + gap * (rows - 1).coerceAtLeast(0)
 
-    Column(
-        Modifier
-            .width(gridWidth)
-            .height(availableHeight)
-    ) {
-        Text(
-            title,
-            color = TextPrimary,
-            fontSize = 19.sp,
-            fontWeight = FontWeight.Light,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Text(
-            hint,
-            color = Color.White.copy(alpha = 0.64f),
-            fontSize = 10.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(Modifier.height(6.dp))
-        Box(Modifier.width(gridWidth).height(gridHeight)) {
-            entries.forEachIndexed { index, entry ->
-                val place = placements[index]
-                StartTile(
-                    entry = entry,
-                    width = cell * place.w + gap * (place.w - 1),
-                    height = cell * place.h + gap * (place.h - 1),
-                    liveLines = liveLinesFor(entry),
-                    favorite = entry.id in favorites,
-                    minimized = entry.route == minimizedRoute,
-                    modifier = Modifier.offset(x = (cell + gap) * place.x, y = (cell + gap) * place.y),
-                    onClick = { onOpen(entry) },
-                    onLongClick = { onToggleFavorite(entry) }
-                )
+        Column(
+            Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                title,
+                color = TextPrimary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Light,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                hint,
+                color = Color.White.copy(alpha = 0.62f),
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(6.dp))
+            Box(Modifier.width(gridWidth).height(gridHeight)) {
+                entries.forEachIndexed { index, entry ->
+                    val place = placements[index]
+                    StartTile(
+                        entry = entry,
+                        width = cell * place.w + gap * (place.w - 1),
+                        height = cell * place.h + gap * (place.h - 1),
+                        liveLines = liveLinesFor(entry),
+                        favorite = entry.id in favorites,
+                        minimized = entry.route == minimizedRoute,
+                        index = sectionIndex * 18 + index,
+                        modifier = Modifier.offset(x = (cell + gap) * place.x, y = (cell + gap) * place.y),
+                        onClick = { onOpen(entry) },
+                        onLongClick = { onToggleFavorite(entry) }
+                    )
+                }
             }
         }
     }
@@ -531,6 +515,7 @@ private fun StartTile(
     liveLines: List<String>,
     favorite: Boolean,
     minimized: Boolean,
+    index: Int,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit
@@ -548,86 +533,126 @@ private fun StartTile(
             }
         }
     }
-    val shape = RoundedCornerShape(2.dp)
+    var entered by remember(entry.id) { mutableStateOf(false) }
+    LaunchedEffect(entry.id) {
+        delay((index % 16).coerceAtLeast(0) * 30L)
+        entered = true
+    }
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val enterAlpha by animateFloatAsState(if (entered) 1f else 0f, tween(320), label = "tileAlpha")
+    val enterScale by animateFloatAsState(
+        if (entered) 1f else 0.90f,
+        spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "tileEnterScale"
+    )
+    val pressScale by animateFloatAsState(
+        if (pressed) 0.962f else 1f,
+        spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "tilePressScale"
+    )
+    val skin = LocalSkinValues.current
+    val density = skin.prgOpacity.coerceIn(5, 90) / 100f
+    val shape = skinShape("tile")
     val wide = width >= 112.dp
     val roomy = height >= 76.dp
     val compact = height < 64.dp
     Box(
         modifier
+            .graphicsLayer {
+                alpha = enterAlpha
+                scaleX = enterScale * pressScale
+                scaleY = enterScale * pressScale
+                translationY = (1f - enterAlpha) * 18f
+            }
             .width(width)
             .height(height)
             .clip(shape)
             .background(
                 Brush.linearGradient(
-                    listOf(entry.color.copy(alpha = 0.97f), entry.color.copy(alpha = 0.68f))
+                    listOf(
+                        entry.color.copy(alpha = 0.50f + 0.34f * density),
+                        entry.color.copy(alpha = 0.28f + 0.34f * density),
+                        Color.White.copy(alpha = 0.10f)
+                    )
                 )
             )
             .border(
                 if (minimized) 2.dp else 1.dp,
-                if (minimized) Color.White else Color.White.copy(alpha = 0.18f),
+                when {
+                    minimized -> Color.White
+                    favorite -> Color.White.copy(alpha = 0.55f)
+                    else -> Color.White.copy(alpha = 0.24f)
+                },
                 shape
             )
             .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(if (compact) 6.dp else 9.dp)
     ) {
-        Row(Modifier.align(Alignment.TopStart), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = ImageVector.vectorResource(entry.iconRes),
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.94f),
-                modifier = Modifier.size(if (compact) 16.dp else if (wide) 26.dp else 22.dp)
-            )
-            Spacer(Modifier.weight(1f))
-            val badge = when {
-                minimized -> "активно"
-                entry.fresh -> "5.2"
-                favorite -> "моё"
-                else -> null
-            }
-            if (badge != null) {
-                Text(
-                    badge,
-                    color = Color.White,
-                    fontSize = 8.sp,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(Color.Black.copy(alpha = 0.24f))
-                        .padding(horizontal = 4.dp, vertical = 1.dp)
+        PrgGlassSheen(Modifier.matchParentSize(), accent = entry.color, seed = entry.id.hashCode())
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(if (compact) 6.dp else 9.dp)
+        ) {
+            Row(Modifier.align(Alignment.TopStart), verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = ImageVector.vectorResource(entry.iconRes),
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.95f),
+                    modifier = Modifier.size(if (compact) 16.dp else if (wide) 26.dp else 22.dp)
                 )
-            }
-        }
-        Column(Modifier.align(Alignment.BottomStart)) {
-            Text(
-                entry.title,
-                color = Color.White,
-                fontSize = if (compact) 10.sp else if (wide) 15.sp else 13.sp,
-                lineHeight = if (compact) 11.sp else if (wide) 16.sp else 14.sp,
-                fontWeight = FontWeight.Light,
-                maxLines = if (compact) 1 else 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (wide || roomy) {
-                AnimatedContent(
-                    targetState = cleanLines[lineIndex],
-                    transitionSpec = {
-                        (slideInVertically { it / 2 } + fadeIn()) togetherWith
-                            (slideOutVertically { -it / 2 } + fadeOut())
-                    },
-                    label = "start-live"
-                ) { line ->
+                Spacer(Modifier.weight(1f))
+                val badge = when {
+                    minimized -> "активно"
+                    entry.fresh -> "PRG"
+                    favorite -> "моё"
+                    else -> null
+                }
+                if (badge != null) {
                     Text(
-                        line,
-                        color = Color.White.copy(alpha = 0.78f),
-                        fontSize = 10.sp,
-                        lineHeight = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        badge,
+                        color = Color.White,
+                        fontSize = 8.sp,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color.Black.copy(alpha = 0.24f))
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
                     )
+                }
+            }
+            Column(Modifier.align(Alignment.BottomStart)) {
+                Text(
+                    entry.title,
+                    color = Color.White,
+                    fontSize = if (compact) 10.sp else if (wide) 15.sp else 13.sp,
+                    lineHeight = if (compact) 11.sp else if (wide) 16.sp else 14.sp,
+                    fontWeight = FontWeight.Light,
+                    maxLines = if (compact) 1 else 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (wide || roomy) {
+                    AnimatedContent(
+                        targetState = cleanLines[lineIndex],
+                        transitionSpec = {
+                            (slideInVertically { it / 2 } + fadeIn()) togetherWith
+                                (slideOutVertically { -it / 2 } + fadeOut())
+                        },
+                        label = "start-live"
+                    ) { line ->
+                        Text(
+                            line,
+                            color = Color.White.copy(alpha = 0.80f),
+                            fontSize = 10.sp,
+                            lineHeight = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -641,59 +666,98 @@ fun MetroAppShell(
     onMinimize: () -> Unit,
     content: @Composable () -> Unit
 ) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Color(0xFF170326))
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .height(52.dp)
-                .background(Color(0xFF1E0733))
-                .border(1.dp, Color.White.copy(alpha = 0.08f), RectangleShape)
-                .padding(start = 6.dp, end = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    AnimatedGrapeBackground {
+        Column(Modifier.fillMaxSize()) {
             Box(
                 Modifier
-                    .size(width = 44.dp, height = 40.dp)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .height(34.dp)
                     .clip(RectangleShape)
-                    .clickable { onMinimize() },
-                contentAlignment = Alignment.Center
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.09f),
+                                Color(0xFF8B5CF6).copy(alpha = 0.17f),
+                                Color.White.copy(alpha = 0.04f)
+                            )
+                        )
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.13f), RectangleShape)
             ) {
-                Text("—", color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Light)
+                PrgGlassSheen(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6), seed = title.hashCode())
+                Row(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier
+                            .size(width = 36.dp, height = 28.dp)
+                            .clip(RectangleShape)
+                            .background(Color.White.copy(alpha = 0.06f))
+                            .clickable { onMinimize() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("—", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Light)
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        title.lowercase(),
+                        color = TextPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Light,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        "GSYNKPRG",
+                        color = Color.White.copy(alpha = 0.48f),
+                        fontSize = 8.sp,
+                        letterSpacing = 1.sp,
+                        maxLines = 1
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Box(
+                        Modifier
+                            .size(width = 40.dp, height = 28.dp)
+                            .clip(RectangleShape)
+                            .background(Color(0xFFE81123).copy(alpha = 0.72f))
+                            .border(1.dp, Color.White.copy(alpha = 0.22f), RectangleShape)
+                            .clickable { onClose() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("×", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Light)
+                    }
+                }
             }
-            Text(
-                "активный левый угол",
-                color = Color.White.copy(alpha = 0.58f),
-                fontSize = 10.sp,
-                maxLines = 1
+            var visible by remember(title) { mutableStateOf(false) }
+            LaunchedEffect(title) {
+                visible = false
+                delay(16L)
+                visible = true
+            }
+            val contentAlpha by animateFloatAsState(if (visible) 1f else 0f, tween(260), label = "shellAlpha")
+            val contentScale by animateFloatAsState(
+                if (visible) 1f else 0.985f,
+                spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy),
+                label = "shellScale"
             )
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    title.lowercase(),
-                    color = TextPrimary,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Light,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text("GSYNK · metro-приложение", color = Color.White.copy(alpha = 0.55f), fontSize = 9.sp)
-            }
             Box(
                 Modifier
-                    .size(width = 48.dp, height = 40.dp)
-                    .clip(RectangleShape)
-                    .background(Color(0xFFE81123).copy(alpha = 0.92f))
-                    .clickable { onClose() },
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        alpha = contentAlpha
+                        scaleX = contentScale
+                        scaleY = contentScale
+                        translationY = (1f - contentAlpha) * 14f
+                    }
             ) {
-                Text("×", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Light)
+                content()
             }
         }
-        Box(Modifier.weight(1f)) { content() }
     }
 }

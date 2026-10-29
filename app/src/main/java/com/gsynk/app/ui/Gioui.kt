@@ -269,7 +269,7 @@ object Gioui {
     }
 
     /** Текущая метка интерфейса — показывается в настройках и отчётах. */
-    const val UI_VERSION = "GIOUI Metro 5.2"
+    const val UI_VERSION = "GSYNKPRG Premium Realtime Glass"
 }
 
 /** Уровень эффектов, доступный всему интерфейсу без лишних вызовов. */
@@ -298,14 +298,9 @@ fun skinRadius(kind: String): Dp {
 @Composable
 fun skinShape(kind: String): Shape = RoundedCornerShape(skinRadius(kind))
 
-/** Стекло из настроек: имя вида → рецепт. */
+/** Стекло из настроек: единственный UI — GSYNKPRG Premium Realtime Glass. */
 @Composable
-fun skinGlass(): Glass.Kind = when (LocalSkinValues.current.glass) {
-    "matte" -> Glass.Kind.MATTE
-    "frost" -> Glass.Kind.FROST
-    "aqua" -> Glass.Kind.AQUA
-    else -> Glass.Kind.LIQUID
-}
+fun skinGlass(): Glass.Kind = Glass.Kind.PRG
 
 /** Ширина сетки: на большом экране плитки не растягиваются в блин. */
 val LocalGiouiColumns = compositionLocalOf { Gioui.COLUMNS }
@@ -419,7 +414,7 @@ fun GioCard(
             .gioSpan(size)
             .scale(pressScale)
             .clip(Gioui.Shapes.tile)
-            .background(Brush.linearGradient(listOf(color.copy(alpha = 0.94f), color.copy(alpha = 0.66f))))
+            .background(Brush.linearGradient(listOf(color.copy(alpha = 0.72f), color.copy(alpha = 0.38f))))
             .border(1.dp, Color.White.copy(alpha = 0.16f), Gioui.Shapes.tile)
             .then(
                 if (onLongClick != null) {
@@ -447,8 +442,9 @@ fun GioCard(
             )
     ) {
         // Живое переливание: только там, где телефон это вытянет.
-        if (effects != Gioui.Effects.PLAIN && size != Gioui.Size.SMALL) {
-            GioSheen(color = color, strong = effects == Gioui.Effects.FULL)
+        if (effects != Gioui.Effects.PLAIN) {
+            PrgGlassSheen(Modifier.matchParentSize(), accent = color, seed = title.hashCode())
+            if (size != Gioui.Size.SMALL) GioSheen(color = color, strong = effects == Gioui.Effects.FULL)
         }
         Column(
             Modifier
