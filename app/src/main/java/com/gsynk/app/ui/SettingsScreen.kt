@@ -145,7 +145,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
             SurfaceCard(borderColor = CardBorder) {
                 Text("GSYNKPRG · Premium Realtime Glass", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
-                Text("один UI для всего приложения: прозрачное стекло, анимированный контур и блики", color = TextDim, fontSize = Gioui.Type.caption)
+                Text("один UI для всего приложения: прозрачное стекло, анимированный контур и случайные блики только по краям", color = TextDim, fontSize = Gioui.Type.caption)
                 Spacer(Modifier.height(10.dp))
                 Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
@@ -202,7 +202,7 @@ fun SettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Движение бликов — " + skin.prgMotion + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Text("Движение краевых бликов — " + skin.prgMotion + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 ChipFlow {
                     listOf(60, 100, 140, 200).forEach { value ->

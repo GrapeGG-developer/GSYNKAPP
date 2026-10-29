@@ -132,7 +132,7 @@ fun EffectsScreen(onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Анимированные блики — " + skin.prgGlare + "%")
+        SectionTitle("Случайные блики по краям — " + skin.prgGlare + "%")
         Spacer(Modifier.height(7.dp))
         ChipFlow {
             listOf(0, 15, 35, 50, 65, 85, 100).forEach { value ->
@@ -143,7 +143,7 @@ fun EffectsScreen(onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Движение бликов — " + skin.prgMotion + "%")
+        SectionTitle("Движение краевых бликов — " + skin.prgMotion + "%")
         Spacer(Modifier.height(7.dp))
         ChipFlow {
             listOf(40, 60, 100, 140, 200).forEach { value ->

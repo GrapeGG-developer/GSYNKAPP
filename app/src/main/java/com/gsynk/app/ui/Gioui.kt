@@ -444,7 +444,6 @@ fun GioCard(
         // Живое переливание: только там, где телефон это вытянет.
         if (effects != Gioui.Effects.PLAIN) {
             PrgGlassSheen(Modifier.matchParentSize(), accent = color, seed = title.hashCode())
-            if (size != Gioui.Size.SMALL) GioSheen(color = color, strong = effects == Gioui.Effects.FULL)
         }
         Column(
             Modifier
@@ -573,38 +572,13 @@ fun GioGroup(header: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Плавный блик по плитке — «живая плитка» из GIOUI, но без лишних кадров. */
+/** Совместимый вызов старого блика: теперь это те же случайные сегменты только на краях GSYNKPRG. */
 @Composable
 fun GioSheen(color: Color, strong: Boolean) {
-    val light = if (strong) 0.2f else 0.1f
-    val transition = rememberInfiniteTransition(label = "gioSheen")
-    val shift by transition.animateFloat(
-        initialValue = -0.7f,
-        targetValue = 1.7f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = if (strong) 4_800 else 6_800, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "gioSheenShift"
-    )
-    Box(
-        Modifier
-            .fillMaxSize()
-            .drawBehind {
-                val startX = size.width * shift
-                drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = light),
-                            color.copy(alpha = light * 0.45f),
-                            Color.Transparent
-                        ),
-                        start = Offset(startX - size.width * 0.45f, 0f),
-                        end = Offset(startX + size.width * 0.45f, size.height)
-                    )
-                )
-            }
+    PrgGlassSheen(
+        modifier = Modifier.fillMaxSize(),
+        accent = color,
+        seed = color.hashCode() xor if (strong) 0x5f3759df.toInt() else 0x27d4eb2f
     )
 }
 

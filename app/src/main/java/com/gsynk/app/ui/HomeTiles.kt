@@ -89,14 +89,6 @@ fun LiveTile(
         label = "tileScale"
     )
 
-    // медленно плывущий градиент — «живой» фон плитки
-    val drift = rememberInfiniteTransition(label = "drift")
-    val shift by drift.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(9_000, easing = LinearEasing), RepeatMode.Reverse),
-        label = "shift"
-    )
 
     val tileContext = LocalContext.current
     val tweakRevision by UiTweaks.revision.collectAsStateWithLifecycle()
@@ -119,22 +111,7 @@ fun LiveTile(
                 onClick()
             }
     ) {
-        // движущийся блик
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.16f * (1f - shift)),
-                            Color.Transparent,
-                            Color.White.copy(alpha = 0.10f * shift)
-                        ),
-                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                        end = androidx.compose.ui.geometry.Offset(1f + shift * 400f, 900f)
-                    )
-                )
-        )
+        PrgGlassSheen(Modifier.matchParentSize(), accent = accent, seed = title.hashCode())
 
         Column(
             Modifier

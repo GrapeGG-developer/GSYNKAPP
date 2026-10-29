@@ -40,6 +40,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -189,17 +190,21 @@ private fun DvdLogo(hue: Int) {
             size = Size(w, h),
             style = Stroke(width = 2.5f)
         )
-        // блик, бегущий слева направо
-        val shineX = -w + shine * (2.2f * w)
-        drawRect(
-            brush = Brush.linearGradient(
-                listOf(Color.Transparent, Color.White.copy(alpha = 0.35f), Color.Transparent),
-                start = Offset(shineX, top),
-                end = Offset(shineX + w * 0.4f, top + h)
-            ),
-            topLeft = Offset(0f, top),
-            size = Size(w, h),
-        )
+        // Случайные блики идут только по краям логотипа; оттенок задаёт seed.
+        prgEdgeGlints(hue * 7919 + 17).forEach { glint ->
+            val localStart = ((glint.start + shine * 0.22f * glint.speed + glint.phase * 0.11f) % 0.86f).coerceAtLeast(0.02f)
+            val localEnd = (localStart + glint.length).coerceAtMost(0.98f)
+            val from: Offset
+            val to: Offset
+            when (glint.edge) {
+                0 -> { from = Offset(w * localStart, top + 1.5f); to = Offset(w * localEnd, top + 1.5f) }
+                1 -> { from = Offset(w - 1.5f, top + h * localStart); to = Offset(w - 1.5f, top + h * localEnd) }
+                2 -> { from = Offset(w * localEnd, top + h - 1.5f); to = Offset(w * localStart, top + h - 1.5f) }
+                else -> { from = Offset(1.5f, top + h * localEnd); to = Offset(1.5f, top + h * localStart) }
+            }
+            drawLine(Color.White.copy(alpha = 0.16f * glint.alpha), from, to, strokeWidth = 5f, cap = StrokeCap.Round)
+            drawLine(Color.White.copy(alpha = 0.48f * glint.alpha), from, to, strokeWidth = 2f, cap = StrokeCap.Round)
+        }
         // «крылья» DVD
         val wing = Path().apply {
             moveTo(w * 0.16f, top + h)

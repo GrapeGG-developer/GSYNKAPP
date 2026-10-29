@@ -79,6 +79,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -301,7 +302,49 @@ fun rememberPrgPhase(seed: Int = 0): Float {
     return (raw + shift) % 1f
 }
 
-/** Живой блик GSYNKPRG: мягкое пятно, верхняя кромка и диагональная полоса. Родитель обязан клиппить форму. */
+/** Один случайный блик на краю: сторона, позиция, длина и собственная фаза заданы seed-ом. */
+internal data class PrgEdgeGlint(
+    val edge: Int,
+    val start: Float,
+    val length: Float,
+    val speed: Float,
+    val phase: Float,
+    val drift: Float,
+    val alpha: Float,
+    val accentMix: Float
+)
+
+private fun prgHash01(seed: Int, index: Int, salt: Int): Float {
+    var x = seed xor ((index + 1) * 0x45d9f3b) xor (salt * 0x119de1f3)
+    x = x xor (x ushr 16)
+    x *= 0x45d9f3b
+    x = x xor (x ushr 16)
+    return ((x ushr 8) and 0xFFFF) / 65535f
+}
+
+/** Стабильный набор случайных бликов: у каждой поверхности свой рисунок, без мерцания при рекомпозиции. */
+internal fun prgEdgeGlints(seed: Int): List<PrgEdgeGlint> {
+    val count = 2 + (prgHash01(seed, 17, 91) * 3f).toInt().coerceIn(0, 2)
+    val firstEdge = (prgHash01(seed, 17, 17) * 4f).toInt().coerceIn(0, 3)
+    return List(count) { index ->
+        val length = 0.08f + prgHash01(seed, index, 43) * 0.20f
+        PrgEdgeGlint(
+            edge = (firstEdge + index) % 4,
+            start = 0.04f + prgHash01(seed, index, 29) * (0.88f - length),
+            length = length,
+            speed = 0.55f + prgHash01(seed, index, 71) * 0.95f,
+            phase = prgHash01(seed, index, 83),
+            drift = 0.015f + prgHash01(seed, index, 101) * 0.055f,
+            alpha = 0.48f + prgHash01(seed, index, 113) * 0.52f,
+            accentMix = prgHash01(seed, index, 127)
+        )
+    }
+}
+
+/**
+ * Блики GSYNKPRG живут только на краях поверхности.
+ * Каждый короткий сегмент случайно выбирает сторону, позицию, длину, скорость и оттенок.
+ */
 @Composable
 fun PrgGlassSheen(
     modifier: Modifier = Modifier,
@@ -310,45 +353,59 @@ fun PrgGlassSheen(
 ) {
     val skin = LocalSkinValues.current
     val phase = rememberPrgPhase(seed)
+    val glints = remember(seed) { prgEdgeGlints(seed) }
     val glare = (skin.prgGlare.coerceIn(0, 100) / 100f) * if (skin.level == 0 || LocalGiouiEffects.current == Gioui.Effects.PLAIN) 0.35f else 1f
     if (glare <= 0.01f) return
     Canvas(modifier) {
-        val angle = (phase * 2f * PI).toFloat()
-        drawRect(
-            brush = Brush.verticalGradient(
-                colors = listOf(Color.White.copy(alpha = 0.17f * glare), Color.Transparent),
-                startY = 0f,
-                endY = size.height * 0.58f
+        val inset = 1.15.dp.toPx().coerceAtMost(size.minDimension * 0.20f).coerceAtLeast(0.6f)
+        glints.forEach { glint ->
+            val localPhase = (phase * glint.speed + glint.phase) % 1f
+            val wave = 0.5f + 0.5f * sin(localPhase * (2f * PI).toFloat())
+            val pulse = 0.38f + 0.62f * wave
+            val glintStart = (glint.start + sin(localPhase * (2f * PI).toFloat()) * glint.drift)
+                .coerceIn(0.025f, (0.975f - glint.length).coerceAtLeast(0.03f))
+            val glintEnd = glintStart + glint.length
+            val startPoint: Offset
+            val endPoint: Offset
+            when (glint.edge) {
+                0 -> {
+                    startPoint = Offset(size.width * glintStart, inset)
+                    endPoint = Offset(size.width * glintEnd, inset)
+                }
+                1 -> {
+                    startPoint = Offset(size.width - inset, size.height * glintStart)
+                    endPoint = Offset(size.width - inset, size.height * glintEnd)
+                }
+                2 -> {
+                    startPoint = Offset(size.width * glintEnd, size.height - inset)
+                    endPoint = Offset(size.width * glintStart, size.height - inset)
+                }
+                else -> {
+                    startPoint = Offset(inset, size.height * glintEnd)
+                    endPoint = Offset(inset, size.height * glintStart)
+                }
+            }
+            val color = lerp(Color.White, accent, glint.accentMix * 0.55f)
+            drawLine(
+                color = color.copy(alpha = 0.12f * glare * glint.alpha * pulse),
+                start = startPoint,
+                end = endPoint,
+                strokeWidth = 3.4.dp.toPx(),
+                cap = StrokeCap.Round
             )
-        )
-        val glowCenter = Offset(
-            size.width * (0.18f + 0.64f * phase),
-            size.height * (0.34f + 0.20f * sin(angle))
-        )
-        val glowRadius = size.maxDimension * (0.55f + skin.blur.coerceIn(0, 30) / 70f)
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(accent.copy(alpha = 0.20f * glare), Color.Transparent),
-                center = glowCenter,
-                radius = glowRadius
-            ),
-            center = glowCenter,
-            radius = glowRadius
-        )
-        val bandCenter = size.width * (-0.35f + phase * 1.75f)
-        val bandWidth = size.width * 0.34f
-        rotate(-18f, Offset(bandCenter, size.height * 0.5f)) {
-            drawRect(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.22f * glare), Color.Transparent),
-                    startX = bandCenter - bandWidth / 2f,
-                    endX = bandCenter + bandWidth / 2f
-                ),
-                topLeft = Offset(bandCenter - bandWidth / 2f, -size.height * 0.18f),
-                size = Size(bandWidth, size.height * 1.36f)
+            drawLine(
+                color = color.copy(alpha = 0.52f * glare * glint.alpha * pulse),
+                start = startPoint,
+                end = endPoint,
+                strokeWidth = 1.15.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawCircle(
+                color = color.copy(alpha = 0.34f * glare * glint.alpha * pulse),
+                radius = 1.55.dp.toPx(),
+                center = if (glint.accentMix >= 0.5f) endPoint else startPoint
             )
         }
-        drawLine(Color.White.copy(alpha = 0.28f * glare), Offset(0f, 0.7f), Offset(size.width, 0.7f), 1.2f)
     }
 }
 

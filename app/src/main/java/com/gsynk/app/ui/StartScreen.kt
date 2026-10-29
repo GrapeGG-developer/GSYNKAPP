@@ -43,8 +43,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -88,6 +91,15 @@ private data class StartGroupData(
     val title: String,
     val hint: String,
     val entries: List<Catalog.Entry>
+)
+
+private data class StartPageData(
+    val key: String,
+    val title: String,
+    val hint: String,
+    val entries: List<Catalog.Entry>,
+    val pageIndex: Int,
+    val pageCount: Int
 )
 
 internal fun startSpan(size: Gioui.Size): Pair<Int, Int> = when (size) {
@@ -145,6 +157,45 @@ internal fun startColumnsForWidth(widthDp: Int, desiredCellDp: Int = 112, gapDp:
 internal fun startCellWidthDp(widthDp: Int, columns: Int, gapDp: Int = START_GAP_DP): Int {
     val safeColumns = columns.coerceAtLeast(1)
     return ((widthDp - gapDp * (safeColumns - 1)) / safeColumns).coerceAtLeast(48)
+}
+
+/** Сколько строк целиком помещается на одной горизонтальной странице «Пуска». */
+internal fun startRowsForHeight(heightDp: Int, desiredCellDp: Int = 112, gapDp: Int = START_GAP_DP): Int =
+    ((heightDp + gapDp) / (desiredCellDp + gapDp)).coerceIn(2, 4)
+
+/** Высота ячейки страницы: сетка заполняет экран по вертикали, но не выходит из него. */
+internal fun startCellHeightDp(heightDp: Int, rows: Int, cellWidthDp: Int, gapDp: Int = START_GAP_DP): Int {
+    val safeRows = rows.coerceAtLeast(1)
+    val byHeight = ((heightDp - gapDp * (safeRows - 1)) / safeRows).coerceAtLeast(1)
+    val byWidth = ((cellWidthDp.coerceAtLeast(1) * 5 + 3) / 4).coerceAtLeast(1)
+    return minOf(byHeight, byWidth)
+}
+
+/**
+ * Делит категорию на полноэкранные страницы для прокрутки вправо.
+ * Порядок плиток сохраняется, а каждая страница целиком помещается в заданные строки.
+ */
+internal fun startPageChunks(
+    entries: List<Catalog.Entry>,
+    columns: Int,
+    maxRows: Int
+): List<List<Catalog.Entry>> {
+    if (entries.isEmpty()) return emptyList()
+    val safeMaxRows = maxRows.coerceAtLeast(2)
+    val pages = mutableListOf<List<Catalog.Entry>>()
+    var current = mutableListOf<Catalog.Entry>()
+    entries.forEach { entry ->
+        val candidate = current + entry
+        val candidateRows = startPlacements(candidate, columns).maxOfOrNull { it.y + it.h } ?: 1
+        if (current.isNotEmpty() && candidateRows > safeMaxRows) {
+            pages += current
+            current = mutableListOf(entry)
+        } else {
+            current += entry
+        }
+    }
+    if (current.isNotEmpty()) pages += current
+    return pages
 }
 
 /**
@@ -327,7 +378,7 @@ fun EmptyHomeScreen(
     }
 }
 
-/** GSYNKPRG Start: категории по центру экрана, сетка целиком внутри его ширины. */
+/** GSYNKPRG Start: полноэкранные страницы категорий листаются вправо, сетка целиком внутри экрана. */
 @Composable
 fun StartMenuScreen(
     favorites: Set<String>,
@@ -412,27 +463,56 @@ fun StartMenuScreen(
                     ) { Text("⌂", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Light) }
                 }
             }
-            LazyColumn(
-                modifier = Modifier
+            BoxWithConstraints(
+                Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 6.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
             ) {
-                itemsIndexed(groups, key = { _, group -> group.key }) { sectionIndex, groupData ->
-                    StartGroup(
-                        title = groupData.title,
-                        hint = groupData.hint,
-                        entries = groupData.entries,
-                        desiredCellDp = desiredCell,
-                        sectionIndex = sectionIndex,
-                        favorites = favorites,
-                        minimizedRoute = minimizedRoute,
-                        liveLinesFor = liveLinesFor,
-                        onOpen = onOpen,
-                        onToggleFavorite = onToggleFavorite
-                    )
+                val viewportWidth = maxWidth
+                val viewportHeight = maxHeight
+                val contentWidthDp = (viewportWidth.value.toInt() - 20).coerceAtLeast(1)
+                val gridHeightDp = (viewportHeight.value.toInt() - 50).coerceAtLeast(1)
+                val columns = startColumnsForWidth(contentWidthDp, desiredCell)
+                val targetRows = startRowsForHeight(gridHeightDp, desiredCell)
+                val pages = remember(groups, columns, targetRows) {
+                    groups.flatMap { groupData ->
+                        val chunks = startPageChunks(groupData.entries, columns, targetRows)
+                        chunks.mapIndexed { pageIndex, pageEntries ->
+                            StartPageData(
+                                key = groupData.key + "-page-" + pageIndex,
+                                title = groupData.title,
+                                hint = if (pageIndex == 0) groupData.hint else "продолжение: " + groupData.title,
+                                entries = pageEntries,
+                                pageIndex = pageIndex,
+                                pageCount = chunks.size
+                            )
+                        }
+                    }
+                }
+                val startListState = rememberLazyListState()
+                val pageSnap = rememberSnapFlingBehavior(startListState)
+                LazyRow(
+                    state = startListState,
+                    flingBehavior = pageSnap,
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    itemsIndexed(pages, key = { _, page -> page.key }) { pageNumber, page ->
+                        StartGroupPage(
+                            page = page,
+                            pageWidth = viewportWidth,
+                            pageHeight = viewportHeight,
+                            columns = columns,
+                            pageNumber = pageNumber,
+                            hasNextPage = pageNumber < pages.lastIndex,
+                            favorites = favorites,
+                            minimizedRoute = minimizedRoute,
+                            liveLinesFor = liveLinesFor,
+                            onOpen = onOpen,
+                            onToggleFavorite = onToggleFavorite
+                        )
+                    }
                 }
             }
         }
@@ -440,12 +520,13 @@ fun StartMenuScreen(
 }
 
 @Composable
-private fun StartGroup(
-    title: String,
-    hint: String,
-    entries: List<Catalog.Entry>,
-    desiredCellDp: Int,
-    sectionIndex: Int,
+private fun StartGroupPage(
+    page: StartPageData,
+    pageWidth: Dp,
+    pageHeight: Dp,
+    columns: Int,
+    pageNumber: Int,
+    hasNextPage: Boolean,
     favorites: Set<String>,
     minimizedRoute: String?,
     liveLinesFor: (Catalog.Entry) -> List<String>,
@@ -453,51 +534,65 @@ private fun StartGroup(
     onToggleFavorite: (Catalog.Entry) -> Unit
 ) {
     val gap = START_GAP_DP.dp
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val availableWidth = maxWidth
-        val columns = remember(entries, availableWidth, desiredCellDp) {
-            startColumnsForWidth(availableWidth.value.toInt().coerceAtLeast(1), desiredCellDp)
-        }
-        val placements = remember(entries, columns) { startPlacements(entries, columns) }
-        val rows = max(1, placements.maxOfOrNull { it.y + it.h } ?: 1)
-        val cell = startCellWidthDp(availableWidth.value.toInt().coerceAtLeast(1), columns).dp
-        val gridWidth = cell * columns + gap * (columns - 1).coerceAtLeast(0)
-        val gridHeight = cell * rows + gap * (rows - 1).coerceAtLeast(0)
+    val entries = page.entries
+    val placements = remember(entries, columns) { startPlacements(entries, columns) }
+    val rows = max(1, placements.maxOfOrNull { it.y + it.h } ?: 1)
+    val availableWidthDp = (pageWidth.value.toInt() - 20).coerceAtLeast(1)
+    val availableGridHeightDp = (pageHeight.value.toInt() - 50).coerceAtLeast(1)
+    val cellWidthDp = startCellWidthDp(availableWidthDp, columns)
+    val cellWidth = cellWidthDp.dp
+    val cellHeight = startCellHeightDp(availableGridHeightDp, rows, cellWidthDp).dp
+    val gridWidth = cellWidth * columns + gap * (columns - 1).coerceAtLeast(0)
+    val gridHeight = cellHeight * rows + gap * (rows - 1).coerceAtLeast(0)
+    val shownTitle = buildString {
+        append(page.title)
+        if (page.pageCount > 1) append(" · " + (page.pageIndex + 1) + "/" + page.pageCount)
+        if (hasNextPage) append("  →")
+    }
 
-        Column(
-            Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+    Column(
+        Modifier
+            .width(pageWidth)
+            .height(pageHeight)
+            .padding(horizontal = 10.dp, vertical = 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            shownTitle,
+            color = TextPrimary,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Light,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            page.hint,
+            color = Color.White.copy(alpha = 0.62f),
+            fontSize = 10.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(6.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.Center
         ) {
-            Text(
-                title,
-                color = TextPrimary,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Light,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                hint,
-                color = Color.White.copy(alpha = 0.62f),
-                fontSize = 10.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(6.dp))
             Box(Modifier.width(gridWidth).height(gridHeight)) {
                 entries.forEachIndexed { index, entry ->
                     val place = placements[index]
                     StartTile(
                         entry = entry,
-                        width = cell * place.w + gap * (place.w - 1),
-                        height = cell * place.h + gap * (place.h - 1),
+                        width = cellWidth * place.w + gap * (place.w - 1),
+                        height = cellHeight * place.h + gap * (place.h - 1),
                         liveLines = liveLinesFor(entry),
                         favorite = entry.id in favorites,
                         minimized = entry.route == minimizedRoute,
-                        index = sectionIndex * 18 + index,
-                        modifier = Modifier.offset(x = (cell + gap) * place.x, y = (cell + gap) * place.y),
+                        index = pageNumber * 18 + index,
+                        modifier = Modifier.offset(x = (cellWidth + gap) * place.x, y = (cellHeight + gap) * place.y),
                         onClick = { onOpen(entry) },
                         onLongClick = { onToggleFavorite(entry) }
                     )

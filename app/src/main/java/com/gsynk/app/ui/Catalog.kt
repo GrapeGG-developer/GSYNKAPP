@@ -136,9 +136,9 @@ object Catalog {
         Entry("coop", "игра вдвоём", "grape link по Wi-Fi", Group.CONNECT, Gioui.Size.SMALL, 10, SHIELD, "panel:coop", 62, words = listOf("кооп", "данж")),
 
         // ——— экран ———
-        Entry("effects", "GSYNKPRG", "premium realtime glass: прозрачность, свечение и блики", Group.SCREEN, Gioui.Size.MEDIUM, 12, TIME, "page:effects", 98, fresh = true, words = listOf("gsynkprg", "premium realtime glass", "дизайн", "стекло", "блюр", "blur", "блики", "свечение", "анимации")),
+        Entry("effects", "GSYNKPRG", "premium realtime glass: прозрачность, свечение и краевые блики", Group.SCREEN, Gioui.Size.MEDIUM, 12, TIME, "page:effects", 98, fresh = true, words = listOf("gsynkprg", "premium realtime glass", "дизайн", "стекло", "блюр", "blur", "блики", "свечение", "анимации")),
         Entry("radius", "формы GSYNKPRG", "контуры единого стеклянного UI", Group.SCREEN, Gioui.Size.SMALL, 13, TUNE, "page:radius", 74, fresh = true, words = listOf("gsynkprg", "формы", "радиус", "углы", "дизайн")),
-        Entry("tweaks", "дизайн GSYNKPRG", "акцент, стекло, блики и отклик", Group.SCREEN, Gioui.Size.SMALL, 14, VOLUME, "panel:settings", 82, fresh = true, words = listOf("gsynkprg", "дизайн", "тема", "цвет", "стекло", "блики")),
+        Entry("tweaks", "дизайн GSYNKPRG", "акцент, стекло, краевые блики и отклик", Group.SCREEN, Gioui.Size.SMALL, 14, VOLUME, "panel:settings", 82, fresh = true, words = listOf("gsynkprg", "дизайн", "тема", "цвет", "стекло", "блики")),
         Entry("screensaver", "скринсейвер", "полка с часами", Group.SCREEN, Gioui.Size.SMALL, 15, TIME, "flag:screensaver", 42, words = listOf("часы", "полка")),
         Entry("screen", "проверка экрана", "AMOLED, ШИМ, мультитач", Group.SCREEN, Gioui.Size.SMALL, 16, BRIGHT, "lab:screen", 48, words = listOf("пиксель", "битый")),
         Entry("pwm", "шим-микроскоп", "замер мерцания камерой", Group.SCREEN, Gioui.Size.SMALL, 17, BRIGHT, "lab:pwm", 44, fresh = false, words = listOf("мерцание", "истощение")),
@@ -226,7 +226,7 @@ object Catalog {
         Entry("schedulenew", "новое правило", "день, время и уровни", Group.SCHEDULE, Gioui.Size.MEDIUM, 9, TUNE, "panel:schedule_new", 94, fresh = false, words = listOf("создать", "править", "автоматика")),
         Entry("schedulestatus", "статус расписания", "ближайшее изменение", Group.SCHEDULE, Gioui.Size.SMALL, 10, BOLT, "panel:schedule", 84, fresh = false, words = listOf("автопилот", "следующее", "активно")),
         Entry("lifeauto", "автоматизации жизни", "школа, дом, учёба и отдых", Group.SCHEDULE, Gioui.Size.WIDE, 11, TIME, "panel:lifeauto", 99, fresh = true, words = listOf("школа", "учёба", "дом", "youtube", "ютуб", "сцены", "автоматика")),
-        Entry("news", "новости 5.4.0", "GSYNKPRG: стекло, анимации и плитки по центру экрана", Group.SYSTEM, Gioui.Size.WIDE, 3, TIME, "page:news", 99, fresh = true, words = listOf("новости", "обновление", "релиз", "5.4.0", "5.3.1", "gsynkprg", "стекло", "анимации", "центр экрана")),
+        Entry("news", "новости 5.4.1", "«Пуск» вправо и случайные блики только по краям", Group.SYSTEM, Gioui.Size.WIDE, 3, TIME, "page:news", 99, fresh = true, words = listOf("новости", "обновление", "релиз", "5.4.1", "5.4.0", "gsynkprg", "стекло", "анимации", "центр экрана", "вправо", "краевые блики", "случайные блики")),
         Entry("settings", "настройки", "автопилот, обновления и доступы", Group.SYSTEM, Gioui.Size.MEDIUM, 4, TUNE, "panel:settings", 98, fresh = true, words = listOf("настройки", "параметры", "доступы", "кастомизация")),
         Entry("quick", "быстрые переключатели", "фонарик, тишина, сирена", Group.SYSTEM, Gioui.Size.MEDIUM, 5, BOLT, "tool:quick", 87, fresh = true, words = listOf("фонарик", "не беспокоить", "сирена", "вибрация")),
         Entry("permissions", "разрешения", "всё, что нужно приложению", Group.SYSTEM, Gioui.Size.SMALL, 9, SHIELD, "panel:settings", 70, words = listOf("права", "доступ")),
