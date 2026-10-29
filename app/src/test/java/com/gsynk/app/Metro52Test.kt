@@ -4,6 +4,7 @@ import com.gsynk.app.core.LifeAutomations
 import com.gsynk.app.core.ReleaseNews
 import com.gsynk.app.core.Rule
 import com.gsynk.app.ui.Catalog
+import com.gsynk.app.ui.startLayoutForMaxRows
 import com.gsynk.app.ui.startPlacements
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -15,7 +16,7 @@ import kotlinx.serialization.json.Json
 import java.time.ZonedDateTime
 import org.junit.Test
 
-/** GSYNK 5.2: пустой дом, Metro-«Пуск», прямые плитки и автоматизации жизни. */
+/** GSYNK 5.1: альбомный запуск, Metro-«Пуск», прямые плитки и автоматизации жизни. */
 class Metro52Test {
 
     @Test
@@ -35,6 +36,47 @@ class Metro52Test {
                 }
             }
         }
+    }
+
+    @Test
+    fun landscapeStartLayoutFitsFewRowsWithoutOverlap() {
+        listOf(2, 3).forEach { maxRows ->
+            Catalog.Group.entries.forEach { group ->
+                val entries = Catalog.ALL.filter { it.group == group }
+                val layout = startLayoutForMaxRows(entries, maxRows)
+                assertEquals(entries.size, layout.placements.size)
+                assertTrue("группа " + group.title + " выше " + maxRows + " строк", layout.rows <= maxRows)
+                val occupied = mutableSetOf<Pair<Int, Int>>()
+                layout.placements.forEach { placement ->
+                    assertTrue(placement.x >= 0 && placement.x + placement.w <= layout.columns)
+                    assertTrue(placement.y >= 0 && placement.y + placement.h <= layout.rows)
+                    for (r in placement.y until placement.y + placement.h) {
+                        for (c in placement.x until placement.x + placement.w) {
+                            assertTrue("альбомные плитки наложились", occupied.add(r to c))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun appStartsOnlyInLandscapeWithoutTap() {
+        val manifest = File("src/main/AndroidManifest.xml").readText()
+        assertTrue(manifest.contains("fullSensor"))
+        assertTrue(manifest.contains("orientation|screenSize"))
+        assertFalse(manifest.contains("screenOrientation=" + '"' + "portrait" + '"'))
+        val main = File("src/main/java/com/gsynk/app/ui/MainScreen.kt").readText()
+        assertTrue(main.contains("LocalConfiguration.current"))
+        assertTrue(main.contains("Configuration.ORIENTATION_LANDSCAPE"))
+        assertTrue(main.contains("LaunchedEffect(isLandscape, panel, minimizedApp)"))
+        assertTrue(main.contains("if (!isLandscape)"))
+        assertTrue(main.contains("LandscapeRequiredScreen()"))
+        assertTrue(main.contains("isLandscape && (creating || editing != null)"))
+        val start = File("src/main/java/com/gsynk/app/ui/StartScreen.kt").readText()
+        assertTrue(start.contains("телефон нужно повернуть горизонтально"))
+        assertTrue(start.contains("касаться экрана не нужно"))
+        assertFalse(start.contains("портретный режим"))
     }
 
     @Test
@@ -128,6 +170,6 @@ class Metro52Test {
         val settings = File(ui, "SettingsScreen.kt").readText()
         assertFalse(settings.contains("ModalBottomSheet"))
         assertFalse(settings.contains("Мультитул"))
-        assertEquals("5.2.0", ReleaseNews.VERSION)
+        assertEquals("5.1", ReleaseNews.VERSION)
     }
 }

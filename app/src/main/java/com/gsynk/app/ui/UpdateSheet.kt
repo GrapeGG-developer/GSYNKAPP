@@ -326,8 +326,8 @@ fun UpdateSheet(vm: MainViewModel, onDismiss: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = update?.notes?.takeIf { it.isNotBlank() }
-                    ?: "5.2 — Metro-«Пуск», пустой дом, автоматизации жизни, 42 шифра " +
-                    "и прямые полноэкранные приложения без старых хабов.",
+                    ?: "5.1 — запуск только горизонтально без лишних касаний; " +
+                    "5.2 — Metro-«Пуск», автоматизации жизни и 42 шифра.",
                 color = TextDim,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Normal)
             )

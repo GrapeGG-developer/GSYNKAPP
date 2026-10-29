@@ -100,7 +100,8 @@
 
         <activity
             android:name=".ui.MainActivity"
-            android:screenOrientation="portrait"
+            android:screenOrientation="fullSensor"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="true"
             android:theme="@style/Theme.GSYNK"
             android:launchMode="singleTop"

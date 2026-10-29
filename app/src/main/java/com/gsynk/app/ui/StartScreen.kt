@@ -60,12 +60,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gsynk.app.BuildConfig
 import com.gsynk.app.R
 import com.gsynk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
 import kotlin.math.max
 
 internal data class StartPlacement(val x: Int, val y: Int, val w: Int, val h: Int)
+
+internal data class StartLayout(
+    val columns: Int,
+    val rows: Int,
+    val placements: List<StartPlacement>
+)
 
 private data class StartGroupData(
     val key: String,
@@ -113,8 +120,97 @@ internal fun startPlacements(entries: List<Catalog.Entry>, columns: Int = 5): Li
 }
 
 /**
- * Пустой главный экран: только GSYNK и подсказка про портрет.
- * Касание где угодно открывает Пуск — как рабочий стол Windows 8 перед Start screen.
+ * Подбирает ширину группы под доступное число строк. В альбомной ориентации
+ * высоты мало, поэтому группа становится шире и уезжает вправо внутри LazyRow,
+ * а не обрезается снизу.
+ */
+internal fun startLayoutForMaxRows(entries: List<Catalog.Entry>, maxRows: Int): StartLayout {
+    val safeMaxRows = maxRows.coerceAtLeast(2)
+    var fallback = StartLayout(5, 1, startPlacements(entries, 5))
+    for (columns in 5..40) {
+        val placements = startPlacements(entries, columns)
+        val rows = max(1, placements.maxOfOrNull { it.y + it.h } ?: 1)
+        fallback = StartLayout(columns, rows, placements)
+        if (rows <= safeMaxRows) return fallback
+    }
+    return fallback
+}
+
+/**
+ * Единственный экран в портретной ориентации. Он специально ничего не запускает
+ * по касанию: GSYNK сам откроется, когда телефон повернут горизонтально.
+ */
+@Composable
+fun LandscapeRequiredScreen() {
+    AnimatedGrapeBackground {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color(0xFF12021E))
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { /* касание намеренно ничего не делает: нужен именно поворот */ }
+                .padding(horizontal = 28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(R.drawable.grapescript_logo),
+                        contentDescription = "Логотип Grape Script",
+                        modifier = Modifier.width(92.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(Modifier.width(14.dp))
+                    Text(
+                        "GSYNK",
+                        color = TextPrimary,
+                        fontSize = 42.sp,
+                        fontWeight = FontWeight.Light,
+                        letterSpacing = 2.sp
+                    )
+                }
+                Spacer(Modifier.height(28.dp))
+                Box(
+                    Modifier
+                        .width(112.dp)
+                        .height(66.dp)
+                        .border(2.dp, Color.White.copy(alpha = 0.78f), RectangleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        Modifier
+                            .width(58.dp)
+                            .height(7.dp)
+                            .background(Color(0xFF8B5CF6), RectangleShape)
+                    )
+                }
+                Spacer(Modifier.height(22.dp))
+                Text(
+                    "телефон нужно повернуть горизонтально",
+                    color = TextPrimary,
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.Light
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "GSYNK запустится сам только в альбомной ориентации — касаться экрана не нужно",
+                    color = Color.White.copy(alpha = 0.68f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Light
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Пустой альбомный дом после закрытия «Пуска» или сворачивания плитки.
+ * Первичный запуск касания не требует: MainScreen сам открывает «Пуск»
+ * сразу, как только конфигурация становится альбомной.
  */
 @Composable
 fun EmptyHomeScreen(
@@ -183,14 +279,22 @@ fun EmptyHomeScreen(
                 }
                 Spacer(Modifier.height(18.dp))
                 Text(
-                    "телефон обязательно нужно повернуть в портретный режим",
+                    if (minimizedTitle != null) {
+                        "приложение свёрнуто в левый верхний угол"
+                    } else {
+                        "альбомная ориентация включена"
+                    },
                     color = Color.White.copy(alpha = 0.82f),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Light
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    "коснитесь экрана, чтобы запустить меню «Пуск»",
+                    if (minimizedTitle != null) {
+                        "коснитесь активной закладки, чтобы продолжить"
+                    } else {
+                        "коснитесь экрана, чтобы снова открыть «Пуск»"
+                    },
                     color = Color.White.copy(alpha = 0.62f),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Light
@@ -287,7 +391,7 @@ fun StartMenuScreen(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text("пуск", color = TextPrimary, fontSize = 36.sp, fontWeight = FontWeight.Light)
-                    Text("GSYNK 5.2 · все плитки", color = Color.White.copy(alpha = 0.62f), fontSize = 12.sp)
+                    Text("GSYNK " + BuildConfig.VERSION_NAME + " · все плитки", color = Color.White.copy(alpha = 0.62f), fontSize = 12.sp)
                 }
                 Box(
                     Modifier
@@ -357,15 +461,17 @@ private fun StartGroup(
     onOpen: (Catalog.Entry) -> Unit,
     onToggleFavorite: (Catalog.Entry) -> Unit
 ) {
-    val columns = 5
     val gap = 4.dp
-    val placements = remember(entries) { startPlacements(entries, columns) }
-    val rows = max(1, placements.maxOfOrNull { it.y + it.h } ?: 1)
     BoxWithConstraints {
-        // Самая большая группа не должна уезжать за нижний край: на невысоких
-        // телефонах ячейка автоматически становится меньше канонических 62 dp.
-        val availableForGrid = (maxHeight - 62.dp).coerceAtLeast(180.dp)
-        val cell = ((availableForGrid - gap * (rows - 1)) / rows).coerceIn(42.dp, 62.dp)
+        // Альбомный экран широкий, но низкий: сначала ограничиваем число строк,
+        // расширяя группу вправо, и только потом подбираем размер ячейки.
+        val availableForGrid = (maxHeight - 62.dp).coerceAtLeast(96.dp)
+        val targetRows = ((availableForGrid + gap) / (54.dp + gap)).toInt().coerceIn(2, 9)
+        val layout = remember(entries, targetRows) { startLayoutForMaxRows(entries, targetRows) }
+        val columns = layout.columns
+        val rows = layout.rows
+        val placements = layout.placements
+        val cell = ((availableForGrid - gap * (rows - 1)) / rows).coerceIn(34.dp, 62.dp)
         val gridWidth = cell * columns + gap * (columns - 1)
         val gridHeight = cell * rows + gap * (rows - 1)
     Column(Modifier.width(gridWidth)) {

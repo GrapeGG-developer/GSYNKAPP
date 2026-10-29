@@ -2,6 +2,7 @@
 
 package com.gsynk.app.ui
 
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -69,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
@@ -106,7 +108,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 /**
- * Главный экран GSYNK 5.2.
+ * Главный экран GSYNK 5.1.
  *
  * Дом намеренно пуст, все функции живут в горизонтальном Metro-«Пуске», а каждая
  * открытая плитка работает как полноэкранное приложение с общей статус-панелью.
@@ -129,6 +131,8 @@ fun MainScreen(vm: MainViewModel) {
     val agentUnseen by vm.agentUnseen.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val snackbar = remember { SnackbarHostState() }
 
     var editing by remember { mutableStateOf<Rule?>(null) }
@@ -153,6 +157,15 @@ fun MainScreen(vm: MainViewModel) {
     var coopAutoHost by remember { mutableStateOf(false) }
     val profile = remember { DeviceProfile.detect(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Запуск без лишних касаний: как только телефон стал горизонтальным,
+    // сам открываем «Пуск». Если открыта плитка или есть свёрнутая закладка,
+    // их состояние не перебиваем.
+    LaunchedEffect(isLandscape, panel, minimizedApp) {
+        if (isLandscape && panel == null && minimizedApp == null) {
+            startOpen = true
+        }
+    }
 
     LaunchedEffect(message) {
         message?.let {
@@ -358,7 +371,7 @@ fun MainScreen(vm: MainViewModel) {
         vm.dismissUpdate()
     }
 
-    BackHandler(enabled = panel != null || startOpen) {
+    BackHandler(enabled = isLandscape && (panel != null || startOpen)) {
         when {
             panel == "update" -> dismissUpdatePanel()
             panel != null -> closeCurrentApp()
@@ -438,7 +451,9 @@ fun MainScreen(vm: MainViewModel) {
             )
         }
 
-    if (creating || editing != null) {
+    // ModalBottomSheet живёт в отдельном окне, поэтому в портрете его нельзя
+    // оставлять поверх экрана требования горизонтали.
+    if (isLandscape && (creating || editing != null)) {
         RuleEditorSheet(
             initial = editing,
             onDismiss = {
@@ -673,6 +688,12 @@ fun MainScreen(vm: MainViewModel) {
             ) {
                 UpdateSheet(vm = vm, onDismiss = { dismissUpdatePanel() })
             }
+        }
+
+        // Жёсткие ворота ориентации: в портрете виден только этот экран.
+        // После поворота горизонтально LaunchedEffect выше сам откроет «Пуск».
+        if (!isLandscape) {
+            LandscapeRequiredScreen()
         }
     }
 }
