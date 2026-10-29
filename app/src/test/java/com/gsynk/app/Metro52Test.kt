@@ -4,8 +4,10 @@ import com.gsynk.app.core.LifeAutomations
 import com.gsynk.app.core.ReleaseNews
 import com.gsynk.app.core.Rule
 import com.gsynk.app.ui.Catalog
+import com.gsynk.app.ui.startCellDp
 import com.gsynk.app.ui.startLayoutForMaxRows
 import com.gsynk.app.ui.startPlacements
+import com.gsynk.app.ui.startTargetRows
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -57,6 +59,32 @@ class Metro52Test {
                     }
                 }
             }
+        }
+    }
+
+    @Test
+    fun startHasNoSearchAndTilesUseFullLandscapeHeight() {
+        val start = File("src/main/java/com/gsynk/app/ui/StartScreen.kt").readText()
+        val main = File("src/main/java/com/gsynk/app/ui/MainScreen.kt").readText()
+        assertFalse("поиск в «Пуске» должен быть удалён", start.contains("поиск в пуске"))
+        assertFalse("текстовое поле поиска должно быть удалено", start.contains("GrapeTextField("))
+        assertFalse("callback поиска должен быть удалён", start.contains("onQueryChange"))
+        assertFalse("состояние запроса должно быть удалено", main.contains("var query"))
+        assertTrue("группа должна получать реальную высоту области плиток", start.contains("availableHeight ="))
+        assertTrue("группа должна занимать всю переданную высоту", start.contains(".height(availableHeight)"))
+
+        assertEquals(2, startTargetRows(180))
+        assertEquals(87, startCellDp(180, 2))
+        assertEquals(3, startTargetRows(280))
+        assertEquals(90, startCellDp(280, 3))
+        assertTrue(startCellDp(360, startTargetRows(360)) >= 116)
+
+        Catalog.Group.entries.forEach { group ->
+            val entries = Catalog.ALL.filter { it.group == group }
+            val layout = startLayoutForMaxRows(entries, startTargetRows(280))
+            val cell = startCellDp(280, layout.rows)
+            val occupiedHeight = cell * layout.rows + 5 * (layout.rows - 1).coerceAtLeast(0)
+            assertTrue("группа " + group.title + " снова сжалась в четверть экрана", occupiedHeight >= 250)
         }
     }
 
@@ -170,6 +198,6 @@ class Metro52Test {
         val settings = File(ui, "SettingsScreen.kt").readText()
         assertFalse(settings.contains("ModalBottomSheet"))
         assertFalse(settings.contains("Мультитул"))
-        assertEquals("5.0", ReleaseNews.VERSION)
+        assertEquals("5.3.1", ReleaseNews.VERSION)
     }
 }

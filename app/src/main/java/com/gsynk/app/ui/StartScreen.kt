@@ -136,6 +136,19 @@ internal fun startLayoutForMaxRows(entries: List<Catalog.Entry>, maxRows: Int): 
     return fallback
 }
 
+internal const val START_MIN_CELL_DP = 88
+internal const val START_MAX_CELL_DP = 132
+
+/** Сколько строк плиток должно занять всю доступную высоту альбомного экрана. */
+internal fun startTargetRows(gridHeightDp: Int, gapDp: Int = 5): Int =
+    ((gridHeightDp + gapDp) / (START_MIN_CELL_DP + gapDp)).coerceIn(2, 5)
+
+/** Размер одной ячейки: строки делят между собой всю высоту, а не четверть экрана. */
+internal fun startCellDp(gridHeightDp: Int, rows: Int, gapDp: Int = 5): Int {
+    val safeRows = rows.coerceAtLeast(1)
+    return ((gridHeightDp - gapDp * (safeRows - 1)) / safeRows).coerceIn(48, START_MAX_CELL_DP)
+}
+
 /**
  * Единственный экран в портретной ориентации. Он специально ничего не запускает
  * по касанию: GSYNK сам откроется, когда телефон повернут горизонтально.
@@ -307,8 +320,6 @@ fun EmptyHomeScreen(
 /** Windows 8 Start: группы идут вправо, заголовок категории стоит над её плитками. */
 @Composable
 fun StartMenuScreen(
-    query: String,
-    onQueryChange: (String) -> Unit,
     favorites: Set<String>,
     minimizedRoute: String?,
     liveLinesFor: (Catalog.Entry) -> List<String>,
@@ -316,9 +327,9 @@ fun StartMenuScreen(
     onToggleFavorite: (Catalog.Entry) -> Unit,
     onCloseHome: () -> Unit
 ) {
-    val groups = remember(query, favorites) {
+    val groups = remember(favorites) {
         buildList {
-            if (query.isBlank() && favorites.isNotEmpty()) {
+            if (favorites.isNotEmpty()) {
                 val favoriteEntries = Catalog.ALL
                     .filter { it.id in favorites }
                     .sortedByDescending { it.hot }
@@ -328,7 +339,7 @@ fun StartMenuScreen(
             }
             Catalog.Group.entries.forEach { group ->
                 val entries = Catalog.ALL
-                    .filter { it.group == group && it.matches(query) }
+                    .filter { it.group == group }
                     .sortedWith(
                         compareByDescending<Catalog.Entry> { it.id in favorites }
                             .thenByDescending { it.hot }
@@ -386,51 +397,55 @@ fun StartMenuScreen(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 8.dp),
+                    .height(48.dp)
+                    .padding(start = 10.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Text("пуск", color = TextPrimary, fontSize = 30.sp, fontWeight = FontWeight.Light)
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("пуск", color = TextPrimary, fontSize = 36.sp, fontWeight = FontWeight.Light)
-                    Text("GSYNK " + BuildConfig.VERSION_NAME + " · все плитки", color = Color.White.copy(alpha = 0.62f), fontSize = 12.sp)
+                    Text(
+                        "GSYNK " + BuildConfig.VERSION_NAME + " · плитки на весь экран",
+                        color = Color.White.copy(alpha = 0.72f),
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "листайте вправо → · долгое нажатие — «моё»",
+                        color = Color.White.copy(alpha = 0.52f),
+                        fontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Box(
                     Modifier
-                        .size(44.dp)
+                        .size(38.dp)
                         .clip(RectangleShape)
                         .background(Color.White.copy(alpha = 0.09f))
                         .border(1.dp, Color.White.copy(alpha = 0.2f), RectangleShape)
                         .clickable { onCloseHome() },
                     contentAlignment = Alignment.Center
-                ) { Text("⌂", color = TextPrimary, fontSize = 21.sp, fontWeight = FontWeight.Light) }
+                ) { Text("⌂", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Light) }
             }
-            GrapeTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                label = "поиск в пуске: шифры, школа, nfc, нагрузка…",
-                modifier = Modifier
+            BoxWithConstraints(
+                Modifier
+                    .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-            )
-            Spacer(Modifier.height(12.dp))
-            if (groups.isEmpty()) {
-                Box(Modifier.fillMaxWidth().padding(24.dp)) {
-                    Text(
-                        "ничего не нашлось — попробуйте «шифр», «школа», «настройки» или «новости»",
-                        color = Color.White.copy(alpha = 0.72f),
-                        fontSize = 14.sp
-                    )
-                }
-            } else {
+            ) {
+                val tileViewportHeight = maxHeight
                 LazyRow(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(start = 20.dp, end = 28.dp, bottom = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(30.dp)
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 8.dp, end = 16.dp, top = 2.dp, bottom = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
                     items(groups, key = { it.key }) { groupData ->
                         StartGroup(
                             title = groupData.title,
                             hint = groupData.hint,
                             entries = groupData.entries,
+                            availableHeight = (tileViewportHeight - 8.dp).coerceAtLeast(160.dp),
                             favorites = favorites,
                             minimizedRoute = minimizedRoute,
                             liveLinesFor = liveLinesFor,
@@ -440,12 +455,6 @@ fun StartMenuScreen(
                     }
                 }
             }
-            Text(
-                "листайте вправо →   ·   долгое нажатие — «моё»",
-                color = Color.White.copy(alpha = 0.58f),
-                fontSize = 12.sp,
-                modifier = Modifier.padding(start = 20.dp, bottom = 12.dp)
-            )
         }
     }
 }
@@ -455,29 +464,46 @@ private fun StartGroup(
     title: String,
     hint: String,
     entries: List<Catalog.Entry>,
+    availableHeight: Dp,
     favorites: Set<String>,
     minimizedRoute: String?,
     liveLinesFor: (Catalog.Entry) -> List<String>,
     onOpen: (Catalog.Entry) -> Unit,
     onToggleFavorite: (Catalog.Entry) -> Unit
 ) {
-    val gap = 4.dp
-    BoxWithConstraints {
-        // Альбомный экран широкий, но низкий: сначала ограничиваем число строк,
-        // расширяя группу вправо, и только потом подбираем размер ячейки.
-        val availableForGrid = (maxHeight - 62.dp).coerceAtLeast(96.dp)
-        val targetRows = ((availableForGrid + gap) / (54.dp + gap)).toInt().coerceIn(2, 9)
-        val layout = remember(entries, targetRows) { startLayoutForMaxRows(entries, targetRows) }
-        val columns = layout.columns
-        val rows = layout.rows
-        val placements = layout.placements
-        val cell = ((availableForGrid - gap * (rows - 1)) / rows).coerceIn(34.dp, 62.dp)
-        val gridWidth = cell * columns + gap * (columns - 1)
-        val gridHeight = cell * rows + gap * (rows - 1)
-    Column(Modifier.width(gridWidth)) {
-        Text(title, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Light)
-        Text(hint, color = Color.White.copy(alpha = 0.64f), fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.height(10.dp))
+    val gap = 5.dp
+    val headingHeight = 44.dp
+    val gridAvailable = (availableHeight - headingHeight).coerceAtLeast(120.dp)
+    val targetRows = startTargetRows(gridAvailable.value.toInt())
+    val layout = remember(entries, targetRows) { startLayoutForMaxRows(entries, targetRows) }
+    val columns = layout.columns
+    val rows = layout.rows
+    val placements = layout.placements
+    val cell = startCellDp(gridAvailable.value.toInt(), rows).dp
+    val gridWidth = cell * columns + gap * (columns - 1).coerceAtLeast(0)
+    val gridHeight = cell * rows + gap * (rows - 1).coerceAtLeast(0)
+
+    Column(
+        Modifier
+            .width(gridWidth)
+            .height(availableHeight)
+    ) {
+        Text(
+            title,
+            color = TextPrimary,
+            fontSize = 19.sp,
+            fontWeight = FontWeight.Light,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            hint,
+            color = Color.White.copy(alpha = 0.64f),
+            fontSize = 10.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Spacer(Modifier.height(6.dp))
         Box(Modifier.width(gridWidth).height(gridHeight)) {
             entries.forEachIndexed { index, entry ->
                 val place = placements[index]
@@ -494,7 +520,6 @@ private fun StartGroup(
                 )
             }
         }
-    }
     }
 }
 
@@ -524,8 +549,9 @@ private fun StartTile(
         }
     }
     val shape = RoundedCornerShape(2.dp)
-    val wide = width >= 104.dp
-    val compact = height < 54.dp
+    val wide = width >= 112.dp
+    val roomy = height >= 76.dp
+    val compact = height < 64.dp
     Box(
         modifier
             .width(width)
@@ -547,14 +573,14 @@ private fun StartTile(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
-            .padding(if (compact) 5.dp else 7.dp)
+            .padding(if (compact) 6.dp else 9.dp)
     ) {
         Row(Modifier.align(Alignment.TopStart), verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = ImageVector.vectorResource(entry.iconRes),
                 contentDescription = null,
                 tint = Color.White.copy(alpha = 0.94f),
-                modifier = Modifier.size(if (compact) 13.dp else if (wide) 18.dp else 16.dp)
+                modifier = Modifier.size(if (compact) 16.dp else if (wide) 26.dp else 22.dp)
             )
             Spacer(Modifier.weight(1f))
             val badge = when {
@@ -579,13 +605,13 @@ private fun StartTile(
             Text(
                 entry.title,
                 color = Color.White,
-                fontSize = if (compact) 9.sp else if (wide) 12.sp else 10.sp,
-                lineHeight = if (compact) 10.sp else if (wide) 13.sp else 11.sp,
+                fontSize = if (compact) 10.sp else if (wide) 15.sp else 13.sp,
+                lineHeight = if (compact) 11.sp else if (wide) 16.sp else 14.sp,
                 fontWeight = FontWeight.Light,
                 maxLines = if (compact) 1 else 2,
                 overflow = TextOverflow.Ellipsis
             )
-            if (wide) {
+            if (wide || roomy) {
                 AnimatedContent(
                     targetState = cleanLines[lineIndex],
                     transitionSpec = {
@@ -597,8 +623,8 @@ private fun StartTile(
                     Text(
                         line,
                         color = Color.White.copy(alpha = 0.78f),
-                        fontSize = 9.sp,
-                        lineHeight = 10.sp,
+                        fontSize = 10.sp,
+                        lineHeight = 11.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

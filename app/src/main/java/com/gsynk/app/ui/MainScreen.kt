@@ -147,7 +147,6 @@ fun MainScreen(vm: MainViewModel) {
     var featureRoute by remember { mutableStateOf<String?>(null) }
     var activeRoute by remember { mutableStateOf<String?>(null) }
     var minimizedApp by remember { mutableStateOf<MinimizedAppState?>(null) }
-    var query by remember { mutableStateOf("") }
     var favorites by remember { mutableStateOf(Catalog.loadFavorites(context)) }
 
     // подземелье на два телефона: сопряжение NFC + игра по Wi-Fi
@@ -436,8 +435,6 @@ fun MainScreen(vm: MainViewModel) {
     Box(Modifier.fillMaxSize()) {
         if (startOpen) {
             StartMenuScreen(
-                query = query,
-                onQueryChange = { query = it },
                 favorites = favorites,
                 minimizedRoute = minimizedApp?.route,
                 liveLinesFor = { entry -> homeTileLines(entry) },
