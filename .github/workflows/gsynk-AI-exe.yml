@@ -88,4 +88,3 @@ jobs:
             gh release create $tag --prerelease --title "GSYNK-AI для Windows" --notes "Автоматическая сборка GSYNK-AI.exe (GitHub Actions)."
           }
           gh release upload $tag "windows/GSYNK-AI/GSYNK-AI-win64.zip" --clobber
-          gh release upload $tag "windows/GSYNK-AI/GSYNK-AI-win64.zip" --clobber
