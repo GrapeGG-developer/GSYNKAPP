@@ -45,10 +45,10 @@ jobs:
         shell: pwsh
         working-directory: windows/GSYNK-AI
         run: |
-          $extra = ""
+          $extra = @()
           python -c "import torch_directml" 2>$null
-          if ($LASTEXITCODE -eq 0) { $extra = "--collect-all torch_directml" ; Write-Host "DirectML найден, включаю в сборку" }
-          pyinstaller --noconfirm --onedir --windowed --name GSYNK-AI --icon icon.ico --collect-submodules gsai $extra app.py
+          if ($LASTEXITCODE -eq 0) { $extra = @("--collect-all", "torch_directml") ; Write-Host "DirectML найден, включаю в сборку" }
+          pyinstaller --noconfirm --onedir --windowed --name GSYNK-AI --icon icon.ico --collect-submodules gsai @extra app.py
           if ($LASTEXITCODE -ne 0) { throw "PyInstaller упал" }
           Get-ChildItem dist\GSYNK-AI | Select-Object -First 20
 
