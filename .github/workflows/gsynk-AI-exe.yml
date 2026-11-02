@@ -25,6 +25,9 @@ jobs:
 
       - name: Updater regression tests
         working-directory: windows/GSYNK-AI
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
         run: python tests/run_updater_tests.py
 
       - name: Install dependencies
