@@ -118,7 +118,10 @@ start "" "{home / exe_name}"
             zf.extractall(extract_dir)
         inner = extract_dir / "GSYNK-AI"
         src = inner if inner.exists() else extract_dir
-        runner = home / "run.bat"
+        if is_frozen() and (src / "GSYNK-AI.exe").exists():
+            runner = home / "GSYNK-AI.exe"
+        else:
+            runner = home / "run.bat"
         bat = f"""@echo off
 :waitloop
 tasklist /FI "PID eq {pid}" | find "{pid}" >nul && (timeout /t 1 /nobreak >nul & goto waitloop)
