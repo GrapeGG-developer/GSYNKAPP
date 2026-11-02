@@ -72,7 +72,7 @@ object Catalog {
         SCREEN("экран", "GSYNKPRG, формы и живые стеклянные поверхности"),
         HARDWARE("железо", "датчики, байты, регистры и экран — каждая плитка напрямую"),
         LOAD("нагрузка", "процессор, ускоритель, температура"),
-        AI("умное", "локальный ИИ и настоящие сети"),
+        AI("GSYNK-AI", "свои модели с ПК и командный ии"),
         CRYPTO("шифраторы", "шифры, машинный уровень, GS-TLS и авто-расшифровка"),
         ANON("анонимность", "персона, аватарки, ники, следы и GANONYM"),
         SYSTEM("система", "новости, разрешения, отчёты и обновление"),
@@ -194,11 +194,11 @@ object Catalog {
         Entry("chronicle2", "статистика нагрузки", "график за час", Group.LOAD, Gioui.Size.SMALL, 17, BOLT, "flag:chronicle", 38, words = listOf("график", "нагрузка")),
 
         // ——— умное ———
-        Entry("ai", "умный помощник", "настоящие сети и офлайн", Group.AI, Gioui.Size.MEDIUM, 3, SHIELD, "page:ai", 76, fresh = false, words = listOf("ии", "gpt", "нейросеть")),
-        Entry("chat", "локальный ии", "чат без интернета", Group.AI, Gioui.Size.SMALL, 4, SHIELD, "flag:chat", 60, words = listOf("офлайн", "болталка")),
-        Entry("daily", "каждый день", "новое при открытии", Group.AI, Gioui.Size.MEDIUM, 5, TIME, "page:everyday", 82, fresh = false, words = listOf("день", "серия", "подарок")),
-        Entry("surprise", "рулетка", "случайная функция", Group.AI, Gioui.Size.SMALL, 6, VOLUME, "page:surprise", 66, fresh = false, words = listOf("рандом", "случайно")),
-        Entry("easter", "пасхалки", "секреты внутри", Group.AI, Gioui.Size.SMALL, 7, COPY, "page:easter", 58, fresh = false, words = listOf("секрет", "секреты")),
+        Entry("gsai", "GSYNK-AI модели", "свои нейросети с ПК — общение на телефоне", Group.AI, Gioui.Size.WIDE, 3, SHIELD, "page:gsai", 98, fresh = true, words = listOf("ии", "gpt", "нейросеть", "модели", "gsynk-ai", "чат", "модель")),
+        Entry("chat", "командный ии", "понимает команды, без интернета", Group.AI, Gioui.Size.SMALL, 4, SHIELD, "flag:chat", 88, fresh = true, words = listOf("бот", "команды", "помощник", "офлайн")),
+        Entry("daily", "каждый день", "новое при открытии", Group.FUN, Gioui.Size.MEDIUM, 5, TIME, "page:everyday", 82, fresh = false, words = listOf("день", "серия", "подарок")),
+        Entry("surprise", "рулетка", "случайная функция", Group.FUN, Gioui.Size.SMALL, 6, VOLUME, "page:surprise", 66, fresh = false, words = listOf("рандом", "случайно")),
+        Entry("easter", "пасхалки", "секреты внутри", Group.FUN, Gioui.Size.SMALL, 7, COPY, "page:easter", 58, fresh = false, words = listOf("секрет", "секреты")),
 
         // ——— шифраторы (GIOUI/5.0) ———
         Entry("ciphers", "шифраторы", "все шифры в одном окне", Group.CRYPTO, Gioui.Size.WIDE, 2, SHIELD, "page:ciphers", 97, fresh = true, words = listOf("шифр", "зашифровать", "расшифровать", "код", "base64", "крипто")),
@@ -226,7 +226,7 @@ object Catalog {
         Entry("schedulenew", "новое правило", "день, время и уровни", Group.SCHEDULE, Gioui.Size.MEDIUM, 9, TUNE, "panel:schedule_new", 94, fresh = false, words = listOf("создать", "править", "автоматика")),
         Entry("schedulestatus", "статус расписания", "ближайшее изменение", Group.SCHEDULE, Gioui.Size.SMALL, 10, BOLT, "panel:schedule", 84, fresh = false, words = listOf("автопилот", "следующее", "активно")),
         Entry("lifeauto", "автоматизации жизни", "школа, дом, учёба и отдых", Group.SCHEDULE, Gioui.Size.WIDE, 11, TIME, "panel:lifeauto", 99, fresh = true, words = listOf("школа", "учёба", "дом", "youtube", "ютуб", "сцены", "автоматика")),
-        Entry("news", "новости 5.4.1", "«Пуск» вправо и случайные блики только по краям", Group.SYSTEM, Gioui.Size.WIDE, 3, TIME, "page:news", 99, fresh = true, words = listOf("новости", "обновление", "релиз", "5.4.1", "5.4.0", "gsynkprg", "стекло", "анимации", "центр экрана", "вправо", "краевые блики", "случайные блики")),
+        Entry("news", "новости 5.5.0", "GSYNK-AI: свои ИИ-модели с ПК, старые ИИ удалены", Group.SYSTEM, Gioui.Size.WIDE, 3, TIME, "page:news", 99, fresh = true, words = listOf("новости", "обновление", "релиз", "5.5.0", "5.4.1", "gsynk-ai", "ии", "модели", "нейросеть", "обучение", "командный ии")),
         Entry("settings", "настройки", "автопилот, обновления и доступы", Group.SYSTEM, Gioui.Size.MEDIUM, 4, TUNE, "panel:settings", 98, fresh = true, words = listOf("настройки", "параметры", "доступы", "кастомизация")),
         Entry("quick", "быстрые переключатели", "фонарик, тишина, сирена", Group.SYSTEM, Gioui.Size.MEDIUM, 5, BOLT, "tool:quick", 87, fresh = true, words = listOf("фонарик", "не беспокоить", "сирена", "вибрация")),
         Entry("permissions", "разрешения", "всё, что нужно приложению", Group.SYSTEM, Gioui.Size.SMALL, 9, SHIELD, "panel:settings", 70, words = listOf("права", "доступ")),

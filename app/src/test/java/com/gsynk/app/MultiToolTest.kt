@@ -6,7 +6,7 @@ import com.gsynk.app.core.Passwords
 import com.gsynk.app.core.PayloadCodec
 import com.gsynk.app.core.Rule
 import com.gsynk.app.core.CrashAnalyzer
-import com.gsynk.app.core.RealtimeAi
+import com.gsynk.app.core.TurboMode
 import com.gsynk.app.core.RogueGame
 import com.gsynk.app.core.ReportSanitizer
 import com.gsynk.app.core.RuleSort
@@ -307,46 +307,28 @@ class MultiToolTest {
         assertTrue("игроки стоят рядом, но не в одной точке", world.players[0].x != world.players[1].x)
     }
 
-    // ————— нейросеть на телефоне —————
+    // ————— режим переливания (бывшая нейросеть удалена в 5.5.0) —————
 
     @Test
-    fun ai_returnsProbabilities() {
-        val ai = RealtimeAi(1L)
-        val result = ai.infer(floatArrayOf(0.9f, 0.5f, 0.4f, 0.8f, 0.5f, 0.3f, 0.2f, 0.8f))
-        assertEquals(RealtimeAi.OUTPUT, result.size)
-        val sum = result.sum()
-        assertTrue("вероятности должны давать единицу, а не $sum", sum > 0.99f && sum < 1.01f)
-        result.forEach { assertTrue(it in 0f..1f) }
+    fun turboModeNightByClock() {
+        assertEquals(TurboMode.NIGHT, TurboMode.decide(23, 0f))
+        assertEquals(TurboMode.NIGHT, TurboMode.decide(3, 99f))
+        assertEquals(TurboMode.NIGHT, TurboMode.decide(6, 0f))
     }
 
     @Test
-    fun ai_isDeterministicForSameWeights() {
-        val one = RealtimeAi(7L)
-        val two = RealtimeAi(7L)
-        val features = floatArrayOf(0.2f, 0.2f, 0.3f, 0.9f, 0.9f, 0.1f, 0.1f, 0.8f)
-        assertEquals(
-            one.infer(features).toList(),
-            two.infer(features).toList()
-        )
+    fun turboModeActiveUnderLoad() {
+        assertEquals(TurboMode.ACTIVE, TurboMode.decide(12, 20f))
+        assertEquals(TurboMode.CALM, TurboMode.decide(12, 1f))
+        assertEquals(TurboMode.CALM, TurboMode.decide(7, 0f))
     }
 
     @Test
-    fun ai_learnsAndLowersLoss() {
-        val ai = RealtimeAi(5L)
-        val features = floatArrayOf(0.9f, 0.8f, 0.3f, 0.8f, 0.5f, 0.2f, 0.2f, 0.8f)
-        repeat(40) { ai.learn(features, batteryPercent = 90) }
-        assertTrue(ai.steps == 40L)
-        assertTrue("после обучения ошибка должна быть вменяемой, а не ${ai.lastLoss}", ai.lastLoss < 1.2f)
-    }
-
-    @Test
-    fun ai_operationsCountMatchesLayers() {
-        val ai = RealtimeAi()
-        val expected = RealtimeAi.INPUT * RealtimeAi.HIDDEN_ONE +
-            RealtimeAi.HIDDEN_ONE * RealtimeAi.HIDDEN_TWO +
-            RealtimeAi.HIDDEN_TWO * RealtimeAi.OUTPUT
-        assertEquals(expected, ai.operationsPerRun)
-        assertTrue("сеть должна быть достаточно тяжёлой для нагрузки", expected > 500)
+    fun turboModeNames() {
+        assertEquals("ночной", TurboMode.name(TurboMode.NIGHT))
+        assertEquals("энергичный", TurboMode.name(TurboMode.ACTIVE))
+        assertEquals("спокойный", TurboMode.name(TurboMode.CALM))
+        assertEquals("спокойный", TurboMode.name(99))
     }
 
     // ————— анализатор отчётов —————

@@ -20,7 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.gsynk.app.core.ChipInfo
-import com.gsynk.app.core.RealtimeAi
+import com.gsynk.app.core.TurboMode
 import com.gsynk.app.core.TurboState
 import com.gsynk.app.ui.theme.GrapeAmber
 import com.gsynk.app.ui.theme.GrapeCyan
@@ -46,8 +46,6 @@ fun TurboScreen(vm: MainViewModel, onBack: () -> Unit) {
     val fps by TurboState.gpuFps.collectAsState()
     val operations by TurboState.totalOperations.collectAsState()
     val mode by TurboState.aiMode.collectAsState()
-    val confidence by TurboState.aiConfidence.collectAsState()
-    val loss by TurboState.aiLoss.collectAsState()
     val temp by TurboState.batteryTemp.collectAsState()
 
     DisposableEffect(Unit) {
@@ -112,26 +110,22 @@ fun TurboScreen(vm: MainViewModel, onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Нейросеть на телефоне")
+        SectionTitle("Режим переливания фона")
         Spacer(Modifier.height(9.dp))
         SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.45f)) {
             Text(
-                text = "режим: ${RealtimeAi.modeName(mode)}",
+                text = "режим: ${TurboMode.name(mode)}",
                 color = if (active) GrapeCyan else TextDim,
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium),
                 fontWeight = FontWeight.Light
             )
             Spacer(Modifier.height(8.dp))
-            InfoRow("Уверенность", "${(confidence * 100).toInt()}%")
-            InfoRow("Ошибка обучения", "%.4f".format(loss))
-            InfoRow("Слои", "8 → 24 → 16 → 3")
-            InfoRow("Операций за прогон", "${RealtimeAi().operationsPerRun}")
-            Spacer(Modifier.height(8.dp))
             Text(
-                text = "Сеть никуда не отправляет данные: она живёт в памяти приложения и " +
-                    "дообучается по вашим привычкам — нагрузке, памяти, времени суток. " +
-                    "От её ответа зависит переливание фона: спокойный режим — медленное, " +
-                    "энергичный — быстрое, ночной — почти без движения.",
+                text = "Раньше переливанием фона управляла крошечная встроенная нейросеть — " +
+                    "в GSYNK 5.5.0 все старые ИИ удалены, остались только ваши модели из GSYNK-AI " +
+                    "и командный бот. Теперь режим честно выбирается правилами: ночью — ночной, " +
+                    "под высокой нагрузкой — энергичный, иначе спокойный. От режима зависит " +
+                    "скорость переливания фона во всём приложении.",
                 color = TextDim,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
             )

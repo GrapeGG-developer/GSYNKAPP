@@ -1,6 +1,5 @@
 package com.gsynk.app
 
-import com.gsynk.app.core.AiNet
 import com.gsynk.app.core.Bench
 import com.gsynk.app.core.BleRadar
 import com.gsynk.app.core.EverydayFaceDown
@@ -264,64 +263,6 @@ class BenchLinkTest {
         )
     }
 
-    // ————— ИИ-сеть —————
-
-    @Test
-    fun offlineIsDefaultAndNeedsNothing() {
-        val config = AiNet.Config()
-        assertTrue(config.isOffline)
-        assertTrue(config.ready)
-        assertEquals("офлайн-помощник GSYNK", AiNet.describe(config))
-    }
-
-    @Test
-    fun providerIdsAreUniqueAndHaveAddresses() {
-        val ids = AiNet.PROVIDERS.map { it.id }
-        assertEquals(ids.size, ids.distinct().size)
-        AiNet.PROVIDERS.forEach { provider ->
-            assertTrue(provider.title.isNotBlank())
-            assertTrue(provider.hint.isNotBlank())
-            // У сетевых провайдеров есть адрес и модель; у офлайн-режима их нет по замыслу.
-            if (provider.id != "offline") {
-                assertTrue(provider.baseUrl.startsWith("http"))
-                assertTrue(provider.model.isNotBlank())
-            }
-        }
-        assertEquals("offline", AiNet.PROVIDERS.first().id)
-    }
-
-    @Test
-    fun settingsFallBackToProviderDefaults() {
-        val groq = AiNet.PROVIDERS.first { it.id == "groq" }
-        val config = AiNet.Config(provider = "groq", baseUrl = "  ", model = "", key = "ключ")
-        assertEquals(groq.baseUrl, config.address)
-        assertEquals(groq.model, config.modelName)
-        assertFalse(config.isOffline)
-    }
-
-    @Test
-    fun remoteProviderWithoutKeyIsNotReady() {
-        // У облачных провайдеров без ключа отправлять нечего.
-        val openai = AiNet.PROVIDERS.first { it.id == "openai" }
-        assertTrue(openai.needsKey)
-        assertFalse(AiNet.Config(provider = "openai", key = "").ready)
-        assertTrue(AiNet.Config(provider = "openai", key = "sk-тест").ready)
-        // Своя модель в домашней сети ключа не требует.
-        assertTrue(AiNet.Config(provider = "ollama").ready)
-    }
-
-    @Test
-    fun addressLosesTrailingSlash() {
-        val config = AiNet.Config(provider = "ollama", baseUrl = "http://192.168.1.2:11434/")
-        assertEquals("http://192.168.1.2:11434", config.address)
-    }
-
-    @Test
-    fun systemHintKeepsAssistantInCharacter() {
-        assertTrue(AiNet.SYSTEM.contains("GSYNK"))
-        assertTrue(AiNet.SYSTEM.contains("по-русски"))
-    }
-
     // ————— телефон лицом вниз —————
 
     @Test
@@ -332,6 +273,3 @@ class BenchLinkTest {
         assertFalse(EverydayFaceDown.isFaceDown(9.8f))
     }
 }
-
-/** Мелочь для читаемости: провайдер без сети — это офлайн. */
-private fun AiNet.Provider.isOffline(): Boolean = id == "offline"

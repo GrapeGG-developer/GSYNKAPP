@@ -16,7 +16,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
-import com.gsynk.app.core.RealtimeAi
 import com.gsynk.app.core.TurboState
 import kotlinx.coroutines.isActive
 
@@ -143,7 +142,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawFallback(
     drawRect(
         brush = Brush.linearGradient(
             colors = listOf(
-                RealtimeAi.modeName(mode.toInt()).let { Color(0xFF7C3AED) }.copy(alpha = 0.35f),
+                Color(0xFF7C3AED).copy(alpha = 0.35f),
                 Color.Transparent,
                 Color(0xFF22C55E).copy(alpha = 0.28f)
             ),

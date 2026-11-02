@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
-import android.os.SystemClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,10 +19,33 @@ import kotlinx.coroutines.withContext
 import java.util.Calendar
 
 /**
+ * Режим переливания фона. Раньше его выбирала крошечная встроенная нейросеть —
+ * в GSYNK 5.5.0 все старые встроенные ИИ удалены, и режим честно считается
+ * простыми правилами по времени суток и нагрузке.
+ */
+object TurboMode {
+    const val CALM = 0
+    const val ACTIVE = 1
+    const val NIGHT = 2
+
+    fun name(mode: Int): String = when (mode) {
+        ACTIVE -> "энергичный"
+        NIGHT -> "ночной"
+        else -> "спокойный"
+    }
+
+    fun decide(hourOfDay: Int, cpuGflops: Float): Int = when {
+        hourOfDay >= 23 || hourOfDay < 7 -> NIGHT
+        cpuGflops > 5f -> ACTIVE
+        else -> CALM
+    }
+}
+
+/**
  * Состояние нагрузки: сюда пишет вычислитель, отсюда читают экран и фон.
  *
  * Фон подписан на [active] и [progress]: пока нагрузка идёт, градиент циклично
- * переливается, а скорость переливания задаёт нейросеть.
+ * переливается со скоростью текущего режима [TurboMode].
  */
 object TurboState {
 
@@ -39,12 +61,10 @@ object TurboState {
     /** Индекс процветания: сколько всего операций посчитано. */
     val totalOperations = MutableStateFlow(0L)
 
-    /** Выход нейросети: 0 спокойный, 1 энергичный, 2 ночной. */
-    val aiMode = MutableStateFlow(RealtimeAi.MODE_CALM)
-    val aiConfidence = MutableStateFlow(0f)
-    val aiLoss = MutableStateFlow(0f)
+    /** Режим переливания: 0 спокойный, 1 энергичный, 2 ночной (см. [TurboMode]). */
+    val aiMode = MutableStateFlow(TurboMode.CALM)
 
-    /** Фаза переливания фона, 0..1 — её крутит ИИ. */
+    /** Фаза переливания фона, 0..1. */
     val progress = MutableStateFlow(0f)
 
     /** Температура батареи в градусах, чтобы не перегреть телефон. */
@@ -59,11 +79,11 @@ object TurboState {
 }
 
 /**
- * Вычислитель «турбо»: грузит процессор на всех ядрах, крутит нейросеть и
- * подсказывает фону, как переливаться.
+ * Вычислитель «турбо»: грузит процессор на всех ядрах и подсказывает фону,
+ * как переливаться.
  *
  * Считает честно: перемножение матриц в float на каждом ядре, замер за секунду,
- * оценка в миллиардах операций. Плюс каждые 200 мс — прогон и шаг обучения сети.
+ * оценка в миллиардах операций. Каждые 200 мс обновляется режим переливания.
  * Видеоускоритель грузит экранный шейдер (см. `GpuField`), его кадры попадают
  * сюда через [TurboState.gpuFps].
  */
@@ -73,7 +93,6 @@ class TurboEngine(private val context: Context) {
     private var workers: Job? = null
     private var brain: Job? = null
 
-    private val ai = RealtimeAi()
     private var frame = 0L
     private var heatStop = false
 
@@ -103,34 +122,13 @@ class TurboEngine(private val context: Context) {
             val calendar = Calendar.getInstance()
             while (isActive && TurboState.active.value) {
                 val snapshot = runCatching { DeviceStats.snapshot(context) }.getOrNull()
-                val memory = Runtime.getRuntime()
-                val heapUsed = (memory.totalMemory() - memory.freeMemory()).toFloat() /
-                    memory.maxMemory().toFloat()
                 calendar.timeInMillis = System.currentTimeMillis()
 
-                val features = floatArrayOf(
-                    (TurboState.cpuGflops.value / 40f).coerceIn(0f, 1f),
-                    (TurboState.gpuFps.value / 120f).coerceIn(0f, 1f),
-                    ((snapshot?.batteryTempC?.toFloat() ?: 30f) / 60f).coerceIn(0f, 1f),
-                    ((snapshot?.batteryPercent ?: 100).toFloat() / 100f).coerceIn(0f, 1f),
-                    calendar.get(Calendar.HOUR_OF_DAY) / 24f,
-                    heapUsed.coerceIn(0f, 1f),
-                    (SystemClock.elapsedRealtime() / 3_600_000f / 24f).coerceIn(0f, 1f),
-                    (snapshot?.cores ?: cores).toFloat() / 12f
+                val best = TurboMode.decide(
+                    calendar.get(Calendar.HOUR_OF_DAY),
+                    TurboState.cpuGflops.value
                 )
-
-                val prediction = ai.learn(features, snapshot?.batteryPercent ?: 100)
-                var best = 0
-                var bestValue = prediction[0]
-                for (i in prediction.indices) {
-                    if (prediction[i] > bestValue) {
-                        bestValue = prediction[i]
-                        best = i
-                    }
-                }
                 TurboState.aiMode.value = best
-                TurboState.aiConfidence.value = prediction[best]
-                TurboState.aiLoss.value = ai.lastLoss
                 val temperature = snapshot?.batteryTempC?.toFloat() ?: 0f
                 TurboState.batteryTemp.value = temperature
 
@@ -147,18 +145,17 @@ class TurboEngine(private val context: Context) {
                 // переливание фона: скорость зависит от режима ИИ,
                 // поэтому картинка меняется вместе с поведением сети
                 val speed = when (best) {
-                    RealtimeAi.MODE_ACTIVE -> 0.055f
-                    RealtimeAi.MODE_NIGHT -> 0.012f
+                    TurboMode.ACTIVE -> 0.055f
+                    TurboMode.NIGHT -> 0.012f
                     else -> 0.030f
                 }
                 TurboState.progress.value = (TurboState.progress.value + speed) % 1f
 
                 if (frame % 45L == 0L) {
-                    val sure = (prediction[best] * 100).toInt()
                     val speedText = "%.1f".format(TurboState.cpuGflops.value)
                     AppLog.event(
                         "Турбо",
-                        "режим ${RealtimeAi.modeName(best)} (уверенность $sure проц.), " +
+                        "режим ${TurboMode.name(best)}, " +
                             "$speedText млрд оп/с, ${TurboState.gpuFps.value.toInt()} кадров/с"
                     )
                 }
@@ -177,7 +174,7 @@ class TurboEngine(private val context: Context) {
         workers = null
         brain = null
         TurboState.reset()
-        AppLog.event("Турбо", "нагрузка выключена, сеть обучена на ${ai.steps} прогонах")
+        AppLog.event("Турбо", "нагрузка выключена")
     }
 
     fun release() {

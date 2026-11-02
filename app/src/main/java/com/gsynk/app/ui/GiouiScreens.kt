@@ -695,7 +695,7 @@ fun SurpriseScreen(onBack: () -> Unit) {
  */
 
 val GiouiPageIds: List<String> = listOf(
-    "effects", "radius", "everyday", "easter", "surprise", "ai", "bench",
+    "effects", "radius", "everyday", "easter", "surprise", "gsai", "bench",
     "echo", "eyes", "pulse", "news",
     // Шифраторы — один экран, разные стартовые пресеты.
     "ciphers", "cipherlock", "ciphergrape", "cipherauto", "cipherpig",
@@ -712,7 +712,7 @@ fun GiouiPage(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
         "everyday" -> { EverydayScreen(onBack); return true }
         "easter" -> { EasterScreen(onBack); return true }
         "surprise" -> { SurpriseScreen(onBack); return true }
-        "ai" -> { AiScreen(onBack); return true }
+        "gsai" -> { GsaiModelsScreen(onBack); return true }
         "bench" -> { BenchScreen(vm, onBack); return true }
         "echo" -> { EchoRulerScreen(onBack); return true }
         "eyes" -> { EyeScreen(onBack); return true }

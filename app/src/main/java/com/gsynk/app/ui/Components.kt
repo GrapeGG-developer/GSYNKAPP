@@ -101,7 +101,7 @@ import com.gsynk.app.ui.theme.BgBottomA
 import com.gsynk.app.ui.theme.BgBottomB
 import com.gsynk.app.ui.theme.BgMidA
 import com.gsynk.app.ui.theme.BgMidB
-import com.gsynk.app.core.RealtimeAi
+import com.gsynk.app.core.TurboMode
 import com.gsynk.app.core.TurboState
 import com.gsynk.app.ui.theme.BgTopA
 import com.gsynk.app.ui.theme.BgTopB
@@ -182,8 +182,8 @@ fun AnimatedGrapeBackground(
 
                 val accent = if (turboActive) {
                     when (aiMode) {
-                        RealtimeAi.MODE_ACTIVE -> Color(0xFF7C3AED)
-                        RealtimeAi.MODE_NIGHT -> Color(0xFF2563EB)
+                        TurboMode.ACTIVE -> Color(0xFF7C3AED)
+                        TurboMode.NIGHT -> Color(0xFF2563EB)
                         else -> Color(0xFF22C55E)
                     }
                 } else {

@@ -1,9 +1,9 @@
-# GSYNK 5.4.1 — мультитул для телефона на GSYNKPRG
+# GSYNK 5.5.0 — мультитул для телефона на GSYNKPRG
 
 **GSYNK** — приложение-мультитул для Android: расписание яркости и громкости, связь
 «GSYNK рядом» с Grape Link/NFC, нагрузка на процессор, видеоускоритель и нейросеть,
-единый GSYNKPRG (Premium Realtime Glass) с живым анимированным фоном, локальная ИИ-модель с чатом прямо
-на телефоне, повседневные автоматизации, прямые железные опыты и низкий уровень, 42 шифра
+единый GSYNKPRG (Premium Realtime Glass) с живым анимированным фоном, свои ИИ-модели из Windows-программы
+GSYNK-AI (создаются и обучаются на вашем ПК, а общаются прямо на телефоне), повседневные автоматизации, прямые железные опыты и низкий уровень, 42 шифра
 (до байт-кода, ASM, процессорного дампа, GS-TLS и GANONYM), категория анонимности,
 мини-игры и обновление по воздуху. Интерфейс запускается только в горизонтальной
 альбомной ориентации: в портрете виден экран требования, а после поворота «Пуск»
@@ -24,7 +24,8 @@
 
 | Версия | Ссылка |
 |---|---|
-| **5.4.1** (текущая, «Пуск» вправо и блики только по краям, versionCode 27) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v5.4.1/GSYNK-v5.4.1-debug.apk |
+| **5.5.0** (текущая, GSYNK-AI: свои ИИ-модели с ПК, versionCode 28) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v5.5.0/GSYNK-v5.5.0-debug.apk |
+| 5.4.1 («Пуск» вправо и блики только по краям, versionCode 27) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v5.4.1/GSYNK-v5.4.1-debug.apk |
 | 5.4.0 (GSYNKPRG, плитки по центру экрана, versionCode 26) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v5.4.0/GSYNK-v5.4.0-debug.apk |
 | 5.3.1 (плитки на весь экран, без поиска, versionCode 25) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v5.3.1/GSYNK-v5.3.1-debug.apk |
 | 5.3.0 (автообновление и очистка APK, versionCode 24) | https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/v5.3.0/GSYNK-v5.3.0-debug.apk |
@@ -296,8 +297,8 @@ Grape Link; пользовательских NFC-дверей на других 
 
 | Проверка | Результат |
 |---|---|
-| Юнит-тесты (`testDebugUnitTest`) | **346 / 346** (правила, автоматизации жизни, движки, железо, сеть, обновления, все 42 шифра и многослойная расшифровка, GS-TLS/GANONYM, анонимность, низкий уровень, каталог, раскладка «Пуска» и guard-ы интерфейса) |
-| Android Lint (`lintDebug`) | **0 ошибок/Fatal**, 86 Warning и 51 Hint |
+| Юнит-тесты (`testDebugUnitTest`) | **347 / 347** (правила, автоматизации жизни, движки, железо, сеть, обновления, все 42 шифра и многослойная расшифровка, GS-TLS/GANONYM, анонимность, низкий уровень, каталог, раскладка «Пуска», guard-ы интерфейса и движок GSYNK-AI) |
+| Android Lint (`lintDebug`) | **0 ошибок/Fatal**, 85 Warning и 54 Hint |
 | Сборка (`assembleDebug`) | успешно, APK ~38 МБ |
 | Компиляция | без ошибок; предупреждения только про доступные обновления зависимостей |
 
