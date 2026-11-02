@@ -177,6 +177,13 @@ def friendly_error(text: str) -> str:
                 "(обучение пойдёт на процессоре, ему памяти хватает всегда).")
     if "датасет слишком маленький" in low:
         return "Датасет слишком маленький для обучения. Добавьте диалогов на вкладке «Датасет»."
+    if "updateerror:" in low or "обновлен" in low and ("github" in low or "скач" in low or "папк" in low):
+        last = next((ln.strip() for ln in reversed(text.splitlines()) if ln.strip()), text)
+        for prefix in ("UpdateError:", "RuntimeError:"):
+            if last.startswith(prefix):
+                last = last[len(prefix):].strip()
+                break
+        return last
     if "не хватает видеопамяти даже" in low:
         last = next((ln.strip() for ln in reversed(text.splitlines()) if ln.strip()), text)
         return last
@@ -277,13 +284,18 @@ class MainWindow(QMainWindow):
     def info(self, text: str) -> None:
         QMessageBox.information(self, "GSYNK-AI", text)
 
-    def run_async(self, fn, on_done, silent: bool = False) -> None:
+    def run_async(self, fn, on_done, silent: bool = False, on_failed=None) -> None:
         worker = FuncWorker(fn)
         worker.done.connect(on_done)
         if silent:
             worker.failed.connect(lambda _: None)
         else:
-            worker.failed.connect(self.error)
+            def failed(text):
+                if on_failed is not None:
+                    on_failed(text)
+                self.error(text)
+
+            worker.failed.connect(failed)
         worker.finished.connect(lambda: self.workers.remove(worker) if worker in self.workers else None)
         self.workers.append(worker)
         worker.start()
@@ -1156,7 +1168,10 @@ class MainWindow(QMainWindow):
             else:
                 self.update_status.setText("у вас последняя версия GSYNK-AI")
 
-        self.run_async(lambda: updater.check_update(self.settings.repo), done)
+        def failed(_text):
+            self.update_status.setText("не удалось проверить обновление — смотрите текст ошибки выше")
+
+        self.run_async(lambda: updater.check_update(self.settings.repo), done, on_failed=failed)
 
     def apply_update(self) -> None:
         update = getattr(self, "pending_update", None)
@@ -1166,10 +1181,19 @@ class MainWindow(QMainWindow):
         self.update_btn.setText("качаю обновление…")
 
         def job():
-            updater.download_and_apply(update)
-            return True
+            try:
+                updater.download_and_apply(update)
+                return ""
+            except Exception as exc:  # показываем человеку и разблокируем кнопку ниже
+                return str(exc) or exc.__class__.__name__
 
-        def done(_):
+        def done(error_text):
+            if error_text:
+                self.update_btn.setEnabled(True)
+                self.update_btn.setText(f"⬆ Обновление GSYNK-AI {update['version']} — установить")
+                self.update_status.setText("обновление не установилось — можно попробовать ещё раз")
+                self.error(error_text)
+                return
             self.info("Обновление скачано. GSYNK-AI сейчас закроется, обновится и запустится снова.")
             QApplication.quit()
 

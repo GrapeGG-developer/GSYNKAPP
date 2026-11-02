@@ -23,6 +23,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Updater regression tests
+        working-directory: windows/GSYNK-AI
+        run: python tests/run_updater_tests.py
+
       - name: Install dependencies
         shell: pwsh
         run: |
@@ -67,7 +71,7 @@ jobs:
         working-directory: windows/GSYNK-AI
         run: |
           Compress-Archive -Path dist\GSYNK-AI -DestinationPath GSYNK-AI-win64.zip -Force
-          Get-Item GSYNK-AI-win64.zip | Select-Object Name, Length
+          Get-Item GSYNK-AI-win64.zip, dist\GSYNK-AI\GSYNK-AI.exe | Select-Object Name, Length
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -88,3 +92,6 @@ jobs:
             gh release create $tag --prerelease --title "GSYNK-AI для Windows" --notes "Автоматическая сборка GSYNK-AI.exe (GitHub Actions)."
           }
           gh release upload $tag "windows/GSYNK-AI/GSYNK-AI-win64.zip" --clobber
+          # Служебный мост для сломанного апдейтера 1.0.3/1.0.4: он ищет именно GSYNK-AI.exe.
+          # Это exe из той же onedir-сборки; вручную без соседней папки _internal его качать не надо.
+          gh release upload $tag "windows/GSYNK-AI/dist/GSYNK-AI/GSYNK-AI.exe" --clobber
