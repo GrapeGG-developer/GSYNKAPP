@@ -70,15 +70,21 @@ def list_server_models(repo: str = DEFAULT_REPO) -> list[dict]:
 
 
 def _ensure_models_release(repo: str, token: str) -> dict:
+    # ВАЖНО: релиз моделей обязан быть prerelease, иначе GitHub сделает его "latest"
+    # и автообновление самого GSYNK (releases/latest) начнёт видеть не APK-релиз.
     status, release = _request("GET", f"{API}/repos/{repo}/releases/tags/{MODELS_TAG}", token, ok_404=True)
     if status != 404:
+        if not release.get("prerelease"):
+            payload = json.dumps({"prerelease": True}).encode()
+            _, release = _request("PATCH", f"{API}/repos/{repo}/releases/{release['id']}", token,
+                                   data=payload, ctype="application/json")
         return release
     payload = json.dumps({
         "tag_name": MODELS_TAG,
         "name": "GSYNK-AI — модели",
         "body": "Файлы моделей GSYNK-AI (.gsai). Каталог: AI-models/index.json в репозитории. "
                 "Приложение GSYNK само находит здесь модели и запускает их на телефоне.",
-        "draft": False, "prerelease": False,
+        "draft": False, "prerelease": True,
     }).encode()
     _, release = _request("POST", f"{API}/repos/{repo}/releases", token, data=payload, ctype="application/json")
     return release
