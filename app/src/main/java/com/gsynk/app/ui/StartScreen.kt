@@ -55,6 +55,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,6 +81,7 @@ import com.gsynk.app.BuildConfig
 import com.gsynk.app.R
 import com.gsynk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -371,6 +373,54 @@ fun EmptyHomeScreen(
 }
 
 /**
+ * Сплеш запуска EXP: логотип GSYNK въезжает пружинно при входе в приложение,
+ * как раньше открывался приветственный экран, затем MainScreen уводит его вверх.
+ */
+@Composable
+fun SplashLogoScreen() {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val logoScale by animateFloatAsState(
+        if (shown) 1f else 0.72f,
+        spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "splashLogoScale"
+    )
+    val logoAlpha by animateFloatAsState(if (shown) 1f else 0f, tween(320), label = "splashLogoAlpha")
+    AnimatedGrapeBackground {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .windowInsetsPadding(WindowInsets.navigationBars),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.graphicsLayer {
+                    alpha = logoAlpha
+                    scaleX = logoScale
+                    scaleY = logoScale
+                    translationY = (1f - logoAlpha) * 26f
+                }
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.grapescript_logo),
+                    contentDescription = "Логотип Grape Script",
+                    modifier = Modifier.width(118.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Spacer(Modifier.height(14.dp))
+                Text("GSYNK", color = TextPrimary, fontSize = 46.sp, fontWeight = FontWeight.Light, letterSpacing = 3.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("лента времени · EXP", color = Color.White.copy(alpha = 0.70f), fontSize = 13.sp, fontWeight = FontWeight.Light, letterSpacing = 2.sp)
+                Spacer(Modifier.height(6.dp))
+                Text("GSYNKPRG · Premium Realtime Glass", color = Color.White.copy(alpha = 0.45f), fontSize = 10.sp, letterSpacing = 1.sp)
+            }
+        }
+    }
+}
+
+/**
  * GSYNKPRG Start EXP — «лента времени» в духе Pebble. Приложение портретное,
  * «Пуск» открывается на точке «сейчас»: вверх — прошлое (новости, уведомления
  * приложения и настройки), вниз — будущее (уменьшенные плитки по категориям).
@@ -443,10 +493,17 @@ fun StartMenuScreen(
                         .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("пуск", color = TextPrimary, fontSize = 21.sp, fontWeight = FontWeight.Light)
-                    Spacer(Modifier.width(9.dp))
+                    Image(
+                        painter = painterResource(R.drawable.grapescript_logo),
+                        contentDescription = "Логотип Grape Script",
+                        modifier = Modifier.height(24.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text("GSYNK", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Light, letterSpacing = 1.sp)
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        "GSYNK " + BuildConfig.VERSION_NAME + " EXP · лента времени · GSYNKPRG",
+                        "пуск · " + BuildConfig.VERSION_NAME + " EXP · лента времени",
                         color = Color.White.copy(alpha = 0.66f),
                         fontSize = 10.sp,
                         maxLines = 1,
@@ -886,8 +943,40 @@ fun MetroAppShell(
     onMinimize: () -> Unit,
     content: @Composable () -> Unit
 ) {
+    var visible by remember(title) { mutableStateOf(false) }
+    var leaving by remember(title) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(title) {
+        visible = false
+        delay(16L)
+        visible = true
+    }
+    val shown = visible && !leaving
+    val shellAlpha by animateFloatAsState(if (shown) 1f else 0f, tween(if (leaving) 190 else 260), label = "shellAlpha")
+    val shellScale by animateFloatAsState(
+        if (shown) 1f else 0.97f,
+        spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "shellScale"
+    )
+    fun closeAnimated(action: () -> Unit) {
+        if (leaving) return
+        leaving = true
+        scope.launch {
+            delay(200L)
+            action()
+        }
+    }
     AnimatedGrapeBackground {
-        Column(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = shellAlpha
+                    scaleX = shellScale
+                    scaleY = shellScale
+                    translationY = (1f - shellAlpha) * 22f
+                }
+        ) {
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -917,7 +1006,7 @@ fun MetroAppShell(
                             .size(width = 36.dp, height = 28.dp)
                             .clip(RectangleShape)
                             .background(Color.White.copy(alpha = 0.06f))
-                            .clickable { onMinimize() },
+                            .clickable { closeAnimated(onMinimize) },
                         contentAlignment = Alignment.Center
                     ) {
                         Text("—", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Light)
@@ -946,35 +1035,17 @@ fun MetroAppShell(
                             .clip(RectangleShape)
                             .background(Color(0xFFE81123).copy(alpha = 0.72f))
                             .border(1.dp, Color.White.copy(alpha = 0.22f), RectangleShape)
-                            .clickable { onClose() },
+                            .clickable { closeAnimated(onClose) },
                         contentAlignment = Alignment.Center
                     ) {
                         Text("×", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Light)
                     }
                 }
             }
-            var visible by remember(title) { mutableStateOf(false) }
-            LaunchedEffect(title) {
-                visible = false
-                delay(16L)
-                visible = true
-            }
-            val contentAlpha by animateFloatAsState(if (visible) 1f else 0f, tween(260), label = "shellAlpha")
-            val contentScale by animateFloatAsState(
-                if (visible) 1f else 0.985f,
-                spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy),
-                label = "shellScale"
-            )
             Box(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .graphicsLayer {
-                        alpha = contentAlpha
-                        scaleX = contentScale
-                        scaleY = contentScale
-                        translationY = (1f - contentAlpha) * 14f
-                    }
             ) {
                 content()
             }

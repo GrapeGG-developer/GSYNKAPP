@@ -4,7 +4,13 @@ package com.gsynk.app.ui
 
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -148,6 +154,8 @@ fun MainScreen(vm: MainViewModel) {
     var activeRoute by remember { mutableStateOf<String?>(null) }
     var minimizedApp by remember { mutableStateOf<MinimizedAppState?>(null) }
     var favorites by remember { mutableStateOf(Catalog.loadFavorites(context)) }
+    // Сплеш запуска: логотип GSYNK с анимацией при входе, как раньше.
+    var splashVisible by remember { mutableStateOf(true) }
 
     // подземелье на два телефона: сопряжение NFC + игра по Wi-Fi
     var coopInvite by remember { mutableStateOf<com.gsynk.app.core.NfcLink.GameInvite?>(null) }
@@ -164,6 +172,11 @@ fun MainScreen(vm: MainViewModel) {
         if (isPortrait && panel == null && minimizedApp == null) {
             startOpen = true
         }
+    }
+
+    LaunchedEffect(Unit) {
+        delay(1500)
+        splashVisible = false
     }
 
     LaunchedEffect(message) {
@@ -433,27 +446,38 @@ fun MainScreen(vm: MainViewModel) {
     }
 
     Box(Modifier.fillMaxSize()) {
-        if (startOpen) {
-            StartMenuScreen(
-                favorites = favorites,
-                minimizedRoute = minimizedApp?.route,
-                liveLinesFor = { entry -> homeTileLines(entry) },
-                onOpen = { entry ->
-                    activeRoute = entry.route
-                    Catalog.open(context, entry)
-                },
-                onToggleFavorite = { entry ->
-                    favorites = if (entry.id in favorites) favorites - entry.id else favorites + entry.id
-                    Catalog.saveFavorites(context, favorites)
-                },
-                onCloseHome = { startOpen = false }
-            )
-        } else {
-            EmptyHomeScreen(
-                onOpenStart = { startOpen = true },
-                minimizedTitle = minimizedApp?.title,
-                onResumeMinimized = { resumeMinimizedApp() }
-            )
+        // «Пуск» и пустой дом сменяют друг друга с анимацией, как окно оболочки:
+        // подъём снизу с лёгким масштабом при открытии и затухание вниз при закрытии.
+        AnimatedContent(
+            targetState = startOpen,
+            transitionSpec = {
+                (fadeIn(tween(260)) + slideInVertically(tween(320)) { it / 6 } + scaleIn(initialScale = 0.985f, animationSpec = tween(320))) togetherWith
+                    (fadeOut(tween(170)) + slideOutVertically(tween(220)) { it / 8 } + scaleOut(targetScale = 0.99f, animationSpec = tween(220)))
+            },
+            label = "startSwitch"
+        ) { open ->
+            if (open) {
+                StartMenuScreen(
+                    favorites = favorites,
+                    minimizedRoute = minimizedApp?.route,
+                    liveLinesFor = { entry -> homeTileLines(entry) },
+                    onOpen = { entry ->
+                        activeRoute = entry.route
+                        Catalog.open(context, entry)
+                    },
+                    onToggleFavorite = { entry ->
+                        favorites = if (entry.id in favorites) favorites - entry.id else favorites + entry.id
+                        Catalog.saveFavorites(context, favorites)
+                    },
+                    onCloseHome = { startOpen = false }
+                )
+            } else {
+                EmptyHomeScreen(
+                    onOpenStart = { startOpen = true },
+                    minimizedTitle = minimizedApp?.title,
+                    onResumeMinimized = { resumeMinimizedApp() }
+                )
+            }
         }
 
     // ModalBottomSheet живёт в отдельном окне, поэтому в ландшафте его нельзя
@@ -700,6 +724,16 @@ fun MainScreen(vm: MainViewModel) {
         // Экран ниже — страховка для редких широких окон и складных устройств.
         if (!isPortrait) {
             PortraitRequiredScreen()
+        }
+
+        // Сплеш запуска поверх всего: фирменная шапка-логотип GSYNK
+        // появляется при входе и уходит вверх, открывая ленту времени.
+        AnimatedVisibility(
+            visible = splashVisible && isPortrait,
+            enter = fadeIn(tween(180)),
+            exit = fadeOut(tween(360)) + slideOutVertically(tween(400)) { -it / 3 }
+        ) {
+            SplashLogoScreen()
         }
     }
 }
