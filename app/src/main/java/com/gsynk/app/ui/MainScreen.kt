@@ -132,7 +132,7 @@ fun MainScreen(vm: MainViewModel) {
 
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isPortrait = configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
     val snackbar = remember { SnackbarHostState() }
 
     var editing by remember { mutableStateOf<Rule?>(null) }
@@ -157,11 +157,11 @@ fun MainScreen(vm: MainViewModel) {
     val profile = remember { DeviceProfile.detect(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Запуск без лишних касаний: как только телефон стал горизонтальным,
-    // сам открываем «Пуск». Если открыта плитка или есть свёрнутая закладка,
+    // Запуск без лишних касаний: EXP-портрет сам открывает «Пуск» — ленту времени
+    // на точке «сейчас». Если открыта плитка или есть свёрнутая закладка,
     // их состояние не перебиваем.
-    LaunchedEffect(isLandscape, panel, minimizedApp) {
-        if (isLandscape && panel == null && minimizedApp == null) {
+    LaunchedEffect(isPortrait, panel, minimizedApp) {
+        if (isPortrait && panel == null && minimizedApp == null) {
             startOpen = true
         }
     }
@@ -378,7 +378,7 @@ fun MainScreen(vm: MainViewModel) {
         vm.dismissUpdate()
     }
 
-    BackHandler(enabled = isLandscape && (panel != null || startOpen)) {
+    BackHandler(enabled = isPortrait && (panel != null || startOpen)) {
         when {
             panel == "update" -> dismissUpdatePanel()
             panel != null -> closeCurrentApp()
@@ -456,9 +456,9 @@ fun MainScreen(vm: MainViewModel) {
             )
         }
 
-    // ModalBottomSheet живёт в отдельном окне, поэтому в портрете его нельзя
-    // оставлять поверх экрана требования горизонтали.
-    if (isLandscape && (creating || editing != null)) {
+    // ModalBottomSheet живёт в отдельном окне, поэтому в ландшафте его нельзя
+    // оставлять поверх экрана требования портрета.
+    if (isPortrait && (creating || editing != null)) {
         RuleEditorSheet(
             initial = editing,
             onDismiss = {
@@ -695,10 +695,11 @@ fun MainScreen(vm: MainViewModel) {
             }
         }
 
-        // Жёсткие ворота ориентации: в портрете виден только этот экран.
-        // После поворота горизонтально LaunchedEffect выше сам откроет «Пуск».
-        if (!isLandscape) {
-            LandscapeRequiredScreen()
+        // Жёсткие ворота ориентации EXP: приложение теперь только портретное,
+        // повернуть в горизонтальный режим нельзя (манифест фиксирует портрет).
+        // Экран ниже — страховка для редких широких окон и складных устройств.
+        if (!isPortrait) {
+            PortraitRequiredScreen()
         }
     }
 }

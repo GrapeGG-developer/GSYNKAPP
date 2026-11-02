@@ -191,8 +191,29 @@ def generate_russian_dataset(model_name: str, count: int = 2000, seed: int = 42)
     def add(q: str, a: str) -> None:
         dialogues.append([q, a])
 
+    op_word = {"+": "плюс", "-": "минус", "*": "умножить на"}
+
+    def math_q(a: int, op: str, b: int) -> str:
+        return rnd.choice([
+            f"сколько будет {a} {op} {b}?",
+            f"{a}{op}{b}",
+            f"{a} {op} {b}",
+            f"посчитай {a}{op}{b}",
+            f"реши пример: {a} {op} {b}",
+            f"{a} {op_word[op]} {b} — сколько?",
+        ])
+
+    # обязательная мелкая арифметика «голыми» примерами: живые люди пишут «2+2», а не только «сколько будет»
+    for a in range(1, 11):
+        for b in range(1, 11):
+            add(f"{a}+{b}", f"{a} + {b} = {a + b}.")
+            add(f"{a} * {b}", f"{a} * {b} = {a * b}.")
+    for a in range(2, 21):
+        b = rnd.randint(1, a)
+        add(f"{a}-{b}", f"{a} - {b} = {a - b}.")
+
     while len(dialogues) < count:
-        kind = rnd.randrange(14)
+        kind = rnd.randrange(15)
         if kind == 0:
             add(rnd.choice(_GREET_Q), rnd.choice(_GREET_A))
         elif kind == 1:
@@ -231,7 +252,7 @@ def generate_russian_dataset(model_name: str, count: int = 2000, seed: int = 42)
             else:
                 a, b = rnd.randint(2, 12), rnd.randint(2, 12)
                 ans = a * b
-            add(f"сколько будет {a} {op} {b}?", f"{a} {op} {b} = {ans}.")
+            add(math_q(a, op, b), f"{a} {op} {b} = {ans}.")
         elif kind == 9:
             food = rnd.choice(_FOODS)
             add(f"ты любишь {food}?", rnd.choice([
@@ -250,6 +271,17 @@ def generate_russian_dataset(model_name: str, count: int = 2000, seed: int = 42)
             add(rnd.choice(["расскажи шутку", "пошути", "расскажи анекдот", "развесели меня"]), rnd.choice(_JOKES))
         elif kind == 12:
             add(rnd.choice(["какая сегодня погода?", "что там с погодой?", "тепло сегодня?"]), rnd.choice(_WEATHER_A))
+        elif kind == 13:
+            a, b = rnd.randint(1, 20), rnd.randint(1, 20)
+            op = rnd.choice(["+", "-", "*"])
+            if op == "+":
+                ans = a + b
+            elif op == "-":
+                ans = a - b
+            else:
+                a, b = rnd.randint(1, 10), rnd.randint(1, 10)
+                ans = a * b
+            add(math_q(a, op, b), f"{a} {op} {b} = {ans}.")
         else:
             q = rnd.choice(["что ты умеешь?", "кто тебя создал?", "ты настоящий ии?", "ты умный?"])
             a = {

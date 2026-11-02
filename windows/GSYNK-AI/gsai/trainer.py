@@ -97,12 +97,32 @@ class Trainer:
             torch.from_numpy(ys).to(self.device),
         )
 
+    def _oom_shrink(self, st: TrainState) -> bool:
+        """Не хватило (видео)памяти: чистим кэши и уполовиниваем пакет. False — дальше некуда."""
+        import gc
+
+        self.opt.zero_grad(set_to_none=True)
+        gc.collect()
+        try:
+            if self.device.type == "cuda":
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
+        if self.batch <= 2:
+            return False
+        self.batch = max(2, self.batch // 2)
+        st.message = f"памяти не хватило — уменьшил пакет до {self.batch} и продолжил обучение"
+        if self.on_state:
+            self.on_state(st)
+        return True
+
     def train(self, max_steps: int, checkpoint_path: str | Path | None = None, save_every: int = 250) -> TrainState:
         self.model.train()
         self.stop_flag.clear()
         st = self.state
         st.running = True
         tokens_window = 0
+        tokens_done = 0
         t_window = time.perf_counter()
         tokens_per_epoch = max(1, len(self.data))
         try:
@@ -110,19 +130,33 @@ class Trainer:
                 lr = self._lr_at(st.step, max_steps)
                 for group in self.opt.param_groups:
                     group["lr"] = lr
-                x, y = self._batch()
-                _, loss = self.model(x, y)
-                self.opt.zero_grad(set_to_none=True)
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
-                self.opt.step()
-                value = float(loss.item())
+                try:
+                    x, y = self._batch()
+                    _, loss = self.model(x, y)
+                    self.opt.zero_grad(set_to_none=True)
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+                    self.opt.step()
+                    value = float(loss.item())
+                    step_tokens = int(x.numel())
+                    del x, y, loss
+                except RuntimeError as exc:
+                    text = str(exc).lower()
+                    if "out of memory" in text or "could not allocate" in text or "not enough" in text and "memory" in text:
+                        if self._oom_shrink(st):
+                            continue
+                        raise RuntimeError(
+                            "Не хватает видеопамяти даже для самого маленького пакета. "
+                            "Выберите модель меньшего размера или отключите ТУРБО, чтобы учиться на процессоре."
+                        ) from exc
+                    raise
                 st.step += 1
                 st.loss = value
                 st.loss_ema = value if st.loss_ema == 0 else 0.97 * st.loss_ema + 0.03 * value
                 st.lr = lr
-                tokens_window += int(x.numel())
-                st.epoch = (st.step * self.batch * self.model.cfg.block_size) / tokens_per_epoch
+                tokens_window += step_tokens
+                tokens_done += step_tokens
+                st.epoch = tokens_done / tokens_per_epoch
                 now = time.perf_counter()
                 if now - t_window >= 0.5:
                     st.tok_per_sec = tokens_window / (now - t_window)

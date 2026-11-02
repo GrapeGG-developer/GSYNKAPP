@@ -158,6 +158,7 @@ class TrainWorker(QThread):
                 self.state.emit({
                     "step": st.step, "loss": st.loss_ema, "tok": st.tok_per_sec,
                     "epoch": st.epoch, "lr": st.lr, "device": st.device,
+                    "batch": self.trainer.batch, "msg": st.message,
                 })
 
             self.trainer.on_state = emit
@@ -167,8 +168,24 @@ class TrainWorker(QThread):
             self.failed.emit(traceback.format_exc(limit=5))
 
 
+def friendly_error(text: str) -> str:
+    """Переводим технические ошибки на человеческий русский."""
+    low = text.lower()
+    if "out of memory" in low or "could not allocate" in low or ("not enough" in low and "memory" in low):
+        return ("Не хватило видеопамяти. Обычно обучение само уменьшает пакет и продолжается; "
+                "если ошибка повторяется — выберите размер модели поменьше или отключите ТУРБО "
+                "(обучение пойдёт на процессоре, ему памяти хватает всегда).")
+    if "датасет слишком маленький" in low:
+        return "Датасет слишком маленький для обучения. Добавьте диалогов на вкладке «Датасет»."
+    if "не хватает видеопамяти даже" in low:
+        last = next((ln.strip() for ln in reversed(text.splitlines()) if ln.strip()), text)
+        return last
+    last = next((ln.strip() for ln in reversed(text.splitlines()) if ln.strip()), text)
+    return f"Что-то пошло не так:\n{last}\n\nЕсли ошибка повторяется, сделайте скриншот и покажите его."
+
+
 class MainWindow(QMainWindow):
-    PAGES = ["🍇 Модели", "✨ Создать", "🗂 Датасет", "🔥 Обучение", "💬 Проверка в чате", "🚀 Выпуск", "⚙ Настройки"]
+    PAGES = ["🍇 1 · Модели", "✨ 2 · Создать", "🗂 3 · Датасет", "🔥 4 · Обучение", "💬 5 · Проверка в чате", "🚀 6 · Выпуск", "⚙ Настройки"]
 
     def __init__(self) -> None:
         super().__init__()
@@ -255,7 +272,7 @@ class MainWindow(QMainWindow):
             btn.setStyle(btn.style())
 
     def error(self, text: str) -> None:
-        QMessageBox.critical(self, "GSYNK-AI", text)
+        QMessageBox.critical(self, "GSYNK-AI", friendly_error(text))
 
     def info(self, text: str) -> None:
         QMessageBox.information(self, "GSYNK-AI", text)
@@ -687,6 +704,9 @@ class MainWindow(QMainWindow):
         lay.addWidget(label("Обучение", "title"))
         self.train_info = label("модель не выбрана", "dim")
         lay.addWidget(self.train_info)
+        self.train_hint = label("Как учить: 1) выберите число шагов, 2) «Учить!», 3) жмите «Стоп», когда loss перестанет заметно падать. "
+                                "Если видеокарте не хватит памяти, пакет (батч) уменьшится сам — обучение не упадёт.", "dim")
+        lay.addWidget(self.train_hint)
 
         ctl = QHBoxLayout()
         ctl.addWidget(label("Шагов в этом забеге:"))
@@ -706,6 +726,10 @@ class MainWindow(QMainWindow):
         self.stop_btn.setEnabled(False)
         self.stop_btn.clicked.connect(self.stop_training)
         ctl.addWidget(self.stop_btn)
+        self.reset_btn = QPushButton("↺ Сбросить обучение")
+        self.reset_btn.setToolTip("Удалить контрольную точку и словарь: модель начнёт учиться с нуля по текущему датасету")
+        self.reset_btn.clicked.connect(self.reset_training)
+        ctl.addWidget(self.reset_btn)
         ctl.addStretch(1)
         lay.addWidget(card(ctl))
 
@@ -720,8 +744,9 @@ class MainWindow(QMainWindow):
         self.stat_tok = label("скорость: —")
         self.stat_epoch = label("эпох пройдено: —")
         self.stat_device = label("устройство: —")
+        self.stat_batch = label("пакет (батч): —")
         self.cpu_label = label("CPU: —")
-        for i, w in enumerate([self.stat_step, self.stat_loss, self.stat_tok, self.stat_epoch, self.stat_device, self.cpu_label]):
+        for i, w in enumerate([self.stat_step, self.stat_loss, self.stat_tok, self.stat_epoch, self.stat_device, self.stat_batch, self.cpu_label]):
             stats.addWidget(w, i // 3, i % 3)
         stats_wrap = QVBoxLayout()
         stats_wrap.addLayout(stats)
@@ -757,33 +782,37 @@ class MainWindow(QMainWindow):
         self.settings.turbo = self.turbo_box.isChecked()
         self.settings.save()
         try:
-            tokenizer = self.tokenizer_for(proj)
+            ckpt = checkpoint_of(proj.name)
+            tokenizer = self.tokenizer_for(proj, rebuild=not ckpt.exists())
             stream = build_stream(proj, tokenizer)
             device, device_name = pick_device(self.settings.turbo)
-            ckpt = checkpoint_of(proj.name)
             if ckpt.exists():
                 model, _, _ = Trainer.load_checkpoint(ckpt, device)
                 if model.cfg.vocab_size != tokenizer.vocab_size:
                     self.error("Словарь изменился и не совпадает с контрольной точкой. "
-                               "Удалите checkpoint.pt в папке проекта, чтобы начать обучение заново.")
+                               "Нажмите «Сбросить обучение» на этой странице, чтобы начать с чистого листа по новому датасету.")
                     return
             else:
                 d, layers, heads, block, _, _ = SIZES[proj.size]
                 cfg = GsaiConfig(vocab_size=tokenizer.vocab_size, block_size=block, n_layer=layers, n_head=heads, n_embd=d)
                 model = GsaiGPT(cfg)
-            batch = 64 if self.settings.turbo and device.type != "cpu" else proj.batch
+            if device.type == "cpu":
+                batch = min(proj.batch, 32)
+            else:
+                batch = {"mini": 48, "lite": 32, "mid": 16, "max": 8}.get(proj.size, 16)
             self.trainer = Trainer(model, stream, device, device_name, lr=proj.lr, batch=batch)
         except Exception:
             self.error(traceback.format_exc(limit=4))
             return
         self.chart.points.clear()
-        self.train_worker = TrainWorker(self.trainer, self.trainer.state.step + self.steps_spin.value(), checkpoint_of(proj.name))
         self.trainer.state.step = proj.steps_done
+        self.train_worker = TrainWorker(self.trainer, proj.steps_done + self.steps_spin.value(), checkpoint_of(proj.name))
         self.train_worker.state.connect(self.on_train_state)
         self.train_worker.finished_ok.connect(self.on_train_done)
         self.train_worker.failed.connect(self.on_train_failed)
         self.start_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
+        self.reset_btn.setEnabled(False)
         self.train_worker.start()
 
     def on_train_state(self, st: dict) -> None:
@@ -792,7 +821,29 @@ class MainWindow(QMainWindow):
         self.stat_tok.setText(f"скорость: {st['tok']:.0f} ток/с")
         self.stat_epoch.setText(f"эпох пройдено: {st['epoch']:.2f}")
         self.stat_device.setText(f"устройство: {st['device']}")
+        self.stat_batch.setText(f"пакет (батч): {st.get('batch', '—')}")
+        if st.get("msg"):
+            self.train_hint.setText("⚠ " + st["msg"])
         self.chart.push(st["loss"])
+
+    def reset_training(self) -> None:
+        proj = self.require_project()
+        if proj is None or self.train_worker is not None:
+            return
+        if QMessageBox.question(self, "GSYNK-AI",
+                                f"Сбросить обучение модели «{proj.name}»? Контрольная точка и словарь будут удалены, "
+                                "следующее обучение начнётся с нуля по текущему датасету.") != QMessageBox.StandardButton.Yes:
+            return
+        for path in (checkpoint_of(proj.name), project_dir(proj.name) / "vocab.json"):
+            try:
+                path.unlink(missing_ok=True)
+            except Exception:
+                pass
+        proj.steps_done = 0
+        proj.best_loss = 0.0
+        save_project(proj)
+        self.refresh_train_labels()
+        self.info("Обучение сброшено. Теперь «Учить!» начнёт с чистого листа.")
 
     def stop_training(self) -> None:
         if self.trainer:
@@ -802,12 +853,14 @@ class MainWindow(QMainWindow):
         self.train_worker = None
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
+        self.reset_btn.setEnabled(True)
         self.error(text)
 
     def on_train_done(self, result: dict) -> None:
         self.train_worker = None
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(False)
+        self.reset_btn.setEnabled(True)
         if self.project:
             self.project.steps_done = result["step"]
             self.project.best_loss = result["loss"]

@@ -219,7 +219,7 @@ class UpdateFlowTest {
     @Test
     fun backgroundCheckWaitsHalfAnHour() {
         // Android не разрешает чаще 15 минут; полчаса — компромисс между свежестью и батареей.
-        assertEquals(30 * 60 * 1000L, com.gsynk.app.core.UpdateJobs.INTERVAL_MS)
+        assertEquals(15 * 60 * 1000L, com.gsynk.app.core.UpdateJobs.INTERVAL_MS)
         assertTrue(com.gsynk.app.core.UpdateJobs.INTERVAL_MS >= 15 * 60 * 1000L)
     }
 

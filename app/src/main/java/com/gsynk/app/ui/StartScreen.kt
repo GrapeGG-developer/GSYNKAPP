@@ -43,10 +43,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -82,6 +80,9 @@ import com.gsynk.app.BuildConfig
 import com.gsynk.app.R
 import com.gsynk.app.ui.theme.TextPrimary
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.max
 
 internal data class StartPlacement(val x: Int, val y: Int, val w: Int, val h: Int)
@@ -91,15 +92,6 @@ private data class StartGroupData(
     val title: String,
     val hint: String,
     val entries: List<Catalog.Entry>
-)
-
-private data class StartPageData(
-    val key: String,
-    val title: String,
-    val hint: String,
-    val entries: List<Catalog.Entry>,
-    val pageIndex: Int,
-    val pageCount: Int
 )
 
 internal fun startSpan(size: Gioui.Size): Pair<Int, Int> = when (size) {
@@ -144,9 +136,9 @@ internal const val START_GAP_DP = 6
 
 /** Целевая ширина ячейки для выбранного размера плиток. */
 internal fun startDesiredCellDp(tileScale: Int): Int = when (tileScale.coerceIn(1, 3)) {
-    1 -> 96
-    3 -> 128
-    else -> 112
+    1 -> 64
+    3 -> 84
+    else -> 72
 }
 
 /** Сколько колонок целиком помещается в ширину экрана. */
@@ -199,11 +191,11 @@ internal fun startPageChunks(
 }
 
 /**
- * Единственный экран в портретной ориентации. Он специально ничего не запускает
- * по касанию: GSYNK сам откроется, когда телефон повернут горизонтально.
+ * Единственный экран в альбомной ориентации (EXP: GSYNK теперь только портретный).
+ * Он специально ничего не запускает по касанию: GSYNK сам откроется в портрете.
  */
 @Composable
-fun LandscapeRequiredScreen() {
+fun PortraitRequiredScreen() {
     AnimatedGrapeBackground {
         val transition = rememberInfiniteTransition(label = "landscapePhone")
         val rock by transition.animateFloat(
@@ -256,7 +248,7 @@ fun LandscapeRequiredScreen() {
                 Spacer(Modifier.height(34.dp))
                 Box(
                     Modifier
-                        .size(width = 282.dp, height = 150.dp)
+                        .size(width = 150.dp, height = 282.dp)
                         .graphicsLayer {
                             rotationZ = rock
                             scaleX = pulse
@@ -270,9 +262,9 @@ fun LandscapeRequiredScreen() {
                     PrgGlassSheen(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6), seed = 531)
                     Icon(
                         imageVector = ImageVector.vectorResource(R.drawable.ic_phone_landscape),
-                        contentDescription = "Горизонтальный телефон",
+                        contentDescription = "Вертикальный телефон",
                         tint = Color.White.copy(alpha = 0.96f),
-                        modifier = Modifier.size(width = 246.dp, height = 123.dp)
+                        modifier = Modifier.size(width = 246.dp, height = 123.dp).graphicsLayer { rotationZ = 90f }
                     )
                 }
             }
@@ -281,9 +273,9 @@ fun LandscapeRequiredScreen() {
 }
 
 /**
- * Пустой альбомный дом после закрытия «Пуска» или сворачивания плитки.
+ * Пустой портретный дом после закрытия «Пуска» или сворачивания плитки.
  * Первичный запуск касания не требует: MainScreen сам открывает «Пуск»
- * сразу, как только конфигурация становится альбомной.
+ * сразу, как только появляется портретный экран.
  */
 @Composable
 fun EmptyHomeScreen(
@@ -356,7 +348,7 @@ fun EmptyHomeScreen(
                     if (minimizedTitle != null) {
                         "приложение свёрнуто в левый верхний угол"
                     } else {
-                        "альбомная ориентация включена"
+                        "EXP · лента времени: прошлое сверху, будущее снизу"
                     },
                     color = Color.White.copy(alpha = 0.82f),
                     fontSize = 15.sp,
@@ -378,7 +370,11 @@ fun EmptyHomeScreen(
     }
 }
 
-/** GSYNKPRG Start: полноэкранные страницы категорий листаются вправо, сетка целиком внутри экрана. */
+/**
+ * GSYNKPRG Start EXP — «лента времени» в духе Pebble. Приложение портретное,
+ * «Пуск» открывается на точке «сейчас»: вверх — прошлое (новости, уведомления
+ * приложения и настройки), вниз — будущее (уменьшенные плитки по категориям).
+ */
 @Composable
 fun StartMenuScreen(
     favorites: Set<String>,
@@ -410,6 +406,11 @@ fun StartMenuScreen(
                 }
             }
         }
+    }
+    // Прошлое ленты: от самого давнего (настройки) к ближайшему к «сейчас» (новости).
+    val pastEntries = remember {
+        listOf("settings", "permissions", "diag", "agent", "update", "news")
+            .mapNotNull { Catalog.byId(it) }
     }
     val desiredCell = startDesiredCellDp(UiTweaks.tileScale)
     AnimatedGrapeBackground {
@@ -445,7 +446,7 @@ fun StartMenuScreen(
                     Text("пуск", color = TextPrimary, fontSize = 21.sp, fontWeight = FontWeight.Light)
                     Spacer(Modifier.width(9.dp))
                     Text(
-                        "GSYNK " + BuildConfig.VERSION_NAME + " · GSYNKPRG · Premium Realtime Glass",
+                        "GSYNK " + BuildConfig.VERSION_NAME + " EXP · лента времени · GSYNKPRG",
                         color = Color.White.copy(alpha = 0.66f),
                         fontSize = 10.sp,
                         maxLines = 1,
@@ -468,50 +469,53 @@ fun StartMenuScreen(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
-                val viewportWidth = maxWidth
-                val viewportHeight = maxHeight
-                val contentWidthDp = (viewportWidth.value.toInt() - 20).coerceAtLeast(1)
-                val gridHeightDp = (viewportHeight.value.toInt() - 50).coerceAtLeast(1)
+                val contentWidthDp = (maxWidth.value.toInt() - 20).coerceAtLeast(1)
                 val columns = startColumnsForWidth(contentWidthDp, desiredCell)
-                val targetRows = startRowsForHeight(gridHeightDp, desiredCell)
-                val pages = remember(groups, columns, targetRows) {
-                    groups.flatMap { groupData ->
-                        val chunks = startPageChunks(groupData.entries, columns, targetRows)
-                        chunks.mapIndexed { pageIndex, pageEntries ->
-                            StartPageData(
-                                key = groupData.key + "-page-" + pageIndex,
-                                title = groupData.title,
-                                hint = if (pageIndex == 0) groupData.hint else "продолжение: " + groupData.title,
-                                entries = pageEntries,
-                                pageIndex = pageIndex,
-                                pageCount = chunks.size
+                val listState = rememberLazyListState()
+                val nowIndex = pastEntries.size + 1
+                var positioned by remember { mutableStateOf(false) }
+                LaunchedEffect(Unit) {
+                    if (!positioned) {
+                        listState.scrollToItem(nowIndex)
+                        positioned = true
+                    }
+                }
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    item(key = "past-head") {
+                        TimelineSectionLabel("↑ прошлое", "новости, уведомления и настройки — листай вверх")
+                    }
+                    items(pastEntries, key = { "past-" + it.id }) { entry ->
+                        TimelinePastCard(
+                            entry = entry,
+                            liveLines = liveLinesFor(entry),
+                            onClick = { onOpen(entry) }
+                        )
+                    }
+                    item(key = "now") { TimelineNowCard() }
+                    var runningIndex = 0
+                    groups.forEach { group ->
+                        val baseIndex = runningIndex
+                        runningIndex += group.entries.size
+                        item(key = "future-" + group.key) {
+                            TimelineGroupSection(
+                                group = group,
+                                columns = columns,
+                                baseIndex = baseIndex,
+                                favorites = favorites,
+                                minimizedRoute = minimizedRoute,
+                                liveLinesFor = liveLinesFor,
+                                onOpen = onOpen,
+                                onToggleFavorite = onToggleFavorite
                             )
                         }
                     }
-                }
-                val startListState = rememberLazyListState()
-                val pageSnap = rememberSnapFlingBehavior(startListState)
-                LazyRow(
-                    state = startListState,
-                    flingBehavior = pageSnap,
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    itemsIndexed(pages, key = { _, page -> page.key }) { pageNumber, page ->
-                        StartGroupPage(
-                            page = page,
-                            pageWidth = viewportWidth,
-                            pageHeight = viewportHeight,
-                            columns = columns,
-                            pageNumber = pageNumber,
-                            hasNextPage = pageNumber < pages.lastIndex,
-                            favorites = favorites,
-                            minimizedRoute = minimizedRoute,
-                            liveLinesFor = liveLinesFor,
-                            onOpen = onOpen,
-                            onToggleFavorite = onToggleFavorite
-                        )
+                    item(key = "future-end") {
+                        TimelineSectionLabel("конец будущего", "дальше — только следующие версии GSYNK")
                     }
                 }
             }
@@ -520,13 +524,142 @@ fun StartMenuScreen(
 }
 
 @Composable
-private fun StartGroupPage(
-    page: StartPageData,
-    pageWidth: Dp,
-    pageHeight: Dp,
+private fun TimelineSectionLabel(title: String, hint: String) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            title,
+            color = Color.White.copy(alpha = 0.55f),
+            fontSize = 11.sp,
+            letterSpacing = 2.sp,
+            maxLines = 1
+        )
+        Text(
+            hint,
+            color = Color.White.copy(alpha = 0.40f),
+            fontSize = 10.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+/** Карточка «прошлого»: широкая строка на всю ширину ленты. */
+@Composable
+private fun TimelinePastCard(
+    entry: Catalog.Entry,
+    liveLines: List<String>,
+    onClick: () -> Unit
+) {
+    val shape = skinShape("tile")
+    val line = liveLines.map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: entry.subtitle
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp)
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    listOf(entry.color.copy(alpha = 0.42f), Color.White.copy(alpha = 0.07f))
+                )
+            )
+            .border(1.dp, Color.White.copy(alpha = 0.20f), shape)
+            .clickable { onClick() }
+    ) {
+        PrgGlassSheen(Modifier.matchParentSize(), accent = entry.color, seed = entry.id.hashCode() + 7)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(entry.iconRes),
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.95f),
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    entry.title,
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Light,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    line,
+                    color = Color.White.copy(alpha = 0.72f),
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Text("›", color = Color.White.copy(alpha = 0.6f), fontSize = 20.sp)
+        }
+    }
+}
+
+/** Точка «сейчас» ленты: живые часы, с которых начинается каждый вход в «Пуск». */
+@Composable
+private fun TimelineNowCard() {
+    var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            nowMs = System.currentTimeMillis()
+            delay(15_000L)
+        }
+    }
+    val locale = remember { Locale("ru", "RU") }
+    val timeText = remember(nowMs) { SimpleDateFormat("HH:mm", locale).format(Date(nowMs)) }
+    val dateText = remember(nowMs) { SimpleDateFormat("EEEE, d MMMM", locale).format(Date(nowMs)) }
+    val shape = skinShape("sheet")
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp)
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    listOf(Color(0xFF8B5CF6).copy(alpha = 0.34f), Color.White.copy(alpha = 0.06f))
+                )
+            )
+            .border(1.dp, Color.White.copy(alpha = 0.30f), shape)
+    ) {
+        PrgGlassSheen(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6), seed = 560)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("· сейчас ·", color = Color.White.copy(alpha = 0.65f), fontSize = 11.sp, letterSpacing = 3.sp)
+            Text(timeText, color = TextPrimary, fontSize = 44.sp, fontWeight = FontWeight.Light)
+            Text(dateText, color = Color.White.copy(alpha = 0.78f), fontSize = 13.sp, fontWeight = FontWeight.Light)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "↑ прошлое: новости и настройки · ↓ будущее: плитки",
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/** Одна категория «будущего»: заголовок и плотная сетка уменьшенных квадратных плиток. */
+@Composable
+private fun TimelineGroupSection(
+    group: StartGroupData,
     columns: Int,
-    pageNumber: Int,
-    hasNextPage: Boolean,
+    baseIndex: Int,
     favorites: Set<String>,
     minimizedRoute: String?,
     liveLinesFor: (Catalog.Entry) -> List<String>,
@@ -534,68 +667,60 @@ private fun StartGroupPage(
     onToggleFavorite: (Catalog.Entry) -> Unit
 ) {
     val gap = START_GAP_DP.dp
-    val entries = page.entries
+    val entries = group.entries
     val placements = remember(entries, columns) { startPlacements(entries, columns) }
     val rows = max(1, placements.maxOfOrNull { it.y + it.h } ?: 1)
-    val availableWidthDp = (pageWidth.value.toInt() - 20).coerceAtLeast(1)
-    val availableGridHeightDp = (pageHeight.value.toInt() - 50).coerceAtLeast(1)
-    val cellWidthDp = startCellWidthDp(availableWidthDp, columns)
-    val cellWidth = cellWidthDp.dp
-    val cellHeight = startCellHeightDp(availableGridHeightDp, rows, cellWidthDp).dp
-    val gridWidth = cellWidth * columns + gap * (columns - 1).coerceAtLeast(0)
-    val gridHeight = cellHeight * rows + gap * (rows - 1).coerceAtLeast(0)
-    val shownTitle = buildString {
-        append(page.title)
-        if (page.pageCount > 1) append(" · " + (page.pageIndex + 1) + "/" + page.pageCount)
-        if (hasNextPage) append("  →")
-    }
-
-    Column(
+    BoxWithConstraints(
         Modifier
-            .width(pageWidth)
-            .height(pageHeight)
-            .padding(horizontal = 10.dp, vertical = 3.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp)
     ) {
-        Text(
-            shownTitle,
-            color = TextPrimary,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Light,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            page.hint,
-            color = Color.White.copy(alpha = 0.62f),
-            fontSize = 10.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(6.dp))
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center
+        val cellWidthDp = startCellWidthDp(maxWidth.value.toInt().coerceAtLeast(1), columns)
+        val cell = cellWidthDp.dp
+        val gridWidth = cell * columns + gap * (columns - 1).coerceAtLeast(0)
+        val gridHeight = cell * rows + gap * (rows - 1).coerceAtLeast(0)
+        Column(
+            Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(Modifier.width(gridWidth).height(gridHeight)) {
-                entries.forEachIndexed { index, entry ->
-                    val place = placements[index]
-                    StartTile(
-                        entry = entry,
-                        width = cellWidth * place.w + gap * (place.w - 1),
-                        height = cellHeight * place.h + gap * (place.h - 1),
-                        liveLines = liveLinesFor(entry),
-                        favorite = entry.id in favorites,
-                        minimized = entry.route == minimizedRoute,
-                        index = pageNumber * 18 + index,
-                        modifier = Modifier.offset(x = (cellWidth + gap) * place.x, y = (cellHeight + gap) * place.y),
-                        onClick = { onOpen(entry) },
-                        onLongClick = { onToggleFavorite(entry) }
-                    )
+            Text(
+                group.title,
+                color = TextPrimary,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Light,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                group.hint,
+                color = Color.White.copy(alpha = 0.58f),
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(6.dp))
+            Box(
+                Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(Modifier.width(gridWidth).height(gridHeight)) {
+                    entries.forEachIndexed { index, entry ->
+                        val place = placements[index]
+                        StartTile(
+                            entry = entry,
+                            width = cell * place.w + gap * (place.w - 1),
+                            height = cell * place.h + gap * (place.h - 1),
+                            liveLines = liveLinesFor(entry),
+                            favorite = entry.id in favorites,
+                            minimized = entry.route == minimizedRoute,
+                            index = baseIndex + index,
+                            modifier = Modifier.offset(x = (cell + gap) * place.x, y = (cell + gap) * place.y),
+                            onClick = { onOpen(entry) },
+                            onLongClick = { onToggleFavorite(entry) }
+                        )
+                    }
                 }
             }
         }
