@@ -4,21 +4,21 @@
    "id": "vinogradik",
    "name": "Виноградик",
    "icon": "🍇",
-   "description": "первая модель GSYNK-AI: болтает, считает и рассказывает факты о животных, городах и планетах",
-   "version": "1.0.0",
-   "params": 2065767,
-   "size": 3813872,
-   "sha256": "eec65de0dca451521af08b0d97e35b9fd509e6e5d77b079b33654db24f40d630",
+   "description": "первая модель GSYNK-AI: болтает, уверенно считает и рассказывает факты о животных, городах и планетах",
+   "version": "1.0.1",
+   "params": 2064997,
+   "size": 3813461,
+   "sha256": "b7789960a3bc745fa2a759397bdc320a7f35dfba5eff6b1f58f6fdcc6046ee48",
    "url": "https://github.com/GrapeGG-developer/GSYNKAPP/releases/download/AI-models/vinogradik.gsai",
    "architecture": {
-    "vocab_size": 615,
+    "vocab_size": 613,
     "block_size": 256,
     "n_layer": 4,
     "n_head": 4,
     "n_embd": 192
    },
-   "steps": 900,
-   "loss": 0.11816006840693541
+   "steps": 15272,
+   "loss": 0.007231995663112624
   }
  ]
 }
