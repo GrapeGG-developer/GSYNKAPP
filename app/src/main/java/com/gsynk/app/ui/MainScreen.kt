@@ -5,7 +5,6 @@ package com.gsynk.app.ui
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
@@ -13,6 +12,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -63,18 +63,22 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -108,7 +112,9 @@ import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
 import com.gsynk.app.ui.theme.GioBrush
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -154,8 +160,32 @@ fun MainScreen(vm: MainViewModel) {
     var activeRoute by remember { mutableStateOf<String?>(null) }
     var minimizedApp by remember { mutableStateOf<MinimizedAppState?>(null) }
     var favorites by remember { mutableStateOf(Catalog.loadFavorites(context)) }
-    // Сплеш запуска: логотип GSYNK с анимацией при входе, как раньше.
-    var splashVisible by remember { mutableStateOf(true) }
+    // Жидкие окна: одноразовая геометрия нажатой плитки, режим выхода и
+    // отложенное действие, которое выполнится только после уплывания окна.
+    var liquidLaunch by remember { mutableStateOf<LiquidWindowOrigin?>(null) }
+    var liquidLaunchSerial by remember { mutableIntStateOf(0) }
+    var liquidExitMode by remember { mutableStateOf<LiquidWindowExit?>(null) }
+    var liquidExitJob by remember { mutableStateOf<Job?>(null) }
+    var homeUnderlayStart by remember { mutableStateOf(true) }
+    val windowScope = rememberCoroutineScope()
+    var rootWindowShown by remember { mutableStateOf(false) }
+
+    fun prepareLiquidWindow() {
+        liquidExitJob?.cancel()
+        liquidExitJob = null
+        liquidExitMode = null
+    }
+
+    fun requestLiquidWindowExit(mode: LiquidWindowExit, action: () -> Unit) {
+        if (panel == null || liquidExitMode != null) return
+        liquidExitMode = mode
+        liquidExitJob = windowScope.launch {
+            delay(480L)
+            action()
+            liquidExitMode = null
+            liquidExitJob = null
+        }
+    }
 
     // подземелье на два телефона: сопряжение NFC + игра по Wi-Fi
     var coopInvite by remember { mutableStateOf<com.gsynk.app.core.NfcLink.GameInvite?>(null) }
@@ -175,8 +205,13 @@ fun MainScreen(vm: MainViewModel) {
     }
 
     LaunchedEffect(Unit) {
-        delay(1500)
-        splashVisible = false
+        rootWindowShown = true
+    }
+
+    // За открытым приложением остаётся именно тот фон, из которого его открыли:
+    // «Пуск» не должен на лету превращаться в пустой дом под morph-ом окна.
+    LaunchedEffect(panel, startOpen) {
+        if (panel == null) homeUnderlayStart = startOpen
     }
 
     LaunchedEffect(message) {
@@ -218,6 +253,7 @@ fun MainScreen(vm: MainViewModel) {
 
             null -> Unit
             else -> {
+                prepareLiquidWindow()
                 activeRoute = "tool:nearby"
                 startOpen = false
                 panel = "nfc"
@@ -232,6 +268,7 @@ fun MainScreen(vm: MainViewModel) {
         val (kind, name) = Router.split(request)
         when (kind) {
             "panel" -> {
+                prepareLiquidWindow()
                 activeRoute = request
                 startOpen = false
                 minimizedApp = null
@@ -249,6 +286,7 @@ fun MainScreen(vm: MainViewModel) {
             }
 
             "page" -> {
+                prepareLiquidWindow()
                 activeRoute = request
                 startOpen = false
                 minimizedApp = null
@@ -266,6 +304,7 @@ fun MainScreen(vm: MainViewModel) {
             }
 
             "tool", "flag", "lab" -> {
+                prepareLiquidWindow()
                 activeRoute = request
                 startOpen = false
                 minimizedApp = null
@@ -289,7 +328,8 @@ fun MainScreen(vm: MainViewModel) {
     LaunchedEffect(updatePrompt) {
         if (updatePrompt == 0) return@LaunchedEffect
         if (!hasUpdate) return@LaunchedEffect
-        if (panel == "rogue" || panel == "coop") return@LaunchedEffect
+        if (panel == "rogue" || panel == "coop" || panel == "update") return@LaunchedEffect
+        prepareLiquidWindow()
         panelBeforeUpdate = panel
         panel = "update"
         vm.noteUpdatePanelShown()
@@ -348,7 +388,7 @@ fun MainScreen(vm: MainViewModel) {
             ?: "gsynk"
     }
 
-    fun closeCurrentApp() {
+    fun performCloseCurrentApp() {
         if (panel == "rogue" && coopRole != null) com.gsynk.app.core.WifiCoop.stop()
         if (panel == "rogue" || panel == "coop") {
             coopRole = null
@@ -358,10 +398,15 @@ fun MainScreen(vm: MainViewModel) {
         panel = null
         featureRoute = null
         activeRoute = null
+        liquidLaunch = null
         startOpen = true
     }
 
-    fun minimizeCurrentApp() {
+    fun closeCurrentApp() {
+        requestLiquidWindowExit(LiquidWindowExit.CLOSE) { performCloseCurrentApp() }
+    }
+
+    fun performMinimizeCurrentApp() {
         val currentPanel = panel ?: return
         val routeNow = currentRoute()
         minimizedApp = MinimizedAppState(
@@ -372,11 +417,31 @@ fun MainScreen(vm: MainViewModel) {
         )
         panel = null
         featureRoute = null
+        liquidLaunch = null
         startOpen = false
+    }
+
+    fun minimizeCurrentApp() {
+        requestLiquidWindowExit(LiquidWindowExit.MINIMIZE) { performMinimizeCurrentApp() }
     }
 
     fun resumeMinimizedApp() {
         val saved = minimizedApp ?: return
+        prepareLiquidWindow()
+        val launchId = liquidLaunchSerial + 1
+        liquidLaunchSerial = launchId
+        val savedEntry = Catalog.ALL.firstOrNull { it.route == saved.route }
+        liquidLaunch = LiquidWindowOrigin(
+            id = launchId,
+            route = saved.route.orEmpty(),
+            title = saved.title,
+            iconRes = savedEntry?.iconRes ?: 0,
+            color = savedEntry?.color ?: Color(0xFF8B5CF6),
+            left = LIQUID_MINIMIZE_RECT.left,
+            top = LIQUID_MINIMIZE_RECT.top,
+            width = LIQUID_MINIMIZE_RECT.width,
+            height = LIQUID_MINIMIZE_RECT.height
+        )
         panel = saved.panel
         featureRoute = saved.featureRoute
         activeRoute = saved.route
@@ -384,11 +449,15 @@ fun MainScreen(vm: MainViewModel) {
         startOpen = false
     }
 
-    fun dismissUpdatePanel() {
-        panel = panelBeforeUpdate
+    fun performDismissUpdatePanel() {
+        panel = panelBeforeUpdate?.takeUnless { it == "update" }
         if (panel == null) startOpen = true
         panelBeforeUpdate = null
         vm.dismissUpdate()
+    }
+
+    fun dismissUpdatePanel() {
+        requestLiquidWindowExit(LiquidWindowExit.CLOSE) { performDismissUpdatePanel() }
     }
 
     BackHandler(enabled = isPortrait && (panel != null || startOpen)) {
@@ -445,14 +514,61 @@ fun MainScreen(vm: MainViewModel) {
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        // «Пуск» и пустой дом сменяют друг друга с анимацией, как окно оболочки:
-        // подъём снизу с лёгким масштабом при открытии и затухание вниз при закрытии.
+    val underlayStartOpen = when {
+        liquidExitMode == LiquidWindowExit.MINIMIZE -> false
+        panel == null -> startOpen
+        else -> homeUnderlayStart
+    }
+    val backdropProgress by animateFloatAsState(
+        targetValue = if (panel != null && liquidExitMode == null) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.88f),
+        label = "liquidBackdrop"
+    )
+    val rootRevealProgress by animateFloatAsState(
+        targetValue = if (rootWindowShown) 1f else 0f,
+        animationSpec = tween(durationMillis = 680, easing = FastOutSlowInEasing),
+        label = "rootWindowReveal"
+    )
+
+    CompositionLocalProvider(
+        LocalLiquidWindowLaunch provides liquidLaunch,
+        LocalLiquidWindowLaunchConsumer provides { launchId ->
+            if (liquidLaunch?.id == launchId) liquidLaunch = null
+        },
+        LocalLiquidWindowExit provides liquidExitMode
+    ) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFF160B2E))
+    ) {
+        // При запуске анимируется не логотип, а само окно «Пуска»: оно раскрывается
+        // из приподнятой стеклянной карты в полноэкранное окно. Под открытым
+        // приложением фон, наоборот, чуть уплывает назад и затемняется.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val reveal = rootRevealProgress
+                    val backdrop = backdropProgress
+                    scaleX = (0.91f + 0.09f * reveal) * (1f - 0.045f * backdrop)
+                    scaleY = (0.94f + 0.06f * reveal) * (1f - 0.035f * backdrop)
+                    alpha = reveal * (1f - 0.30f * backdrop)
+                    translationY = (1f - reveal) * 58f + backdrop * 22f
+                    shape = RoundedCornerShape(((1f - reveal) * 30f).dp)
+                    clip = reveal < 0.999f
+                }
+        ) {
         AnimatedContent(
-            targetState = startOpen,
+            targetState = underlayStartOpen,
             transitionSpec = {
-                (fadeIn(tween(260)) + slideInVertically(tween(320)) { it / 6 } + scaleIn(initialScale = 0.985f, animationSpec = tween(320))) togetherWith
-                    (fadeOut(tween(170)) + slideOutVertically(tween(220)) { it / 8 } + scaleOut(targetScale = 0.99f, animationSpec = tween(220)))
+                (fadeIn(tween(340)) + slideInVertically(
+                    spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.88f)
+                ) { it / 5 } + scaleIn(
+                    initialScale = 0.94f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = 0.88f)
+                )) togetherWith
+                    (fadeOut(tween(230)) + slideOutVertically(tween(380)) { it / 7 } + scaleOut(targetScale = 0.965f, animationSpec = tween(380)))
             },
             label = "startSwitch"
         ) { open ->
@@ -461,7 +577,22 @@ fun MainScreen(vm: MainViewModel) {
                     favorites = favorites,
                     minimizedRoute = minimizedApp?.route,
                     liveLinesFor = { entry -> homeTileLines(entry) },
-                    onOpen = { entry ->
+                    onOpen = { entry, origin ->
+                        prepareLiquidWindow()
+                        val launchId = liquidLaunchSerial + 1
+                        liquidLaunchSerial = launchId
+                        liquidLaunch = (origin ?: LiquidWindowOrigin(
+                            route = entry.route,
+                            title = entry.title,
+                            iconRes = entry.iconRes,
+                            color = entry.color
+                        )).copy(
+                            id = launchId,
+                            route = entry.route,
+                            title = entry.title,
+                            iconRes = entry.iconRes,
+                            color = entry.color
+                        )
                         activeRoute = entry.route
                         Catalog.open(context, entry)
                     },
@@ -478,6 +609,7 @@ fun MainScreen(vm: MainViewModel) {
                     onResumeMinimized = { resumeMinimizedApp() }
                 )
             }
+        }
         }
 
     // ModalBottomSheet живёт в отдельном окне, поэтому в ландшафте его нельзя
@@ -726,15 +858,7 @@ fun MainScreen(vm: MainViewModel) {
             PortraitRequiredScreen()
         }
 
-        // Сплеш запуска поверх всего: фирменная шапка-логотип GSYNK
-        // появляется при входе и уходит вверх, открывая ленту времени.
-        AnimatedVisibility(
-            visible = splashVisible && isPortrait,
-            enter = fadeIn(tween(180)),
-            exit = fadeOut(tween(360)) + slideOutVertically(tween(400)) { -it / 3 }
-        ) {
-            SplashLogoScreen()
-        }
+    }
     }
 }
 
