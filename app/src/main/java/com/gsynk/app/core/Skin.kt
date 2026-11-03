@@ -6,35 +6,34 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Кожа GIOUI: единый набор форм и «стекла» на всё приложение.
+ * Кожа GREAL: единый набор материалов, света и бесшовных форм.
  *
- * В GIOUI 5.2 формы плоские, как в Windows 8: плитки почти квадратные,
- * карточки едва смягчены, а капсулы остаются самым круглым акцентом. Старые
- * сохранённые большие значения при загрузке ужимаются новыми границами,
- * поэтому обновление поверх 5.1 сразу показывает резкий Metro-контур.
+ * GREAL — скевоморфная система поверх живой авроры: панели полупрозрачны,
+ * кромки имеют фаску и тень, сферы и капсулы остаются главными объёмами,
+ * а старые сохранённые значения по-прежнему ужимаются безопасными границами.
  */
 object Skin {
 
     /** Значения радиусов в dp. По умолчанию — канон GIOUI. */
     data class Values(
-        val tile: Int = 3,
-        val card: Int = 6,
-        val sheet: Int = 8,
-        val button: Int = 4,
-        val toggle: Int = 6,
-        val capsule: Int = 14,
+        val tile: Int = 9,
+        val card: Int = 13,
+        val sheet: Int = 17,
+        val button: Int = 11,
+        val toggle: Int = 13,
+        val capsule: Int = 21,
         val glass: String = "prg",
-        val blur: Int = 12,
-        val focus: Int = 40,
-        val rays: Int = 5,
-        val grid: Boolean = true,
+        val blur: Int = 18,
+        val focus: Int = 58,
+        val rays: Int = 7,
+        val grid: Boolean = false,
         val speed: Int = 100,
         val level: Int = 2,
-        /** GSYNKPRG: плотность прозрачного стекла, контурное свечение, блики и темп бликов. */
+        /** GREAL: плотность материала, контурный свет, блики и темп движения света. */
         val prgOpacity: Int = 38,
-        val prgGlow: Int = 55,
-        val prgGlare: Int = 65,
-        val prgMotion: Int = 100
+        val prgGlow: Int = 68,
+        val prgGlare: Int = 78,
+        val prgMotion: Int = 110
     ) {
         /** Уровень эффектов: 0 — простые, 1 — облегчённые, 2 — полные. */
         val effectsLevel: Int get() = level.coerceIn(0, 2)
@@ -42,7 +41,7 @@ object Skin {
     }
 
     val GLASSES: List<Pair<String, String>> = listOf(
-        "prg" to "GSYNKPRG",
+        "prg" to "GREAL",
         "matte" to "матовое",
         "liquid" to "жидкое",
         "frost" to "морозное",
@@ -128,14 +127,14 @@ object Skin {
             .apply()
     }
 
-    /** Готовые лица GIOUI: одна система форм, разное стекло и темп. */
+    /** Готовые лица GREAL: одна физическая система, разный характер материала. */
     val PRESETS: List<Triple<String, String, Values>> = listOf(
-        Triple("gioui", "GSYNKPRG Premium", Values(glass = "prg", blur = 16, focus = 55, rays = 6, grid = true, speed = 100, level = 2, prgOpacity = 38, prgGlow = 60, prgGlare = 70, prgMotion = 100)),
-        Triple("strict", "GSYNKPRG Строгий", Values(tile = 0, card = 2, sheet = 4, button = 0, toggle = 2, capsule = 8, glass = "prg", blur = 6, focus = 25, rays = 2, grid = true, speed = 90, level = 1, prgOpacity = 55, prgGlow = 25, prgGlare = 25, prgMotion = 80)),
-        Triple("soft", "GSYNKPRG Мягкий", Values(tile = 10, card = 14, sheet = 18, button = 12, toggle = 14, capsule = 22, glass = "prg", blur = 24, focus = 80, rays = 5, grid = false, speed = 85, level = 2, prgOpacity = 30, prgGlow = 75, prgGlare = 85, prgMotion = 90)),
-        Triple("aqua", "GSYNKPRG Аква", Values(tile = 4, card = 7, sheet = 10, button = 5, toggle = 7, capsule = 16, glass = "prg", blur = 18, focus = 70, rays = 9, grid = true, speed = 125, level = 2, prgOpacity = 34, prgGlow = 65, prgGlare = 80, prgMotion = 125)),
-        Triple("light", "GSYNKPRG Лёгкий", Values(tile = 2, card = 4, sheet = 6, button = 2, toggle = 4, capsule = 10, glass = "prg", blur = 0, focus = 25, rays = 0, grid = false, speed = 120, level = 0, prgOpacity = 48, prgGlow = 15, prgGlare = 15, prgMotion = 60)),
-        Triple("compact", "GSYNKPRG Компактный", Values(tile = 1, card = 3, sheet = 5, button = 1, toggle = 3, capsule = 9, glass = "prg", blur = 8, focus = 35, rays = 3, grid = false, speed = 110, level = 1, prgOpacity = 48, prgGlow = 40, prgGlare = 45, prgMotion = 110))
+        Triple("gioui", "GREAL Аврора", Values(tile = 9, card = 13, sheet = 17, button = 11, toggle = 13, capsule = 21, glass = "prg", blur = 18, focus = 58, rays = 7, grid = false, speed = 100, level = 2, prgOpacity = 38, prgGlow = 68, prgGlare = 78, prgMotion = 110)),
+        Triple("strict", "GREAL Гранит", Values(tile = 2, card = 5, sheet = 8, button = 3, toggle = 5, capsule = 12, glass = "prg", blur = 8, focus = 32, rays = 3, grid = true, speed = 90, level = 1, prgOpacity = 56, prgGlow = 34, prgGlare = 38, prgMotion = 80)),
+        Triple("soft", "GREAL Жидкое стекло", Values(tile = 10, card = 14, sheet = 18, button = 12, toggle = 14, capsule = 22, glass = "prg", blur = 24, focus = 80, rays = 6, grid = false, speed = 85, level = 2, prgOpacity = 30, prgGlow = 82, prgGlare = 90, prgMotion = 95)),
+        Triple("aqua", "GREAL Полярное сияние", Values(tile = 8, card = 12, sheet = 16, button = 10, toggle = 12, capsule = 20, glass = "prg", blur = 20, focus = 72, rays = 10, grid = false, speed = 125, level = 2, prgOpacity = 34, prgGlow = 76, prgGlare = 86, prgMotion = 130)),
+        Triple("light", "GREAL Лёгкий", Values(tile = 5, card = 8, sheet = 11, button = 6, toggle = 8, capsule = 16, glass = "prg", blur = 0, focus = 28, rays = 0, grid = false, speed = 120, level = 0, prgOpacity = 50, prgGlow = 22, prgGlare = 24, prgMotion = 60)),
+        Triple("compact", "GREAL Компактный", Values(tile = 5, card = 8, sheet = 11, button = 5, toggle = 8, capsule = 15, glass = "prg", blur = 9, focus = 40, rays = 4, grid = false, speed = 110, level = 1, prgOpacity = 48, prgGlow = 48, prgGlare = 54, prgMotion = 115))
     )
     /** Итоговый уровень с поправкой на железо: слабому телефону полный набор не отдаём. */
     fun effectiveLevel(profile: DeviceProfile.Info, requested: Int): Int =

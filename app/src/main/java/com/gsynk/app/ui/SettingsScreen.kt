@@ -87,7 +87,7 @@ fun SettingsScreen(
                 )
                 Spacer(Modifier.width(9.dp))
                 Text(
-                    text = "GSYNK ${BuildConfig.VERSION_NAME} · GSYNKPRG",
+                    text = "GSYNK ${BuildConfig.VERSION_NAME} · GREAL",
                     color = TextDim,
                     fontSize = Gioui.Type.caption,
                     maxLines = 1,
@@ -141,11 +141,11 @@ fun SettingsScreen(
 
             // ————— кастомизация: как выглядит и отзывается приложение —————
             Spacer(Modifier.height(16.dp))
-            SectionTitle("GSYNKPRG — дизайн")
+            SectionTitle("GREAL — дизайн")
             Spacer(Modifier.height(8.dp))
             SurfaceCard(borderColor = CardBorder) {
-                Text("GSYNKPRG · Premium Realtime Glass", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
-                Text("один UI для всего приложения: прозрачное стекло, анимированный контур и случайные блики только по краям", color = TextDim, fontSize = Gioui.Type.caption)
+                Text("GREAL · Grape Realism Engine", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
+                Text("один UI для всего приложения: GPU-аврора под физическими текстурами, сферы-плитки, 3D-лента и активные углы окон", color = TextDim, fontSize = Gioui.Type.caption)
                 Spacer(Modifier.height(10.dp))
                 Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
@@ -178,7 +178,7 @@ fun SettingsScreen(
                 }
 
                 Spacer(Modifier.height(12.dp))
-                Text("Плотность стекла — " + skin.prgOpacity + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Text("Плотность материала — " + skin.prgOpacity + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 ChipFlow {
                     listOf(15, 30, 38, 55, 75).forEach { value ->
@@ -186,7 +186,7 @@ fun SettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Контурное свечение — " + skin.prgGlow + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Text("Свет по контуру — " + skin.prgGlow + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 ChipFlow {
                     listOf(0, 25, 55, 80, 100).forEach { value ->
@@ -194,7 +194,7 @@ fun SettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Блики — " + skin.prgGlare + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Text("Реальные блики — " + skin.prgGlare + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 ChipFlow {
                     listOf(0, 25, 50, 65, 85, 100).forEach { value ->
@@ -202,7 +202,7 @@ fun SettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("Движение краевых бликов — " + skin.prgMotion + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Text("Движение света — " + skin.prgMotion + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                 Spacer(Modifier.height(6.dp))
                 ChipFlow {
                     listOf(60, 100, 140, 200).forEach { value ->
@@ -228,7 +228,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(8.dp))
             SettingRow(
                 title = "Счётчики на плитках",
-                subtitle = "живые значения: касания, нагрузка, обновления",
+                subtitle = "живой статус сфер: касания, нагрузка, обновления",
                 checked = settings.tileCounters
             ) { vm.setTileCounters(it) }
 

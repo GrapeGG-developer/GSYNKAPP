@@ -55,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -139,147 +140,32 @@ fun AnimatedGrapeBackground(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit
 ) {
-    // Акцент и скорость читаем состоянием: изменил настройку — фон сразу перекрасился.
+    // Акцент и скорость читаем состоянием: изменил настройку — аврора сразу перекрасилась.
     val tweakRevision by UiTweaks.revision.collectAsStateWithLifecycle()
     val skin = LocalSkinValues.current
-    val turboActive by TurboState.active.collectAsState()
-    val aiMode by TurboState.aiMode.collectAsState()
     if (tweakRevision < 0) return
 
-    // Одна круговая фаза 0→1. Все координаты и цвета ниже построены на sin/cos(2π·phase),
-    // поэтому последний кадр цикла совпадает с первым: нет прыгающей полосы и «шва».
-    val transition = rememberInfiniteTransition(label = "bg")
-    val rawPhase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = (UiTweaks.breathMs * 100 / skin.prgMotion.coerceIn(40, 200)).coerceIn(6_000, 60_000), easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "bgPhase"
-    )
+    // GREAL: фоном всего приложения стало северное сияние. На полном уровне
+    // эффектов оно считается AGSL-шейдером попиксельно на видеоускорителе, а
+    // скорость по-прежнему задаётся UiTweaks.breathMs из настроек.
+    val speedScale = (24_000f / UiTweaks.breathMs.toFloat()) *
+        (skin.speed.coerceIn(40, 200) / 100f)
+    val parentAuroraActive = LocalGrealAuroraActive.current
 
-    Box(
-        modifier
-            .fillMaxSize()
-            .drawBehind {
-                val angle = (rawPhase * 2f * PI).toFloat()
-                val wave = (sin(angle) + 1f) * 0.5f
-                val wave2 = (sin(angle * 2f + PI.toFloat() * 0.35f) + 1f) * 0.5f
-                val driftX = cos(angle)
-                val driftY = sin(angle)
-
-                val top = lerp(BgTopA, BgTopB, wave)
-                val mid = lerp(BgMidA, BgMidB, wave2)
-                val bottom = lerp(BgBottomA, BgBottomB, 1f - wave)
-                drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(top, mid, bottom),
-                        start = Offset(size.width * (0.18f + 0.08f * driftX), 0f),
-                        end = Offset(size.width * (0.82f - 0.08f * driftX), size.height)
-                    )
-                )
-
-                val accent = if (turboActive) {
-                    when (aiMode) {
-                        TurboMode.ACTIVE -> Color(0xFF7C3AED)
-                        TurboMode.NIGHT -> Color(0xFF2563EB)
-                        else -> Color(0xFF22C55E)
-                    }
-                } else {
-                    lerp(UiTweaks.accentStart, Color(0xFF22D3EE), wave)
-                }
-                val glowAlpha = if (turboActive) 0.42f else 0.32f
-
-                fun glow(center: Offset, radius: Float, color: Color, alpha: Float) {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(color.copy(alpha = alpha), Color.Transparent),
-                            center = center,
-                            radius = radius
-                        ),
-                        radius = radius,
-                        center = center
-                    )
-                }
-
-                glow(
-                    center = Offset(
-                        size.width * (0.18f + 0.055f * driftX),
-                        size.height * (0.12f + 0.03f * driftY)
-                    ),
-                    radius = size.minDimension * (0.92f + 0.08f * wave),
-                    color = accent,
-                    alpha = glowAlpha
-                )
-                glow(
-                    center = Offset(
-                        size.width * (0.84f - 0.05f * driftX),
-                        size.height * (0.54f + 0.06f * cos(angle * 2f))
-                    ),
-                    radius = size.minDimension * (0.72f + 0.07f * wave2),
-                    color = lerp(accent, Color(0xFF22D3EE), 0.55f),
-                    alpha = glowAlpha * 0.72f
-                )
-                glow(
-                    center = Offset(
-                        size.width * (0.78f + 0.04f * sin(angle * 2f)),
-                        size.height * (0.9f - 0.025f * driftY)
-                    ),
-                    radius = size.minDimension * (0.86f + 0.08f * (1f - wave)),
-                    color = lerp(accent, Color(0xFF22C55E), 0.58f),
-                    alpha = glowAlpha * 0.82f
-                )
-
-                // GSYNKPRG: диагональные авроры, тонкая сетка и искры поверх дыхания фона.
-                val motionAlpha = if (skin.level == 0) 0.45f else 1f
-                for (band in 0..2) {
-                    val centerX = size.width * (0.22f + band * 0.28f + 0.07f * sin(angle + band * 1.7f))
-                    val bandWidth = size.width * (0.16f + band * 0.035f)
-                    rotate(-14f, Offset(centerX, size.height * 0.5f)) {
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(Color.Transparent, accent.copy(alpha = 0.10f * motionAlpha), Color.Transparent),
-                                startX = centerX - bandWidth / 2f,
-                                endX = centerX + bandWidth / 2f
-                            ),
-                            topLeft = Offset(centerX - bandWidth / 2f, -size.height * 0.12f),
-                            size = Size(bandWidth, size.height * 1.24f)
-                        )
-                    }
-                }
-                if (skin.grid) {
-                    val stepPx = 30.dp.toPx()
-                    var gx = (driftX * 5f) % stepPx
-                    while (gx < size.width) {
-                        drawLine(Color.White.copy(alpha = 0.026f), Offset(gx, 0f), Offset(gx, size.height), 1f)
-                        gx += stepPx
-                    }
-                    var gy = (driftY * 5f) % stepPx
-                    while (gy < size.height) {
-                        drawLine(Color.White.copy(alpha = 0.022f), Offset(0f, gy), Offset(size.width, gy), 1f)
-                        gy += stepPx
-                    }
-                }
-                if (skin.level > 0) {
-                    for (spark in 0 until 18) {
-                        val fx = ((spark * 37 + 13) % 100) / 100f
-                        val fy = ((spark * 53 + 7) % 100) / 100f
-                        val twinkle = (sin(angle * 2f + spark * 1.31f) + 1f) * 0.5f
-                        drawCircle(
-                            color = Color.White.copy(alpha = 0.05f + 0.13f * twinkle),
-                            radius = 1.1f + 1.8f * twinkle,
-                            center = Offset(size.width * fx, size.height * fy + 5f * sin(angle + spark))
-                        )
-                    }
-                }
-            }
-    ) {
-        content()
+    Box(modifier.fillMaxSize()) {
+        if (!parentAuroraActive) {
+            GrealAuroraField(
+                modifier = Modifier.matchParentSize(),
+                speedScale = speedScale
+            )
+        }
+        CompositionLocalProvider(LocalGrealAuroraActive provides true) {
+            Box(Modifier.matchParentSize()) { content() }
+        }
     }
 }
 
-/** Общая фаза GSYNKPRG: блики и контурное свечение движутся в одном ритме. */
+/** Общая фаза GREAL: свет, блики и контурное свечение движутся в одном ритме. */
 @Composable
 fun rememberPrgPhase(seed: Int = 0): Float {
     val skin = LocalSkinValues.current
@@ -342,7 +228,7 @@ internal fun prgEdgeGlints(seed: Int): List<PrgEdgeGlint> {
 }
 
 /**
- * Блики GSYNKPRG живут только на краях поверхности.
+ * Блики GREAL живут только на краях поверхности.
  * Каждый короткий сегмент случайно выбирает сторону, позицию, длину, скорость и оттенок.
  */
 @Composable
@@ -409,7 +295,7 @@ fun PrgGlassSheen(
     }
 }
 
-/** Единственная поверхность приложения: прозрачное realtime-стекло GSYNKPRG. */
+/** Единственная поверхность приложения: физический материал GREAL поверх realtime-авроры. */
 @Composable
 fun PrgGlassSurface(
     modifier: Modifier = Modifier,
@@ -450,9 +336,10 @@ fun PrgGlassSurface(
             .background(
                 Brush.linearGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.11f + 0.07f * (1f - density)),
-                        accent.copy(alpha = 0.07f + 0.28f * density),
-                        Color(0xFF090614).copy(alpha = 0.17f + 0.47f * density)
+                        Color.White.copy(alpha = 0.13f + 0.05f * (1f - density)),
+                        accent.copy(alpha = 0.08f + 0.24f * density),
+                        Color(0xFF0B0618).copy(alpha = 0.20f + 0.42f * density),
+                        Color(0xFF03110E).copy(alpha = 0.16f + 0.36f * density)
                     )
                 )
             )
@@ -469,6 +356,7 @@ fun PrgGlassSurface(
                 }
             )
     ) {
+        GrealTexture(Modifier.matchParentSize(), accent = accent, seed = borderColor.hashCode(), density = density)
         PrgGlassSheen(Modifier.matchParentSize(), accent = accent, seed = borderColor.hashCode())
         Column(Modifier.padding(contentPadding), content = content)
     }
@@ -561,7 +449,10 @@ fun PrimaryButton(
             .padding(horizontal = 20.dp, vertical = 13.dp),
         contentAlignment = Alignment.Center
     ) {
-        if (enabled) PrgGlassSheen(Modifier.matchParentSize(), accent = Color.White, seed = text.hashCode())
+        if (enabled) {
+            GrealTexture(Modifier.matchParentSize(), accent = Color.White, seed = text.hashCode(), density = 0.30f)
+            PrgGlassSheen(Modifier.matchParentSize(), accent = Color.White, seed = text.hashCode())
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
                 Icon(
@@ -610,6 +501,7 @@ fun SecondaryButton(
             .padding(horizontal = 18.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
+        GrealTexture(Modifier.matchParentSize(), accent = UiTweaks.accentStart, seed = text.hashCode(), density = 0.34f)
         PrgGlassSheen(Modifier.matchParentSize(), accent = UiTweaks.accentStart, seed = text.hashCode())
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             if (icon != null) {
@@ -699,9 +591,9 @@ fun NeoSlider(
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(14.dp)
-                .clip(skinShape("card"))
-                .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.08f), TrackBg)))
+                .height(16.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .background(Brush.linearGradient(listOf(Color.Black.copy(alpha = 0.26f), Color.White.copy(alpha = 0.10f), TrackBg)))
         ) {
             Box(
                 Modifier
@@ -722,9 +614,17 @@ fun NeoSlider(
             Modifier
                 .offset { IntOffset(((widthState.floatValue - thumbPx) * animatedFill).roundToInt(), 0) }
                 .size(thumbSize)
-                .clip(skinShape("card"))
-                .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.92f), if (enabled) GrapeVioletSoft.copy(alpha = 0.72f) else Color(0xFF8E82A8))))
-                .border(1.dp, if (enabled) GrapeViolet else ChipBorder, skinShape("card"))
+                .clip(androidx.compose.foundation.shape.CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.98f),
+                            if (enabled) GrapeVioletSoft.copy(alpha = 0.86f) else Color(0xFF8E82A8),
+                            if (enabled) GrapeViolet.copy(alpha = 0.88f) else Color(0xFF554D6E)
+                        )
+                    )
+                )
+                .border(1.dp, Color.White.copy(alpha = 0.42f), androidx.compose.foundation.shape.CircleShape)
         )
     }
 }
@@ -895,14 +795,14 @@ fun PulseDot(color: Color, modifier: Modifier = Modifier) {
         modifier
             .size(10.dp)
             .scale(scale)
-            .clip(skinShape("card"))
-            .background(color.copy(alpha = alpha))
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .background(Brush.radialGradient(listOf(Color.White.copy(alpha = alpha), color.copy(alpha = alpha))))
     )
 }
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    // GIOUI: заголовок группы — строчными буквами, с разрядкой, без капса.
+    // GREAL: заголовок группы — понятная подпись с разрядкой.
     Text(
         text = text.lowercase(),
         modifier = modifier.padding(top = Gioui.unit, bottom = Gioui.unit / 2f),
@@ -1031,17 +931,22 @@ fun GrapeScreen(
             ) {
                 Box(
                     Modifier
-                        .size(width = 36.dp, height = 30.dp)
-                        .clip(RectangleShape)
-                        .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.13f), Color.White.copy(alpha = 0.04f))))
-                        .border(1.dp, Color.White.copy(alpha = 0.22f), RectangleShape)
+                        .size(38.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(
+                            Brush.radialGradient(
+                                listOf(Color.White.copy(alpha = 0.28f), GrapeViolet.copy(alpha = 0.34f), Color.Black.copy(alpha = 0.30f))
+                            )
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.34f), androidx.compose.foundation.shape.CircleShape)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) { onBack() },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("←", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Light)
+                    GrealTexture(Modifier.matchParentSize(), accent = GrapeViolet, seed = title.hashCode(), density = 0.28f)
+                    Text("←", color = TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.Light)
                 }
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
@@ -1049,7 +954,7 @@ fun GrapeScreen(
                         text = title.lowercase(),
                         color = TextPrimary,
                         fontSize = 17.sp,
-                        fontWeight = FontWeight.Light,
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1
                     )
                     if (subtitle != null) {

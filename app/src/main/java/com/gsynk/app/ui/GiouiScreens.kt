@@ -61,26 +61,25 @@ fun EffectsScreen(onBack: () -> Unit) {
     var glassSwitches by remember { mutableIntStateOf(0) }
     val profile = remember { DeviceProfile.detect(context) }
 
-    GrapeScreen(title = "GSYNKPRG", subtitle = "Premium Realtime Glass · " + Skin.label(skin.level), onBack = onBack) {
+    GrapeScreen(title = "GREAL", subtitle = "Grape Realism Engine · GPU-аврора и физический свет · " + Skin.label(skin.level), onBack = onBack) {
         Box(
             Modifier
                 .fillMaxWidth()
                 .height(210.dp)
                 .clip(Gioui.Shapes.card)
         ) {
-            GrainField(
+            GrealAuroraField(
                 modifier = Modifier.fillMaxSize(),
-                accent = UiTweaks.accentStart,
-                speed = skin.speed / 100f
+                speedScale = skin.speed / 100f
             )
             if (skin.rays > 0) {
                 LightRays(modifier = Modifier.fillMaxSize(), rays = skin.rays)
             }
             GlassPanel(modifier = Modifier.fillMaxSize(), kind = glassKind(skin.glass)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.Bottom) {
-                    Text("GSYNKPRG живьём", color = Color.White, fontSize = Gioui.Type.pageSubtitle)
+                    Text("GREAL живьём", color = Color.White, fontSize = Gioui.Type.pageSubtitle)
                     Text(
-                        text = "стекло " + skin.prgOpacity + "%, свечение " + skin.prgGlow + "%, блики " + skin.prgGlare + "%, " +
+                        text = "материал " + skin.prgOpacity + "%, свечение " + skin.prgGlow + "%, блики " + skin.prgGlare + "%, " +
                             "размытие " + skin.blur + " dp, движение " + skin.prgMotion + "%",
                         color = Color.White.copy(alpha = 0.8f),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
@@ -108,7 +107,7 @@ fun EffectsScreen(onBack: () -> Unit) {
         )
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Плотность стекла — " + skin.prgOpacity + "%")
+        SectionTitle("Плотность материала — " + skin.prgOpacity + "%")
         Spacer(Modifier.height(7.dp))
         ChipFlow {
             listOf(10, 20, 30, 38, 55, 75, 90).forEach { value ->
@@ -121,7 +120,7 @@ fun EffectsScreen(onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Контурное свечение — " + skin.prgGlow + "%")
+        SectionTitle("Свет по контуру — " + skin.prgGlow + "%")
         Spacer(Modifier.height(7.dp))
         ChipFlow {
             listOf(0, 15, 35, 55, 75, 100).forEach { value ->
@@ -132,7 +131,7 @@ fun EffectsScreen(onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Случайные блики по краям — " + skin.prgGlare + "%")
+        SectionTitle("Реальные блики по краям — " + skin.prgGlare + "%")
         Spacer(Modifier.height(7.dp))
         ChipFlow {
             listOf(0, 15, 35, 50, 65, 85, 100).forEach { value ->
@@ -143,7 +142,7 @@ fun EffectsScreen(onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Движение краевых бликов — " + skin.prgMotion + "%")
+        SectionTitle("Движение света и авроры — " + skin.prgMotion + "%")
         Spacer(Modifier.height(7.dp))
         ChipFlow {
             listOf(40, 60, 100, 140, 200).forEach { value ->
@@ -187,11 +186,11 @@ fun EffectsScreen(onBack: () -> Unit) {
         }
 
         Spacer(Modifier.height(12.dp))
-        SectionTitle("Сетка GIOUI и скорость фона")
+        SectionTitle("Фактура GREAL и скорость авроры")
         Spacer(Modifier.height(7.dp))
         ChipFlow {
-            SortChip("сетка 20 px", skin.grid) { Skin.save(context, skin.copy(grid = true)) }
-            SortChip("без сетки", !skin.grid) { Skin.save(context, skin.copy(grid = false)) }
+            SortChip("фактура", skin.grid) { Skin.save(context, skin.copy(grid = true)) }
+            SortChip("гладко", !skin.grid) { Skin.save(context, skin.copy(grid = false)) }
         }
         Spacer(Modifier.height(7.dp))
         ChipFlow {
@@ -211,7 +210,7 @@ fun EffectsScreen(onBack: () -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text(title, color = TextPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
                         Text(
-                            text = "GSYNKPRG " + values.prgOpacity + "% · свечение " + values.prgGlow + "% · блики " + values.prgGlare + "% · размытие " + values.blur +
+                            text = "GREAL " + values.prgOpacity + "% · свечение " + values.prgGlow + "% · блики " + values.prgGlare + "% · размытие " + values.blur +
                                 " · скругления " + values.card + "/" + values.toggle,
                             color = TextDim,
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal).copy(fontSize = Gioui.Type.caption, fontWeight = FontWeight.Normal)
@@ -234,7 +233,7 @@ fun RadiusScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val skin by Skin.values.collectAsStateWithLifecycle()
 
-    GrapeScreen(title = "Формы GSYNKPRG", subtitle = "Единая система Premium Realtime Glass", onBack = onBack) {
+    GrapeScreen(title = "Формы GREAL", subtitle = "Бесшовные края, сферы и активные 3D-углы", onBack = onBack) {
         Box(
             Modifier
                 .fillMaxWidth()
