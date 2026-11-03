@@ -323,7 +323,7 @@ fun PrgGlassSurface(
             .let { base ->
                 if (skin.level > 0 && glow > 0.02f) {
                     base.shadow(
-                        elevation = (3f + 9f * glow * (0.55f + 0.45f * pulse)).dp,
+                        elevation = (7f + 18f * glow * (0.55f + 0.45f * pulse)).dp,
                         shape = shape,
                         ambientColor = accent.copy(alpha = 0.28f * glow),
                         spotColor = accent.copy(alpha = 0.42f * glow)

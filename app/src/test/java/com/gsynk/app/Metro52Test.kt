@@ -122,7 +122,7 @@ class Metro52Test {
         val components = File("src/main/java/com/gsynk/app/ui/Components.kt").readText()
         val start = File("src/main/java/com/gsynk/app/ui/StartScreen.kt").readText()
         val settings = File("src/main/java/com/gsynk/app/ui/SettingsScreen.kt").readText()
-        val effects = File("src/main/java/com/gsynk/app/ui/GiouiScreens.kt").readText()
+        val effects = File("src/main/java/com/gsynk/app/ui/GrealSettingsScreen.kt").readText()
         assertTrue(components.contains("fun PrgGlassSurface("))
         assertTrue(components.contains("GrealAuroraField(") && components.contains("GrealTexture("))
         assertTrue(components.contains("fun PrgGlassSheen("))
@@ -130,8 +130,8 @@ class Metro52Test {
         assertTrue(start.contains("PrgGlassSheen"))
         assertTrue(start.contains("AnimatedGrapeBackground"))
         assertTrue(settings.contains("GREAL — дизайн"))
-        assertTrue(settings.contains("prgOpacity") && settings.contains("prgGlow") && settings.contains("prgGlare") && settings.contains("prgMotion"))
-        assertTrue(effects.contains("GREAL") && effects.contains("Плотность материала") && effects.contains("Свет по контуру"))
+        assertTrue(settings.contains("Router.page(\"greal\")") && effects.contains("prgOpacity") && effects.contains("prgGlow") && effects.contains("prgGlare") && effects.contains("prgMotion"))
+        assertTrue(effects.contains("Настройки GREAL UI") && effects.contains("Плотность материала") && effects.contains("Свет по контуру") && effects.contains("Формы, бесшовные края") && effects.contains("Сферы-плитки"))
         val sheenStart = components.indexOf("fun PrgGlassSheen(")
         val sheenEnd = components.indexOf("fun PrgGlassSurface(", sheenStart)
         assertTrue(sheenStart >= 0 && sheenEnd > sheenStart)
@@ -190,9 +190,13 @@ class Metro52Test {
 
     @Test
     fun catalogHasSeparateNewsSettingsLifeAndNoLabHub() {
-        assertTrue(Catalog.ALL.size >= 106)
+        assertTrue(Catalog.ALL.size >= 104)
         assertEquals(Catalog.ALL.size, Catalog.ALL.map { it.id }.distinct().size)
         assertNull("плитка старого хаба вернулась", Catalog.byId("lab"))
+        assertEquals("page:greal", Catalog.byId("grealui")?.route)
+        assertNull("отдельная плитка эффектов вернулась", Catalog.byId("effects"))
+        assertNull("отдельная плитка форм вернулась", Catalog.byId("radius"))
+        assertNull("отдельная плитка дизайна вернулась", Catalog.byId("tweaks"))
         assertEquals("page:news", Catalog.byId("news")?.route)
         assertEquals("panel:settings", Catalog.byId("settings")?.route)
         assertEquals("panel:lifeauto", Catalog.byId("lifeauto")?.route)
@@ -282,11 +286,11 @@ class Metro52Test {
         assertTrue(start.contains("combinedClickable"))
         assertTrue(start.contains("LiquidWindowOrigin"))
         assertTrue(start.contains("onGloballyPositioned"))
-        assertTrue(start.contains("liquidWindowRect") && start.contains("GrealTapeBackdrop") && start.contains("GrealOrbFace"))
+        assertTrue(start.contains("liquidWindowRect") && start.contains("GrealDepthBackdrop") && start.contains("GrealOrbFace"))
         assertFalse(start.contains("SplashLogoScreen"))
         val settings = File(ui, "SettingsScreen.kt").readText()
         assertFalse(settings.contains("ModalBottomSheet"))
         assertFalse(settings.contains("Мультитул"))
-        assertEquals("5.7.0", ReleaseNews.VERSION)
+        assertEquals("5.7.1", ReleaseNews.VERSION)
     }
 }

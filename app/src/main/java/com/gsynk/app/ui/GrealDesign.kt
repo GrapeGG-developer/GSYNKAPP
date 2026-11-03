@@ -49,9 +49,9 @@ import kotlinx.coroutines.isActive
  * Новый визуальный язык GSYNK: интерфейс собран не из плоских прямоугольников,
  * а из физических материалов. Под панелями живёт северное сияние, которое на
  * Android 13+ считается попиксельно AGSL-шейдером на видеоускорителе; поверх
- * него — полупрозрачные слои с текстурой, фасками, швом, зерном и настоящим
+ * него — полупрозрачные слои с мягкой текстурой, фасками, зерном и настоящим
  * направленным светом. Плитки стали объёмными сферами, а лента времени —
- * магнитной лентой, намотанной на задний 3D-барабан.
+ * глубокой 3D-сценой без кассетных линий и кругов.
  */
 /** Уже нарисованная родительская аврора: вложенные экраны второй GPU-шейдер не запускают. */
 val LocalGrealAuroraActive = staticCompositionLocalOf { false }
@@ -69,44 +69,49 @@ object Greal {
     val DeepSea = Color(0xFF041511)
 }
 
-internal data class GrealTapeTransform(
+internal data class GrealDepthTransform(
     val rotationX: Float,
     val rotationY: Float,
     val scale: Float,
     val alpha: Float,
+    val translationXD: Float,
     val translationYDp: Float,
+    val pivotY: Float,
     val shadowElevation: Float
 )
 
 /**
- * Панель на цилиндре магнитной ленты. [offsetFraction] — расстояние центра
- * панели от центра экрана в долях половины высоты: 0 — панель смотрит прямо
- * на пользователя, края уходят на заднюю фигуру, уменьшаются и темнеют.
+ * Панель в глубокой 3D-сцене GREAL. [offsetFraction] — расстояние центра
+ * панели от центра экрана в долях половины высоты: центр смотрит прямо,
+ * прошлое и будущее сильно поворачиваются, уходят в перспективу и темнеют.
+ * Никакой кассетной графики: только объём, свет и тень.
  */
-internal fun grealTapeTransform(offsetFraction: Float): GrealTapeTransform {
+internal fun grealDepthTransform(offsetFraction: Float): GrealDepthTransform {
     val offset = offsetFraction.coerceIn(-1.25f, 1.25f)
     val distance = abs(offset)
-    val curved = distance.toDouble().pow(1.35).toFloat()
-    return GrealTapeTransform(
-        rotationX = -offset * 27f,
-        rotationY = offset * 2.2f,
-        scale = (1f - 0.105f * curved).coerceIn(0.84f, 1f),
-        alpha = (1f - 0.19f * distance).coerceIn(0.68f, 1f),
-        translationYDp = offset * 7f,
-        shadowElevation = (24f * (1f - distance) + 5f).coerceAtLeast(0f)
+    val curved = distance.toDouble().pow(1.28).toFloat()
+    return GrealDepthTransform(
+        rotationX = -offset * 39f,
+        rotationY = offset * 7.5f,
+        scale = (1f - 0.165f * curved).coerceIn(0.78f, 1f),
+        alpha = (1f - 0.27f * distance).coerceIn(0.58f, 1f),
+        translationXD = -offset * 10f,
+        translationYDp = offset * 15f,
+        pivotY = (0.5f - offset * 0.29f).coerceIn(0.15f, 0.85f),
+        shadowElevation = (36f * (1f - distance) + 8f).coerceAtLeast(0f)
     )
 }
 
 /** Размытие летящего окна: максимум в точке плитки/рулона, ноль — в покое. */
 internal fun grealWindowBlurDp(progress: Float): Float {
     val p = progress.coerceIn(0f, 1f)
-    return (1f - p).toDouble().pow(1.35).toFloat() * 15f
+    return (1f - p).toDouble().pow(1.35).toFloat() * 22f
 }
 
 /** Дополнительный «рулонный» наклон окна на середине morph-а. */
 internal fun grealWindowRollDegrees(progress: Float): Float {
     val p = progress.coerceIn(0f, 1f)
-    return sin(p * PI.toFloat()) * 9f + (1f - p) * 5f
+    return sin(p * PI.toFloat()) * 16f + (1f - p) * 9f
 }
 
 /** Диаметр сферы-плитки: сфера + подпись всегда целиком внутри ячейки. */
@@ -256,8 +261,8 @@ private fun DrawScope.drawGrealAuroraFallback(time: Float, accent: Color, intens
 }
 
 /**
- * Физическая текстура GREAL: шлифованный металл, микрозерно, прошитый шов,
- * верхняя фаска света и нижняя теневая кромка. Рисунок детерминирован seed-ом
+ * Физическая текстура GREAL: мягкие цветные облака материала, микрозерно
+ * и объёмные фаски света без серых линий. Рисунок детерминирован seed-ом
  * поверхности — при перерисовке не мерцает.
  */
 @Composable
@@ -287,56 +292,68 @@ fun GrealTexture(
         )
 
         if (effects != Gioui.Effects.PLAIN) {
-            val lineStep = 3.dp.toPx().coerceAtLeast(2f)
-            var y = lineStep * (0.35f + grealHash01(seed, 3, 7))
-            var lineIndex = 0
-            while (y < size.height) {
-                val alpha = (0.018f + 0.035f * grealHash01(seed, lineIndex, 19) * (1f - material * 0.35f)) * textureStrength
-                drawLine(Color.White.copy(alpha = alpha), Offset(0f, y), Offset(size.width, y), 0.6f)
-                y += lineStep * (0.8f + grealHash01(seed, lineIndex, 23) * 0.55f)
-                lineIndex++
-            }
-            val dotStep = 11.dp.toPx().coerceAtLeast(7f)
-            var row = 0
-            var dotY = dotStep * 0.45f
-            while (dotY < size.height) {
-                var col = 0
-                var dotX = dotStep * (0.25f + 0.4f * grealHash01(seed, row, 31))
-                while (dotX < size.width) {
-                    val a = (0.025f + 0.05f * grealHash01(seed, row * 131 + col, 41)) * textureStrength
-                    drawCircle(
-                        color = if ((row + col) % 3 == 0) Color.White.copy(alpha = a) else Color.Black.copy(alpha = a * 0.8f),
-                        radius = 0.8f + 1.1f * grealHash01(seed, row * 57 + col, 43),
-                        center = Offset(dotX, dotY)
+            // Мягкие цветные облака материала вместо серых царапин и швов.
+            val materialColors = listOf(
+                accent,
+                Greal.AuroraCyan,
+                Greal.AuroraGreen,
+                Greal.AuroraPink,
+                Color.White
+            )
+            for (patch in 0 until 22) {
+                val patchWidth = (20f + grealHash01(seed, patch, 19) * 58f).dp.toPx()
+                val patchHeight = (6f + grealHash01(seed, patch, 23) * 17f).dp.toPx()
+                val patchX = grealHash01(seed, patch, 29) * (size.width - patchWidth).coerceAtLeast(1f)
+                val patchY = grealHash01(seed, patch, 31) * (size.height - patchHeight).coerceAtLeast(1f)
+                val patchColor = materialColors[patch % materialColors.size]
+                val patchAlpha = (0.030f + 0.055f * grealHash01(seed, patch, 37)) * textureStrength
+                rotate(-16f + grealHash01(seed, patch, 41) * 32f, Offset(patchX + patchWidth / 2f, patchY + patchHeight / 2f)) {
+                    drawRoundRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color.Transparent, patchColor.copy(alpha = patchAlpha), Color.Transparent),
+                            start = Offset(patchX, patchY + patchHeight / 2f),
+                            end = Offset(patchX + patchWidth, patchY + patchHeight / 2f)
+                        ),
+                        topLeft = Offset(patchX, patchY),
+                        size = Size(patchWidth, patchHeight),
+                        cornerRadius = CornerRadius(patchHeight / 2f, patchHeight / 2f)
                     )
-                    dotX += dotStep * (0.82f + grealHash01(seed, row * 91 + col, 47) * 0.38f)
-                    col++
                 }
-                dotY += dotStep
-                row++
+            }
+            for (grain in 0 until 64) {
+                val grainSize = (0.8f + grealHash01(seed, grain, 43) * 2.2f).dp.toPx().coerceAtLeast(1f)
+                val grainX = grealHash01(seed, grain, 47) * (size.width - grainSize).coerceAtLeast(1f)
+                val grainY = grealHash01(seed, grain, 53) * (size.height - grainSize).coerceAtLeast(1f)
+                val grainAlpha = (0.025f + 0.05f * grealHash01(seed, grain, 59)) * textureStrength
+                drawRoundRect(
+                    color = if (grain % 3 == 0) Color.White.copy(alpha = grainAlpha) else accent.copy(alpha = grainAlpha * 0.85f),
+                    topLeft = Offset(grainX, grainY),
+                    size = Size(grainSize, grainSize * 0.68f),
+                    cornerRadius = CornerRadius(grainSize / 2f, grainSize / 2f)
+                )
             }
         }
 
-        val inset = 4.dp.toPx().coerceAtMost(size.minDimension * 0.18f)
-        val stitch = lerp(Color.White, accent, 0.35f).copy(alpha = 0.13f * textureStrength)
-        val stitchStep = 8.dp.toPx().coerceAtLeast(5f)
-        var sx = inset
-        while (sx < size.width - inset - stitchStep * 0.45f) {
-            drawLine(stitch, Offset(sx, inset), Offset(sx + stitchStep * 0.45f, inset), 0.8f, StrokeCap.Round)
-            drawLine(stitch.copy(alpha = 0.09f), Offset(sx, size.height - inset), Offset(sx + stitchStep * 0.45f, size.height - inset), 0.8f, StrokeCap.Round)
-            sx += stitchStep
-        }
-        var sy = inset
-        while (sy < size.height - inset - stitchStep * 0.45f) {
-            drawLine(stitch.copy(alpha = 0.10f), Offset(inset, sy), Offset(inset, sy + stitchStep * 0.45f), 0.8f, StrokeCap.Round)
-            drawLine(stitch.copy(alpha = 0.08f), Offset(size.width - inset, sy), Offset(size.width - inset, sy + stitchStep * 0.45f), 0.8f, StrokeCap.Round)
-            sy += stitchStep
-        }
-
-        drawLine(Color.White.copy(alpha = 0.26f), Offset(0f, 0.8f), Offset(size.width, 0.8f), 1.25f)
-        drawLine(Color.White.copy(alpha = 0.11f), Offset(0.8f, 0f), Offset(0.8f, size.height), 1f)
-        drawLine(Color.Black.copy(alpha = 0.34f), Offset(0f, size.height - 0.9f), Offset(size.width, size.height - 0.9f), 1.4f)
-        drawLine(Color.Black.copy(alpha = 0.20f), Offset(size.width - 0.9f, 0f), Offset(size.width - 0.9f, size.height), 1.1f)
+        // Объёмные фаски мягкими световыми полосами, без контурных линий.
+        val bevel = 12.dp.toPx().coerceAtMost(size.minDimension * 0.22f)
+        drawRect(
+            brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.20f), Color.Transparent), 0f, bevel),
+            size = Size(size.width, bevel)
+        )
+        drawRect(
+            brush = Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.22f)), size.height - bevel, size.height),
+            topLeft = Offset(0f, size.height - bevel),
+            size = Size(size.width, bevel)
+        )
+        drawRect(
+            brush = Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.10f), Color.Transparent), 0f, bevel),
+            size = Size(bevel, size.height)
+        )
+        drawRect(
+            brush = Brush.horizontalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.16f)), size.width - bevel, size.width),
+            topLeft = Offset(size.width - bevel, 0f),
+            size = Size(bevel, size.height)
+        )
     }
 }
 
@@ -371,106 +388,62 @@ fun GrealActiveCorners(
 }
 
 /**
- * Задняя фигура «Пуска»: вертикальная магнитная лента на барабане. Перфорация
- * и спицы барабанов движутся от реального скролла списка, поэтому панель
- * буквально прокручивается по задней 3D-фигуре.
+ * Глубокий задний план «Пуска»: только мягкие цветные объёмные плиты
+ * авроры, уходящие в перспективу от скролла. Никаких серых линий,
+ * перфорации, катушек и кассетных кругов.
  */
 @Composable
-fun GrealTapeBackdrop(
+fun GrealDepthBackdrop(
     modifier: Modifier = Modifier,
     scrollPixels: Float = 0f
 ) {
     Canvas(modifier) {
         if (size.width <= 4f || size.height <= 4f) return@Canvas
-        val w = size.width
-        val h = size.height
-        val left = w * 0.055f
-        val right = w * 0.945f
-        val top = -h * 0.04f
-        val tapeHeight = h * 1.08f
-        drawRoundRect(
-            brush = Brush.verticalGradient(
-                listOf(
-                    Color.White.copy(alpha = 0.045f),
-                    Greal.AuroraViolet.copy(alpha = 0.10f),
-                    Greal.AuroraCyan.copy(alpha = 0.055f),
-                    Color.Black.copy(alpha = 0.13f)
+        val colors = listOf(
+            Greal.AuroraViolet,
+            Greal.AuroraCyan,
+            Greal.AuroraGreen,
+            Greal.AuroraPink,
+            Greal.AuroraAmber
+        )
+        val slabStep = 190.dp.toPx().coerceAtLeast(80f)
+        val shift = -(abs(scrollPixels) % slabStep)
+        var index = 0
+        var y = shift - slabStep
+        while (y < size.height + slabStep) {
+            val centerDistance = abs(((y + slabStep * 0.28f) / size.height.coerceAtLeast(1f)) - 0.5f).coerceIn(0f, 0.75f)
+            val depthScale = 1f - centerDistance * 0.34f
+            val slabWidth = size.width * (0.70f + 0.18f * grealHash01(571, index, 11)) * depthScale
+            val slabHeight = (54f + 24f * grealHash01(571, index, 13)).dp.toPx() * depthScale
+            val drift = sin(scrollPixels / 420f + index * 1.37f) * size.width * 0.035f
+            val slabX = (size.width - slabWidth) / 2f + drift
+            val color = colors[index % colors.size]
+            val alpha = 0.105f * (1f - centerDistance * 0.72f)
+            rotate(-5f + grealHash01(571, index, 17) * 10f, Offset(slabX + slabWidth / 2f, y + slabHeight / 2f)) {
+                drawRoundRect(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color.Transparent, color.copy(alpha = alpha), Color.White.copy(alpha = alpha * 0.34f), Color.Transparent),
+                        start = Offset(slabX, y),
+                        end = Offset(slabX + slabWidth, y + slabHeight)
+                    ),
+                    topLeft = Offset(slabX, y),
+                    size = Size(slabWidth, slabHeight),
+                    cornerRadius = CornerRadius(slabHeight * 0.48f, slabHeight * 0.48f)
                 )
-            ),
-            topLeft = Offset(left, top),
-            size = Size(right - left, tapeHeight),
-            cornerRadius = CornerRadius(w * 0.11f, h * 0.18f)
-        )
-        val rail = Path().apply {
-            moveTo(left + w * 0.035f, top)
-            cubicTo(left - w * 0.015f, h * 0.28f, left - w * 0.01f, h * 0.72f, left + w * 0.035f, top + tapeHeight)
-            moveTo(right - w * 0.035f, top)
-            cubicTo(right + w * 0.015f, h * 0.28f, right + w * 0.01f, h * 0.72f, right - w * 0.035f, top + tapeHeight)
-        }
-        drawPath(rail, Color.White.copy(alpha = 0.14f), style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round))
-        drawLine(Greal.AuroraCyan.copy(alpha = 0.10f), Offset(w * 0.5f, 0f), Offset(w * 0.5f, h), 1.dp.toPx())
-
-        val slotStep = 76.dp.toPx()
-        val shift = -(abs(scrollPixels) % slotStep)
-        var y = shift - slotStep
-        while (y < h + slotStep) {
-            val scale = 1f - 0.16f * abs((y / h.coerceAtLeast(1f)) - 0.5f)
-            val slotW = 9.dp.toPx() * scale
-            val slotH = 20.dp.toPx() * scale
-            drawRoundRect(
-                color = Color.Black.copy(alpha = 0.20f),
-                topLeft = Offset(left + 9.dp.toPx(), y),
-                size = Size(slotW, slotH),
-                cornerRadius = CornerRadius(slotW / 2f, slotW / 2f)
-            )
-            drawRoundRect(
-                color = Color.White.copy(alpha = 0.07f),
-                topLeft = Offset(right - 9.dp.toPx() - slotW, y),
-                size = Size(slotW, slotH),
-                cornerRadius = CornerRadius(slotW / 2f, slotW / 2f)
-            )
-            drawLine(
-                color = Color.White.copy(alpha = 0.045f),
-                start = Offset(left + 22.dp.toPx(), y + slotH / 2f),
-                end = Offset(right - 22.dp.toPx(), y + slotH / 2f),
-                strokeWidth = 0.7.dp.toPx()
-            )
-            y += slotStep
-        }
-
-        fun reel(center: Offset, radius: Float, direction: Float) {
-            drawCircle(Color.Black.copy(alpha = 0.16f), radius, center)
-            drawCircle(Color.White.copy(alpha = 0.13f), radius, center, style = Stroke(width = 1.4.dp.toPx()))
-            drawCircle(Greal.AuroraViolet.copy(alpha = 0.12f), radius * 0.68f, center, style = Stroke(width = 1.dp.toPx()))
-            rotate(direction * scrollPixels / 9f, center) {
-                for (spoke in 0 until 6) {
-                    val angle = spoke * PI.toFloat() / 3f
-                    drawLine(
-                        Color.White.copy(alpha = 0.11f),
-                        center,
-                        Offset(center.x + cos(angle) * radius * 0.92f, center.y + sin(angle) * radius * 0.92f),
-                        1.dp.toPx(),
-                        StrokeCap.Round
-                    )
-                }
+                drawRoundRect(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color.Black.copy(alpha = alpha * 0.55f), Color.Transparent),
+                        start = Offset(slabX, y + slabHeight * 0.55f),
+                        end = Offset(slabX + slabWidth, y + slabHeight * 1.45f)
+                    ),
+                    topLeft = Offset(slabX + slabWidth * 0.06f, y + slabHeight * 0.58f),
+                    size = Size(slabWidth * 0.88f, slabHeight * 0.44f),
+                    cornerRadius = CornerRadius(slabHeight * 0.40f, slabHeight * 0.40f)
+                )
             }
-            drawCircle(Color.White.copy(alpha = 0.20f), radius * 0.13f, center)
-            drawCircle(Color.Black.copy(alpha = 0.28f), radius * 0.07f, center)
+            y += slabStep
+            index++
         }
-        reel(Offset(w * 0.16f, h * 0.50f), size.minDimension * 0.20f, 1f)
-        reel(Offset(w * 0.84f, h * 0.50f), size.minDimension * 0.20f, -1f)
-        drawOval(
-            color = Color.White.copy(alpha = 0.06f),
-            topLeft = Offset(left, -h * 0.055f),
-            size = Size(right - left, h * 0.11f),
-            style = Stroke(width = 1.dp.toPx())
-        )
-        drawOval(
-            color = Color.White.copy(alpha = 0.05f),
-            topLeft = Offset(left, h * 0.945f),
-            size = Size(right - left, h * 0.11f),
-            style = Stroke(width = 1.dp.toPx())
-        )
     }
 }
 
@@ -534,6 +507,15 @@ fun GrealOrbFace(
                 radius = radius * 0.78f,
                 center = center
             )
+            drawOval(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color.Black.copy(alpha = 0.28f), Color.Transparent),
+                    center = Offset(center.x + radius * 0.10f, center.y + radius * 0.62f),
+                    radius = radius * 0.78f
+                ),
+                topLeft = Offset(center.x - radius * 0.74f, center.y + radius * 0.20f),
+                size = Size(radius * 1.48f, radius * 0.72f)
+            )
             drawCircle(Color.White.copy(alpha = 0.30f), radius * 0.94f, center, style = Stroke(width = 1.dp.toPx()))
             drawCircle(Color.Black.copy(alpha = 0.20f), radius * 0.80f, center, style = Stroke(width = 0.7.dp.toPx()))
 
@@ -570,8 +552,8 @@ fun GrealOrbFace(
                 size = orbitSize,
                 style = Stroke(width = 0.9.dp.toPx(), cap = StrokeCap.Round)
             )
-            for (satellite in 0 until 3) {
-                val angle = phase * 2f * PI.toFloat() + satellite * 2.094f
+            for (satellite in 0 until 4) {
+                val angle = phase * 2f * PI.toFloat() + satellite * 1.571f
                 val pos = Offset(
                     center.x + cos(angle) * radius * 0.98f,
                     center.y + sin(angle) * radius * 0.38f

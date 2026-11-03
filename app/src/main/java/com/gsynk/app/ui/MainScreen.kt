@@ -558,13 +558,13 @@ fun MainScreen(vm: MainViewModel) {
                 .graphicsLayer {
                     val reveal = rootRevealProgress
                     val backdrop = backdropProgress
-                    scaleX = (0.91f + 0.09f * reveal) * (1f - 0.045f * backdrop)
-                    scaleY = (0.94f + 0.06f * reveal) * (1f - 0.035f * backdrop)
+                    scaleX = (0.88f + 0.12f * reveal) * (1f - 0.070f * backdrop)
+                    scaleY = (0.92f + 0.08f * reveal) * (1f - 0.055f * backdrop)
                     alpha = reveal * (1f - 0.30f * backdrop)
                     translationY = (1f - reveal) * 58f + backdrop * 22f
-                    rotationX = (1f - reveal) * 7f + backdrop * 3.5f
-                    rotationY = backdrop * -2.0f
-                    cameraDistance = 17f * density
+                    rotationX = (1f - reveal) * 12f + backdrop * 6.5f
+                    rotationY = backdrop * -4.5f
+                    cameraDistance = 11f * density
                     shape = RoundedCornerShape(((1f - reveal) * 30f).dp)
                     clip = reveal < 0.999f
                 }

@@ -69,7 +69,7 @@ object Catalog {
     enum class Group(val title: String, val hint: String) {
         CONNECT("связь", "GSYNK рядом: NFC, Grape Link, Wi-Fi и Bluetooth"),
         SCHEDULE("расписание", "автоматизации школы, дома, яркость и громкость по времени"),
-        SCREEN("экран", "GREAL: GPU-аврора, текстуры, 3D-формы и активные углы"),
+        SCREEN("экран", "единые настройки GREAL UI и проверка экрана"),
         HARDWARE("железо", "датчики, байты, регистры и экран — каждая плитка напрямую"),
         LOAD("нагрузка", "процессор, ускоритель, температура"),
         AI("GSYNK-AI", "свои модели с ПК и командный ии"),
@@ -136,9 +136,7 @@ object Catalog {
         Entry("coop", "игра вдвоём", "grape link по Wi-Fi", Group.CONNECT, Gioui.Size.SMALL, 10, SHIELD, "panel:coop", 62, words = listOf("кооп", "данж")),
 
         // ——— экран ———
-        Entry("effects", "GREAL", "Grape Realism: GPU-аврора, скевоморфные текстуры, свет и 3D-углы", Group.SCREEN, Gioui.Size.MEDIUM, 12, TIME, "page:effects", 98, fresh = true, words = listOf("greal", "grape realism", "gsynkprg", "дизайн", "скеуоморфизм", "текстуры", "аврора", "gpu", "блюр", "blur", "блики", "3d", "анимации")),
-        Entry("radius", "формы GREAL", "бесшовные 3D-края, сферы и активные углы", Group.SCREEN, Gioui.Size.SMALL, 13, TUNE, "page:radius", 74, fresh = true, words = listOf("greal", "gsynkprg", "формы", "радиус", "3d углы", "края", "дизайн")),
-        Entry("tweaks", "дизайн GREAL", "аврора, материалы, свет, сферы и отклик", Group.SCREEN, Gioui.Size.SMALL, 14, VOLUME, "panel:settings", 82, fresh = true, words = listOf("greal", "gsynkprg", "дизайн", "тема", "цвет", "материал", "текстура", "блики")),
+        Entry("grealui", "настройки GREAL UI", "единая 3D-сцена: материал, формы, сферы-плитки и отклик", Group.SCREEN, Gioui.Size.LARGE, 12, TUNE, "page:greal", 100, fresh = true, words = listOf("greal", "greal ui", "настройки greal", "дизайн", "формы", "плитки", "сферы", "скеуоморфизм", "текстуры", "аврора", "gpu", "3d", "анимации", "акцент", "тема")),
         Entry("screensaver", "скринсейвер", "полка с часами", Group.SCREEN, Gioui.Size.SMALL, 15, TIME, "flag:screensaver", 42, words = listOf("часы", "полка")),
         Entry("screen", "проверка экрана", "AMOLED, ШИМ, мультитач", Group.SCREEN, Gioui.Size.SMALL, 16, BRIGHT, "lab:screen", 48, words = listOf("пиксель", "битый")),
         Entry("pwm", "шим-микроскоп", "замер мерцания камерой", Group.SCREEN, Gioui.Size.SMALL, 17, BRIGHT, "lab:pwm", 44, fresh = false, words = listOf("мерцание", "истощение")),

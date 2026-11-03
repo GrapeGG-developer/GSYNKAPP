@@ -405,7 +405,7 @@ fun GioCard(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
+        targetValue = if (pressed) 0.93f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy),
         label = "gioPress"
     )
@@ -415,11 +415,11 @@ fun GioCard(
             .gioSpan(size)
             .graphicsLayer {
                 scaleX = pressScale
-                scaleY = if (pressed) pressScale * 1.012f else 1f
-                rotationX = if (pressed) -3.5f else 0f
-                rotationY = if (pressed) 2.5f else 0f
-                cameraDistance = 16f * density
-                shadowElevation = if (pressed) 4f else 14f
+                scaleY = if (pressed) pressScale * 1.025f else 1f
+                rotationX = if (pressed) -10f else -2f
+                rotationY = if (pressed) 8f else 2f
+                cameraDistance = 10f * density
+                shadowElevation = if (pressed) 5f else 22f
                 ambientShadowColor = color.copy(alpha = 0.30f)
                 spotShadowColor = color.copy(alpha = 0.38f)
             }

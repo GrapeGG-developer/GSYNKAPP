@@ -344,12 +344,12 @@ internal fun startPageChunks(
 }
 
 /**
- * Одна панель магнитной ленты GREAL. Положение берётся из реального
+ * Одна панель глубокой 3D-сцены GREAL. Положение берётся из реального
  * LazyListState: центр экрана смотрит прямо, прошлое и будущее уходят
- * по цилиндру на заднюю фигуру.
+ * в перспективу без кассетных линий и кругов.
  */
 @Composable
-private fun GrealTapePanel(
+private fun GrealDepthPanel(
     listState: LazyListState,
     itemKey: String,
     content: @Composable () -> Unit
@@ -360,24 +360,25 @@ private fun GrealTapePanel(
             val viewport = (info.viewportEndOffset - info.viewportStartOffset).coerceAtLeast(1)
             val item = info.visibleItemsInfo.firstOrNull { it.key == itemKey }
             if (item == null) {
-                grealTapeTransform(0f)
+                grealDepthTransform(0f)
             } else {
                 val viewportCenter = viewport / 2f
                 val itemCenter = item.offset - info.viewportStartOffset + item.size / 2f
-                grealTapeTransform((itemCenter - viewportCenter) / viewportCenter.coerceAtLeast(1f))
+                grealDepthTransform((itemCenter - viewportCenter) / viewportCenter.coerceAtLeast(1f))
             }
         }
     }
     Box(
         Modifier.graphicsLayer {
-            transformOrigin = TransformOrigin(0.5f, 0.5f)
+            transformOrigin = TransformOrigin(0.5f, transform.pivotY)
             rotationX = transform.rotationX
             rotationY = transform.rotationY
             scaleX = transform.scale
             scaleY = transform.scale
             alpha = transform.alpha
+            translationX = transform.translationXD * density
             translationY = transform.translationYDp * density
-            cameraDistance = 17f * density
+            cameraDistance = 10.5f * density
             shape = RoundedCornerShape(20.dp)
             clip = false
             shadowElevation = transform.shadowElevation
@@ -399,7 +400,7 @@ private fun GrealControlOrb(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.90f else 1f,
+        targetValue = if (pressed) 0.86f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioLowBouncy),
         label = "grealControlScale"
     )
@@ -408,10 +409,10 @@ private fun GrealControlOrb(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-                rotationX = if (pressed) -8f else 0f
-                rotationY = if (pressed) 6f else 0f
-                cameraDistance = 14f * density
-                shadowElevation = if (pressed) 3f else 10f
+                rotationX = if (pressed) -16f else -3f
+                rotationY = if (pressed) 13f else 3f
+                cameraDistance = 9f * density
+                shadowElevation = if (pressed) 4f else 16f
                 ambientShadowColor = accent.copy(alpha = 0.34f)
                 spotShadowColor = accent.copy(alpha = 0.42f)
             }
@@ -529,7 +530,7 @@ fun EmptyHomeScreen(
     onCloseMinimized: (Int) -> Unit = {}
 ) {
     AnimatedGrapeBackground {
-        GrealTapeBackdrop(Modifier.matchParentSize(), scrollPixels = 120f)
+        GrealDepthBackdrop(Modifier.matchParentSize(), scrollPixels = 120f)
         Box(
             Modifier
                 .fillMaxSize()
@@ -553,10 +554,10 @@ fun EmptyHomeScreen(
                                 .width(184.dp)
                                 .height(72.dp)
                                 .graphicsLayer {
-                                    rotationX = -5f
-                                    rotationY = 7f
-                                    cameraDistance = 15f * density
-                                    shadowElevation = 18f
+                                    rotationX = -11f
+                                    rotationY = 14f
+                                    cameraDistance = 9f * density
+                                    shadowElevation = 27f
                                     ambientShadowColor = window.color.copy(alpha = 0.34f)
                                     spotShadowColor = window.color.copy(alpha = 0.42f)
                                     shape = RoundedCornerShape(18.dp)
@@ -666,8 +667,8 @@ fun EmptyHomeScreen(
 }
 
 /**
- * GREAL Start EXP — портретная 3D-лента времени. Панели намотаны на задний
- * барабан магнитной ленты: вверх — прошлое, в центре — «сейчас», вниз —
+ * GREAL Start EXP — портретная 3D-лента времени. Панели плавают в глубокой
+ * аврора-сцене без кассетной графики: вверх — прошлое, в центре — «сейчас», вниз —
  * будущее из объёмных сфер-плиток по подписанным категориям.
  */
 @Composable
@@ -793,12 +794,12 @@ fun StartMenuScreen(
                         positioned = true
                     }
                 }
-                val tapeScroll by remember {
+                val depthScroll by remember {
                     derivedStateOf {
                         listState.firstVisibleItemIndex * 560f + listState.firstVisibleItemScrollOffset.toFloat()
                     }
                 }
-                GrealTapeBackdrop(Modifier.matchParentSize(), scrollPixels = tapeScroll)
+                GrealDepthBackdrop(Modifier.matchParentSize(), scrollPixels = depthScroll)
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -806,12 +807,12 @@ fun StartMenuScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     item(key = "past-head") {
-                        GrealTapePanel(listState, "past-head") {
+                        GrealDepthPanel(listState, "past-head") {
                             TimelineSectionLabel("↑ прошлое", "новости, уведомления и настройки — листай вверх")
                         }
                     }
                     items(pastEntries, key = { "past-" + it.id }) { entry ->
-                        GrealTapePanel(listState, "past-" + entry.id) {
+                        GrealDepthPanel(listState, "past-" + entry.id) {
                             TimelinePastCard(
                                 entry = entry,
                                 liveLines = liveLinesFor(entry),
@@ -820,14 +821,14 @@ fun StartMenuScreen(
                         }
                     }
                     item(key = "now") {
-                        GrealTapePanel(listState, "now") { TimelineNowCard() }
+                        GrealDepthPanel(listState, "now") { TimelineNowCard() }
                     }
                     var runningIndex = 0
                     groups.forEach { group ->
                         val baseIndex = runningIndex
                         runningIndex += group.entries.size
                         item(key = "future-" + group.key) {
-                            GrealTapePanel(listState, "future-" + group.key) {
+                            GrealDepthPanel(listState, "future-" + group.key) {
                             TimelineGroupSection(
                                 group = group,
                                 columns = columns,
@@ -842,7 +843,7 @@ fun StartMenuScreen(
                         }
                     }
                     item(key = "future-end") {
-                        GrealTapePanel(listState, "future-end") {
+                        GrealDepthPanel(listState, "future-end") {
                             TimelineSectionLabel("конец будущего", "дальше — только следующие версии GSYNK")
                         }
                     }
@@ -912,6 +913,14 @@ private fun TimelinePastCard(
             .onGloballyPositioned { coordinates ->
                 launchOrigin = coordinates.toLiquidWindowOrigin(entry)
             }
+            .graphicsLayer {
+                rotationX = -6f
+                rotationY = 5f
+                cameraDistance = 10f * density
+                shadowElevation = 20f
+                ambientShadowColor = entry.color.copy(alpha = 0.30f)
+                spotShadowColor = entry.color.copy(alpha = 0.38f)
+            }
             .clip(shape)
             .background(
                 Brush.linearGradient(
@@ -974,7 +983,7 @@ private fun TimelinePastCard(
     }
 }
 
-/** Точка «сейчас»: живой часовой барабан, с которого начинается «Пуск». */
+/** Точка «сейчас»: живая часовая сфера, с которого начинается «Пуск». */
 @Composable
 private fun TimelineNowCard() {
     var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -992,6 +1001,14 @@ private fun TimelineNowCard() {
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
+            .graphicsLayer {
+                rotationX = -5f
+                rotationY = -5f
+                cameraDistance = 10f * density
+                shadowElevation = 26f
+                ambientShadowColor = Color(0xFF8B5CF6).copy(alpha = 0.34f)
+                spotShadowColor = Color(0xFF22D3EE).copy(alpha = 0.34f)
+            }
             .clip(shape)
             .background(
                 Brush.linearGradient(
@@ -1077,6 +1094,14 @@ private fun TimelineGroupSection(
         Box(
             Modifier
                 .fillMaxWidth()
+                .graphicsLayer {
+                    rotationX = -3.5f
+                    rotationY = 3.5f
+                    cameraDistance = 11f * density
+                    shadowElevation = 28f
+                    ambientShadowColor = accent.copy(alpha = 0.32f)
+                    spotShadowColor = accent.copy(alpha = 0.38f)
+                }
                 .clip(shape)
                 .background(
                     Brush.linearGradient(
@@ -1176,17 +1201,17 @@ private fun StartTile(
     val pressed by interactionSource.collectIsPressedAsState()
     val enterAlpha by animateFloatAsState(if (entered) 1f else 0f, tween(320), label = "orbAlpha")
     val enterScale by animateFloatAsState(
-        if (entered) 1f else 0.88f,
+        if (entered) 1f else 0.82f,
         spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy),
         label = "orbEnterScale"
     )
     val pressScaleX by animateFloatAsState(
-        if (pressed) 0.92f else 1f,
+        if (pressed) 0.88f else 1f,
         spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioLowBouncy),
         label = "orbPressScaleX"
     )
     val pressScaleY by animateFloatAsState(
-        if (pressed) 1.06f else 1f,
+        if (pressed) 1.10f else 1f,
         spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioLowBouncy),
         label = "orbPressScaleY"
     )
@@ -1210,9 +1235,12 @@ private fun StartTile(
                 scaleX = enterScale * pressScaleX
                 scaleY = enterScale * pressScaleY
                 translationY = (1f - enterAlpha) * 18f
-                rotationX = (if (pressed) -7f else sin(phase * 2f * PI.toFloat()) * 2.4f)
-                rotationY = (if (pressed) 6f else cos(phase * 2f * PI.toFloat()) * 3.0f)
-                cameraDistance = 15f * density
+                rotationX = (if (pressed) -17f else sin(phase * 2f * PI.toFloat()) * 7.5f)
+                rotationY = (if (pressed) 14f else cos(phase * 2f * PI.toFloat()) * 9.5f)
+                cameraDistance = 8.5f * density
+                shadowElevation = if (pressed) 6f else 18f
+                ambientShadowColor = entry.color.copy(alpha = 0.30f)
+                spotShadowColor = entry.color.copy(alpha = 0.38f)
             }
             .width(width)
             .height(height)
@@ -1423,14 +1451,14 @@ fun MetroAppShell(
                 .graphicsLayer {
                     transformOrigin = TransformOrigin(rect.centerX, rect.centerY)
                     scaleX = rect.width * (1f + liquidPulse * 0.018f)
-                    scaleY = rect.height * (1f - liquidPulse * 0.030f)
+                    scaleY = rect.height * (1f - liquidPulse * 0.055f)
                     alpha = contentAlpha
-                    rotationX = (0.5f - targetOrigin.centerY) * 13f * (1f - p) + rollDegrees * rollSign * 0.55f
-                    rotationY = (targetOrigin.centerX - 0.5f) * 11f * (1f - p) + liquidPulse * 1.4f
-                    cameraDistance = 15f * density
+                    rotationX = (0.5f - targetOrigin.centerY) * 21f * (1f - p) + rollDegrees * rollSign * 0.72f
+                    rotationY = (targetOrigin.centerX - 0.5f) * 17f * (1f - p) + liquidPulse * 3.2f
+                    cameraDistance = 10f * density
                     shape = RoundedCornerShape(localCorner)
                     clip = true
-                    shadowElevation = 10f + liquidPulse * 30f
+                    shadowElevation = 14f + liquidPulse * 46f
                     ambientShadowColor = accent.copy(alpha = 0.38f)
                     spotShadowColor = accent.copy(alpha = 0.46f)
                 }
@@ -1574,8 +1602,8 @@ fun MetroAppShell(
                     .graphicsLayer {
                         alpha = seedAlpha
                         rotationX = rollDegrees * rollSign * 0.7f
-                        rotationY = (targetOrigin.centerX - 0.5f) * 10f * (1f - p)
-                        cameraDistance = 15f * density
+                        rotationY = (targetOrigin.centerX - 0.5f) * 16f * (1f - p)
+                        cameraDistance = 9f * density
                     },
                 contentAlignment = Alignment.Center
             ) {
