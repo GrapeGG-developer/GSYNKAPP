@@ -11,7 +11,7 @@ import numpy as np
 import torch
 
 from gsai.context import (
-    ContextSession, KnowledgeIndex, build_context_prompt,
+    ContextSession, KnowledgeIndex, build_context_prompt, content_tokens,
     generate_context_reply, score_candidate,
 )
 from gsai.dataset import (
@@ -31,6 +31,7 @@ def sample_project() -> Project:
         KnowledgeEntry("фотосинтез", "фотосинтез — процесс, при котором растения превращают свет, воду и углекислый газ в кислород и энергию.", "definition", ["биология", "растения"], weight=3),
         KnowledgeEntry("Солнце", "Солнце — звезда в центре Солнечной системы. оно даёт Земле свет и тепло.", "definition", ["космос"], weight=2),
         KnowledgeEntry("правило сложения", "при сложении порядок чисел не меняет результат. например, 2 + 3 = 5 и 3 + 2 = 5.", "rule", ["математика"], weight=2),
+        KnowledgeEntry("2+2", "2 + 2 = 4. Ответ: 4.", "definition", ["математика", "арифметика"], weight=3),
     ]
     topics = ["кошка", "собака", "лиса", "сова", "река", "гора", "море", "лес", "луна", "Марс", "книга", "музыка"]
     facts = [
@@ -87,6 +88,9 @@ def main() -> None:
     index = KnowledgeIndex(project.effective_knowledge())
     hits = index.search("что такое фотосинтез у растений", limit=3)
     assert hits and hits[0].entry.title == "фотосинтез", hits
+    assert content_tokens("2+2") == ["2", "+", "2"]
+    math_hits = index.search("2+2", limit=3)
+    assert math_hits and math_hits[0].entry.title == "2+2" and "Ответ: 4" in math_hits[0].entry.body, math_hits
     session = ContextSession()
     session.memory.observe("Меня зовут Семён. Я живу в Самаре. Я люблю виноград и космос.")
     assert session.memory.direct_answer("как меня зовут?") == "Тебя зовут Семён."

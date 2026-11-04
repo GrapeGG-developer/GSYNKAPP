@@ -50,7 +50,15 @@ def stem(word: str) -> str:
 
 
 def content_tokens(text: str) -> list[str]:
-    return [stem(tok) for tok in split_tokens(text) if tok.isalnum() and tok not in _STOP and len(tok) > 1]
+    out: list[str] = []
+    for tok in split_tokens(text):
+        # Цифры и операторы критичны для арифметики: без них запрос «2+2»
+        # превращался в пустой поиск и модель не получала точную карточку.
+        if tok in {"+", "-", "*", "/", "=", "%"}:
+            out.append(tok)
+        elif tok.isalnum() and tok not in _STOP and (len(tok) > 1 or tok.isdigit() or tok in {"x", "y"}):
+            out.append(stem(tok))
+    return out
 
 
 def _clean(text: str) -> str:
