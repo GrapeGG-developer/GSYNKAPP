@@ -68,12 +68,20 @@ def package_of(name: str) -> Path:
     return project_dir(name) / (slugify(name) + ".gsai")
 
 
+def context_file_of(name: str) -> Path:
+    return project_dir(name) / "context-session.json"
+
+
 class Settings:
     def __init__(self) -> None:
         self.repo: str = DEFAULT_REPO
         self.token: str = ""
         self.turbo: bool = True
         self.check_updates: bool = True
+        self.device_preference: str = "auto"
+        self.compile_model: bool = False
+        self.mixed_precision: bool = True
+        self.auto_batch: bool = True
         self.path = data_dir() / "settings.json"
         self.load()
 
@@ -84,6 +92,10 @@ class Settings:
             self.token = data.get("token", "")
             self.turbo = bool(data.get("turbo", True))
             self.check_updates = bool(data.get("check_updates", True))
+            self.device_preference = str(data.get("device_preference", "auto"))
+            self.compile_model = bool(data.get("compile_model", False))
+            self.mixed_precision = bool(data.get("mixed_precision", True))
+            self.auto_batch = bool(data.get("auto_batch", True))
         except Exception:
             pass
 
@@ -91,4 +103,8 @@ class Settings:
         self.path.write_text(json.dumps({
             "repo": self.repo, "token": self.token,
             "turbo": self.turbo, "check_updates": self.check_updates,
+            "device_preference": self.device_preference,
+            "compile_model": self.compile_model,
+            "mixed_precision": self.mixed_precision,
+            "auto_batch": self.auto_batch,
         }, ensure_ascii=False, indent=1), encoding="utf-8")

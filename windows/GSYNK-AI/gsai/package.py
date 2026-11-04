@@ -37,14 +37,20 @@ def export_package(
     version: str = "1.0.0",
     temperature: float = 0.8,
     top_k: int = 40,
+    top_p: float = 0.92,
+    repetition_penalty: float = 1.08,
     max_new_tokens: int = 90,
+    knowledge: list[dict] | None = None,
     dataset_stats: dict | None = None,
     steps: int = 0,
     loss: float = 0.0,
     icon_png: bytes | None = None,
 ) -> dict:
     cfg = model.cfg
-    state = model.state_dict()
+    state = {
+        (key[len("_orig_mod."):] if key.startswith("_orig_mod.") else key): value
+        for key, value in model.state_dict().items()
+    }
     chunks: list[np.ndarray] = []
     for key, shape in tensor_order(cfg):
         tensor = state[key].detach().cpu().numpy()
@@ -61,6 +67,18 @@ def export_package(
         "params": int(model.num_params()),
         "temperature": temperature,
         "top_k": top_k,
+        "top_p": top_p,
+        "repetition_penalty": repetition_penalty,
+        "generation": {
+            "temperature": temperature, "top_k": top_k, "top_p": top_p,
+            "repetition_penalty": repetition_penalty,
+        },
+        "context": {
+            "engine": "greal-context-1",
+            "trained_on": "knowledge-cards",
+            "knowledge_entries": len(knowledge or []),
+            "supports": ["dialogue-history", "knowledge-retrieval", "user-memory", "follow-up"],
+        },
         "max_new_tokens": max_new_tokens,
         "dataset": dataset_stats or {},
         "steps": steps,
@@ -71,6 +89,10 @@ def export_package(
         zf.writestr("model.json", json.dumps(meta, ensure_ascii=False, indent=1))
         zf.writestr("vocab.json", json.dumps(tokenizer.vocab, ensure_ascii=False))
         zf.writestr("weights.bin", weights)
+        if knowledge is not None:
+            # Необязательный файл: текущий GSYNK его просто игнорирует, а ПК и
+            # будущие версии телефона смогут делать retrieval по этим знаниям.
+            zf.writestr("knowledge.json", json.dumps(knowledge, ensure_ascii=False, indent=1))
         if icon_png:
             zf.writestr("icon.png", icon_png)
     meta["file_size"] = Path(out_path).stat().st_size
@@ -86,6 +108,10 @@ class GsaiPackage:
             self.meta = json.loads(zf.read("model.json").decode("utf-8"))
             vocab = json.loads(zf.read("vocab.json").decode("utf-8"))
             raw = zf.read("weights.bin")
+            self.knowledge = (
+                json.loads(zf.read("knowledge.json").decode("utf-8"))
+                if "knowledge.json" in zf.namelist() else []
+            )
         if self.meta.get("format") != FORMAT:
             raise ValueError("неизвестный формат пакета: нужен gsai-1")
         if hashlib.sha256(raw).hexdigest() != self.meta["weights_sha256"]:
@@ -141,12 +167,19 @@ class GsaiPackage:
         x = self._ln(x, w["ln_f.weight"], w["ln_f.bias"])
         return self._lin(x, w["head.weight"], w["head.bias"])
 
-    def generate(self, prompt: list[int], max_new: int, temperature: float, top_k: int, seed: int = 7) -> list[int]:
+    def generate(
+        self, prompt: list[int], max_new: int, temperature: float, top_k: int,
+        top_p: float = 1.0, repetition_penalty: float = 1.0, seed: int = 7,
+    ) -> list[int]:
         rng = np.random.default_rng(seed)
         ids = list(prompt)[-self.cfg.block_size:]
         out: list[int] = []
         for _ in range(max_new):
-            last = self.logits(ids[-self.cfg.block_size:])[-1]
+            last = self.logits(ids[-self.cfg.block_size:])[-1].copy()
+            if repetition_penalty and repetition_penalty > 1.0 and out:
+                for tok in set(out[-96:]):
+                    penalty = float(repetition_penalty) ** min(4, out[-96:].count(tok))
+                    last[tok] = last[tok] / penalty if last[tok] > 0 else last[tok] * penalty
             if temperature <= 0.01:
                 nxt = int(np.argmax(last))
             else:
@@ -156,6 +189,13 @@ class GsaiPackage:
                     last = np.where(last < thresh, -1e30, last)
                 probs = np.exp(last - last.max())
                 probs /= probs.sum()
+                if top_p and 0.0 < top_p < 1.0:
+                    order = np.argsort(probs)[::-1]
+                    cumulative = np.cumsum(probs[order])
+                    keep = order[(cumulative - probs[order]) < top_p]
+                    filtered = np.zeros_like(probs)
+                    filtered[keep] = probs[keep]
+                    probs = filtered / max(1e-12, filtered.sum())
                 nxt = int(rng.choice(len(probs), p=probs))
             if nxt in (4, 6):
                 break

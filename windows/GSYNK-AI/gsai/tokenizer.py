@@ -36,6 +36,21 @@ def split_tokens(text: str) -> list[str]:
 
 
 class Tokenizer:
+    @staticmethod
+    def tokenize(text: str) -> list[str]:
+        return split_tokens(text)
+
+    @staticmethod
+    def detokenize(tokens: list[str]) -> str:
+        out = ""
+        prev = ""
+        for tok in tokens:
+            if out and tok not in _NO_SPACE_BEFORE and prev not in _NO_SPACE_AFTER:
+                out += " "
+            out += tok
+            prev = tok
+        return out
+
     def __init__(self, vocab: list[str]):
         if vocab[: len(SPECIALS)] != SPECIALS:
             raise ValueError("словарь должен начинаться со специальных токенов GSYNK-AI")

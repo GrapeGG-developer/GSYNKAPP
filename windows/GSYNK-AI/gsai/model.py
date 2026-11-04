@@ -47,8 +47,7 @@ class Block(nn.Module):
         self.fc = nn.Linear(d, 4 * d)
         self.mlp_proj = nn.Linear(4 * d, d)
         self.drop = nn.Dropout(cfg.dropout)
-        mask = torch.tril(torch.ones(cfg.block_size, cfg.block_size))
-        self.register_buffer("mask", mask.view(1, 1, cfg.block_size, cfg.block_size), persistent=False)
+        self.dropout_p = float(cfg.dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         b, t, d = x.shape
@@ -58,11 +57,24 @@ class Block(nn.Module):
         q = q.view(b, t, self.n_head, self.head_dim).transpose(1, 2)
         k = k.view(b, t, self.n_head, self.head_dim).transpose(1, 2)
         v = v.view(b, t, self.n_head, self.head_dim).transpose(1, 2)
-        att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
-        att = att.masked_fill(self.mask[:, :, :t, :t] == 0, float("-inf"))
-        att = F.softmax(att, dim=-1)
-        att = self.drop(att)
-        y = att @ v
+        if x.device.type == "privateuseone":
+            # torch-directml 2.3 не гарантирует SDPA. Для AMD/Intel под Windows
+            # оставляем проверенный ручной causal attention с теми же весами.
+            att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+            mask = torch.triu(
+                torch.full((t, t), float("-inf"), device=x.device, dtype=att.dtype), diagonal=1
+            )
+            att = F.softmax(att + mask, dim=-1)
+            att = self.drop(att)
+            y = att @ v
+        else:
+            # SDPA равен ручному causal attention по математике, но использует fused
+            # ядра ускорителя и не строит огромную матрицу внимания в памяти.
+            y = F.scaled_dot_product_attention(
+                q, k, v,
+                dropout_p=self.dropout_p if self.training else 0.0,
+                is_causal=True,
+            )
         y = y.transpose(1, 2).contiguous().view(b, t, d)
         x = x + self.proj(y)
         h2 = self.ln2(x)
@@ -100,7 +112,12 @@ class GsaiGPT(nn.Module):
         logits = self.head(self.ln_f(x))
         loss = None
         if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+            if bool((targets != -100).any().detach().cpu()):
+                loss = F.cross_entropy(
+                    logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-100
+                )
+            else:
+                loss = logits.sum() * 0.0
         return logits, loss
 
     def num_params(self) -> int:
@@ -113,6 +130,8 @@ class GsaiGPT(nn.Module):
         max_new: int = 90,
         temperature: float = 0.8,
         top_k: int = 40,
+        top_p: float = 1.0,
+        repetition_penalty: float = 1.0,
         stop_ids: tuple[int, ...] = (4, 6),
         device: str | torch.device = "cpu",
         seed: int | None = None,
@@ -128,6 +147,13 @@ class GsaiGPT(nn.Module):
             x = torch.tensor([window], dtype=torch.long, device=device)
             logits, _ = self(x)
             last = logits[0, -1].float().cpu()
+            if repetition_penalty and repetition_penalty > 1.0 and out:
+                seen: dict[int, int] = {}
+                for tok in out[-96:]:
+                    seen[tok] = min(4, seen.get(tok, 0) + 1)
+                for tok, count in seen.items():
+                    penalty = float(repetition_penalty) ** count
+                    last[tok] = last[tok] / penalty if last[tok] > 0 else last[tok] * penalty
             if temperature <= 0.01:
                 nxt = int(torch.argmax(last).item())
             else:
@@ -136,6 +162,13 @@ class GsaiGPT(nn.Module):
                     vals, _ = torch.topk(last, min(top_k, last.numel()))
                     last[last < vals[-1]] = float("-inf")
                 probs = F.softmax(last, dim=-1)
+                if top_p and 0.0 < top_p < 1.0:
+                    sorted_probs, sorted_idx = torch.sort(probs, descending=True)
+                    cumulative = torch.cumsum(sorted_probs, dim=-1)
+                    keep_sorted = cumulative - sorted_probs < top_p
+                    filtered = torch.zeros_like(probs)
+                    filtered[sorted_idx[keep_sorted]] = probs[sorted_idx[keep_sorted]]
+                    probs = filtered / filtered.sum().clamp_min(1e-12)
                 nxt = int(torch.multinomial(probs, 1, generator=gen).item())
             if nxt in stop_ids:
                 break

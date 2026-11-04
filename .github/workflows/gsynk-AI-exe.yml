@@ -46,7 +46,18 @@ jobs:
         working-directory: windows/GSYNK-AI
         run: |
           python -c "import torch, numpy, PySide6; print('torch', torch.__version__)"
-          python -c "import gsai.dataset, gsai.model, gsai.trainer, gsai.package, gsai.server, gsai.updater; print('gsai core OK')"
+          python -c "import gsai.context, gsai.dataset, gsai.model, gsai.trainer, gsai.package, gsai.server, gsai.updater; print('gsai core OK')"
+
+      - name: Knowledge/context/GUI tests
+        shell: pwsh
+        working-directory: windows/GSYNK-AI
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
+          QT_QPA_PLATFORM: "offscreen"
+        run: |
+          python tests/run_core_tests.py
+          python tests/run_gui_tests.py
 
       - name: Build exe with PyInstaller (onedir)
         shell: pwsh
