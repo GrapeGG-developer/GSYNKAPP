@@ -107,10 +107,10 @@ class GrealInfiniteTest {
         assertTrue("страница не зарегистрирована", GiouiPageIds.contains("antistress"))
         val router = File("src/main/java/com/gsynk/app/ui/GiouiScreens.kt").readText()
         assertTrue("роутер не открывает антистресс", router.contains("\"antistress\" -> {"))
-        assertEquals("5.8.0", ReleaseNews.VERSION)
+        assertEquals("5.8.1", ReleaseNews.VERSION)
         val build = File("build.gradle.kts").readText()
-        assertTrue(build.contains("versionCode = 35"))
-        assertTrue(build.contains("versionName = \"5.8.0\""))
+        assertTrue(build.contains("versionCode = 36"))
+        assertTrue(build.contains("versionName = \"5.8.1\""))
     }
 
     @Test

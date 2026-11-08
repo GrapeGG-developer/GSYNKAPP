@@ -3,21 +3,34 @@ package com.gsynk.app.core
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.round
 import kotlin.math.sin
 
 /**
- * Чистая геометрия XrossMediaBar для GSYNK.
+ * Чистая геометрия и физика XrossMediaBar для GSYNK.
  *
- * XMB живёт поверх физического GREAL: горизонтальный ряд подписанных категорий,
- * вертикальный ряд функций под выбранной категорией, один фокус и затухание
- * соседей по глубине. Здесь только математика без Android и Compose — её
- * проверяют unit-тесты, а UI рисует результат одним Canvas/Column.
+ * После 5.8.0 навигация больше не дёргается дискретными шагами: фаза категории
+ * и фаза пункта — непрерывные числа. Каждый элемент знает своё циклическое
+ * расстояние до фокуса, а инерция и кратчайший путь считаются здесь, без Android/Compose.
  */
 object Xmb {
-    const val VERSION = "GREAL XMB — XrossMediaBar на физическом GREAL"
+    const val VERSION = "GREAL XMB Motion — инерционный XrossMediaBar на физическом GREAL"
     const val CATEGORY_STEP_DP = 92
     const val VISIBLE_ITEMS = 7
     const val WAVE_LAYERS = 5
+    const val GESTURE_SLOP_DP = 12
+
+    private fun finite(value: Float, fallback: Float = 0f): Float =
+        if (value.isNaN() || value.isInfinite()) fallback else value
+
+    private fun smoothstep01(value: Float): Float {
+        val t = finite(value).coerceIn(0f, 1f)
+        return t * t * (3f - 2f * t)
+    }
+
+    private fun mix(from: Float, to: Float, progress: Float): Float =
+        from + (to - from) * smoothstep01(progress)
 
     /** Бесконечное кольцо категорий и пунктов: дошёл до края — вышел с другой стороны. */
     fun wrap(index: Int, size: Int): Int {
@@ -27,49 +40,84 @@ object Xmb {
 
     fun move(current: Int, delta: Int, size: Int): Int = wrap(current + delta, size)
 
-    /** Выбранная категория крупнее и ярче; соседи уходят в глубину, но остаются на экране. */
-    fun categoryScale(distance: Int): Float = when (abs(distance)) {
-        0 -> 1.16f
-        1 -> 0.90f
-        2 -> 0.78f
-        else -> 0.66f
+    /** Нормализует непрерывную фазу в [0, size), не ломая отрицательные значения. */
+    fun normalizePhase(phase: Float, size: Int): Float {
+        if (size <= 0) return 0f
+        val value = finite(phase)
+        val sizeF = size.toFloat()
+        return value - floor(value / sizeF) * sizeF
     }
-
-    fun categoryAlpha(distance: Int): Float = when (abs(distance)) {
-        0 -> 1f
-        1 -> 0.72f
-        2 -> 0.48f
-        else -> 0.28f
-    }
-
-    fun categoryRotationY(distance: Int): Float = (distance * 8f).coerceIn(-24f, 24f)
-
-    /** Фокусный пункт выдвинут вправо и увеличен, остальные уходят влево и в тень. */
-    fun itemScale(distance: Int): Float = when (abs(distance)) {
-        0 -> 1.06f
-        1 -> 0.94f
-        2 -> 0.86f
-        else -> 0.78f
-    }
-
-    fun itemAlpha(distance: Int): Float = when (abs(distance)) {
-        0 -> 1f
-        1 -> 0.78f
-        2 -> 0.55f
-        else -> 0.32f
-    }
-
-    fun itemTranslationX(distance: Int): Float = when {
-        distance == 0 -> 26f
-        distance < 0 -> -8f * abs(distance)
-        else -> -16f * distance
-    }
-
-    fun itemRotationX(distance: Int): Float = (distance * 3.2f).coerceIn(-10f, 10f)
 
     /**
-     * Окно из нескольких пунктов вокруг фокуса. Список не скроллится сам:
-     * фокус ходит по всем элементам, а на экране всегда видно фиксированное число строк.
+     * Кратчайшее знаковое расстояние от элемента до фокуса на кольце.
+     * Положительное — элемент справа/ниже, отрицательное — слева/выше.
+     */
+    fun cyclicDistance(index: Int, phase: Float, size: Int): Float {
+        if (size <= 0) return 0f
+        val sizeF = size.toFloat()
+        val normalized = normalizePhase(phase, size)
+        var distance = index - normalized
+        if (distance > sizeF / 2f) distance -= sizeF
+        if (distance < -sizeF / 2f) distance += sizeF
+        return distance.coerceIn(-sizeF / 2f, sizeF / 2f)
+    }
+
+    /** Ближайшая фаза, соответствующая нужному индексу, чтобы анимация не шла через весь круг. */
+    fun nearestPhase(current: Float, index: Int, size: Int): Float {
+        if (size <= 0) return 0f
+        val sizeF = size.toFloat()
+        val normalized = normalizePhase(current, size)
+        val target = wrap(index, size).toFloat()
+        var delta = target - normalized
+        if (delta > sizeF / 2f) delta -= sizeF
+        if (delta < -sizeF / 2f) delta += sizeF
+        return finite(current) + delta
+    }
+
+    /** Сколько ещё целых пунктов добавить после свайпа, исходя из скорости в индексах/секунду. */
+    fun flingSteps(velocityIndexPerSecond: Float, maxSteps: Int = 2): Int {
+        val velocity = finite(velocityIndexPerSecond)
+        val cap = maxSteps.coerceIn(0, 4)
+        if (cap == 0) return 0
+        return when {
+            velocity > 5.2f -> minOf(2, cap)
+            velocity > 1.25f -> 1
+            velocity < -5.2f -> -minOf(2, cap)
+            velocity < -1.25f -> -1
+            else -> 0
+        }
+    }
+
+    /** Целевая фаза после отпускания: ближайший целый пункт плюс инерция. */
+    fun settleTarget(phase: Float, velocityIndexPerSecond: Float, maxSteps: Int = 2): Float =
+        round(finite(phase)) + flingSteps(velocityIndexPerSecond, maxSteps)
+
+    /** Выбранная категория крупнее и ярче; соседи плавно уходят в глубину. */
+    fun categoryScale(distance: Float): Float = mix(1.16f, 0.66f, abs(finite(distance)) / 3f)
+    fun categoryAlpha(distance: Float): Float = mix(1f, 0.24f, abs(finite(distance)) / 3f)
+    fun categoryRotationY(distance: Float): Float = (finite(distance) * 8f).coerceIn(-24f, 24f)
+
+    fun categoryScale(distance: Int): Float = categoryScale(distance.toFloat())
+    fun categoryAlpha(distance: Int): Float = categoryAlpha(distance.toFloat())
+    fun categoryRotationY(distance: Int): Float = categoryRotationY(distance.toFloat())
+
+    /** Фокусный пункт выдвинут вправо и увеличен, остальные плавно уходят влево и в тень. */
+    fun itemScale(distance: Float): Float = mix(1.06f, 0.78f, abs(finite(distance)) / 3f)
+    fun itemAlpha(distance: Float): Float = mix(1f, 0.30f, abs(finite(distance)) / 3f)
+    fun itemTranslationX(distance: Float): Float {
+        val value = finite(distance)
+        return (26f - abs(value) * 18f - maxOf(0f, value) * 8f).coerceIn(-160f, 30f)
+    }
+    fun itemRotationX(distance: Float): Float = (finite(distance) * 3.2f).coerceIn(-10f, 10f)
+
+    fun itemScale(distance: Int): Float = itemScale(distance.toFloat())
+    fun itemAlpha(distance: Int): Float = itemAlpha(distance.toFloat())
+    fun itemTranslationX(distance: Int): Float = itemTranslationX(distance.toFloat())
+    fun itemRotationX(distance: Int): Float = itemRotationX(distance.toFloat())
+
+    /**
+     * Окно из нескольких пунктов вокруг фокуса. Строки не скроллятся отдельным
+     * списком: фаза ходит по всем элементам, на экране всегда фиксированное число.
      */
     fun visibleRange(selected: Int, size: Int, visible: Int = VISIBLE_ITEMS): IntRange {
         if (size <= 0 || visible <= 0) return IntRange.EMPTY
@@ -91,8 +139,8 @@ object Xmb {
 
     /** Мягкая цветная волна XMB вместо серых направляющих линий. Нормирована в [-1, 1]. */
     fun waveHeight(phase: Float, x: Float, layer: Int): Float {
-        val safePhase = if (phase.isNaN() || phase.isInfinite()) 0f else phase
-        val safeX = if (x.isNaN() || x.isInfinite()) 0f else x
+        val safePhase = finite(phase)
+        val safeX = finite(x)
         val drift = safePhase * 2f * PI.toFloat()
         val primary = sin(safeX * 5.2f + drift * (0.55f + layer * 0.08f) + layer * 1.7f)
         val secondary = cos(safeX * 2.1f - drift * 0.32f + layer * 0.91f)

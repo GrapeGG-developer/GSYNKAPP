@@ -1,7 +1,11 @@
 package com.gsynk.app.ui
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -25,12 +29,21 @@ import kotlin.math.sin
 @Composable
 fun XmbWaveField(
     modifier: Modifier = Modifier,
-    accent: Color = Greal.AuroraViolet
+    accent: Color = Greal.AuroraViolet,
+    motion: Float = 0f
 ) {
     val skin = LocalSkinValues.current
     val effects = LocalGiouiEffects.current
     val layers = Xmb.waveLayers(skin.level, effects == Gioui.Effects.FULL)
     val phaseState = rememberPrgPhaseState(0x58D)
+    val motionState by animateFloatAsState(
+        targetValue = motion.coerceIn(0f, 1f),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "xmbWaveMotion"
+    )
     val palette = listOf(
         Greal.AuroraViolet,
         Greal.AuroraCyan,
@@ -41,10 +54,10 @@ fun XmbWaveField(
     Canvas(modifier) {
         if (size.width <= 4f || size.height <= 4f) return@Canvas
         val phase = phaseState.value
-        val strength = if (effects == Gioui.Effects.PLAIN) 0.45f else 1f
+        val strength = (if (effects == Gioui.Effects.PLAIN) 0.45f else 1f) * (1f + motionState * 0.45f)
         for (layer in 0 until layers) {
             val t = layer / maxOf(1, layers - 1).toFloat()
-            val drift = Xmb.waveHeight(phase, layer * 0.37f, layer)
+            val drift = Xmb.waveHeight(phase, layer * 0.37f, layer) * (1f + motionState * 0.35f)
             val top = size.height * (0.14f + t * 0.68f) + drift * size.height * 0.026f
             val height = size.height * (0.055f + 0.025f * t)
             val color = lerp(accent, palette[layer % palette.size], 0.48f)

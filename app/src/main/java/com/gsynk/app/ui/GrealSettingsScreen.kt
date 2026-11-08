@@ -252,7 +252,7 @@ fun GrealSettingsScreen(vm: MainViewModel, onBack: () -> Unit) {
         ) { vm.setCompactList(it) }
 
         Spacer(Modifier.height(16.dp))
-        SectionTitle("XMB: категории, фокус и волна")
+        SectionTitle("XMB Motion: категории, фокус и волна")
         Text(
             text = Xmb.VERSION,
             color = TextSecondary,
@@ -323,6 +323,9 @@ fun GrealSettingsScreen(vm: MainViewModel, onBack: () -> Unit) {
         }
         GrealValueGroup("Глубина фокуса XMB", skin.focus, listOf(0, 25, 50, 75, 100), "%") { value ->
             Skin.save(context, skin.copy(focus = value))
+        }
+        GrealValueGroup("Инерция жестов XMB", skin.prgMotion, listOf(40, 60, 100, 140, 200), "%") { value ->
+            Skin.save(context, skin.copy(prgMotion = value))
         }
         Text(
             "В «Пуске» категории листаются влево/вправо, функции — вверх/вниз, а GREAL отвечает за материал, свет и объём.",
