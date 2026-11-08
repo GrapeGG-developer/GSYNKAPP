@@ -22,7 +22,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Бесконечная 3D-графика GREAL без кассетных линий и кругов.
+ * Бесконечная 3D-графика SCRIPT без кассетных линий и кругов.
  *
  * Все эффекты рисуются одним Canvas на слой и читают общий часовой State прямо
  * в фазе отрисовки. Поэтому бесконечное вращение не вызывает рекомпозицию
@@ -30,11 +30,11 @@ import kotlin.math.sin
  */
 
 private val INFINITE_PALETTE = listOf(
-    Greal.AuroraViolet,
-    Greal.AuroraCyan,
-    Greal.AuroraGreen,
-    Greal.AuroraPink,
-    Greal.AuroraAmber
+    ScriptPalette.Accent,
+    ScriptPalette.Accent2,
+    ScriptPalette.Success,
+    ScriptPalette.Accent3,
+    ScriptPalette.Accent3
 )
 
 private data class GrealShard(
@@ -56,74 +56,9 @@ private fun clampTo(value: Float, min: Float, max: Float): Float =
 @Composable
 fun GrealParallaxShards(
     modifier: Modifier = Modifier,
-    accent: Color = Greal.AuroraViolet
+    accent: Color = ScriptPalette.Accent
 ) {
-    val skin = LocalSkinValues.current
-    val effects = LocalGiouiEffects.current
-    val budget = GrealPlay.effectBudget(skin.level, effects == Gioui.Effects.FULL)
-    val phaseState = rememberPrgPhaseState(0x5EED)
-    val shards = remember(budget) {
-        List(budget) { index ->
-            GrealShard(
-                x = GrealPlay.hash01(9137, index, 11),
-                y = GrealPlay.hash01(9137, index, 23),
-                width = 0.10f + GrealPlay.hash01(9137, index, 31) * 0.19f,
-                height = 0.018f + GrealPlay.hash01(9137, index, 41) * 0.045f,
-                depth = 0.35f + GrealPlay.hash01(9137, index, 53) * 0.65f,
-                rotation = -18f + GrealPlay.hash01(9137, index, 61) * 36f,
-                speed = 0.35f + GrealPlay.hash01(9137, index, 71) * 0.95f,
-                phase = GrealPlay.hash01(9137, index, 83),
-                tone = index % INFINITE_PALETTE.size
-            )
-        }
-    }
-    Canvas(modifier) {
-        if (size.width <= 4f || size.height <= 4f) return@Canvas
-        val phase = phaseState.value
-        val minDim = size.minDimension
-        shards.forEach { shard ->
-            val w = (minDim * shard.width * shard.depth).coerceAtMost(size.width * 0.72f)
-            val h = (minDim * shard.height * shard.depth).coerceAtMost(size.height * 0.22f)
-            val drift = sin(phase * 2f * PI.toFloat() * shard.speed + shard.phase * 6.2f) *
-                minDim * 0.035f * shard.depth
-            val left = clampTo(size.width * shard.x + drift - w / 2f, 2f, size.width - w - 2f)
-            val top = clampTo(size.height * shard.y + cos(phase * 4.1f + shard.phase) * minDim * 0.02f - h / 2f, 2f, size.height - h - 2f)
-            val color = lerp(INFINITE_PALETTE[shard.tone], accent, 0.18f)
-            val alpha = (0.045f + 0.085f * shard.depth) * (if (effects == Gioui.Effects.PLAIN) 0.45f else 1f)
-            val center = Offset(left + w / 2f, top + h / 2f)
-            rotate(shard.rotation + sin(phase * 2f + shard.phase) * 3f, center) {
-                drawRoundRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = alpha * 0.44f),
-                            color.copy(alpha = alpha * 0.55f),
-                            Color.Transparent
-                        ),
-                        start = Offset(left, top + h),
-                        end = Offset(left + w, top)
-                    ),
-                    topLeft = Offset(left + w * 0.06f, top + h * 0.52f),
-                    size = Size(w * 0.94f, h * 0.72f),
-                    cornerRadius = CornerRadius(h * 0.5f, h * 0.5f)
-                )
-                drawRoundRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.White.copy(alpha = alpha * 0.50f),
-                            color.copy(alpha = alpha),
-                            Color.Transparent
-                        ),
-                        start = Offset(left, top),
-                        end = Offset(left + w, top + h)
-                    ),
-                    topLeft = Offset(left, top),
-                    size = Size(w, h),
-                    cornerRadius = CornerRadius(h * 0.5f, h * 0.5f)
-                )
-            }
-        }
-    }
+    ScriptShards(modifier, accent)
 }
 
 /**
@@ -137,63 +72,7 @@ fun GrealInfiniteOrbit(
     seed: Int,
     active: Boolean = false
 ) {
-    val phaseState = rememberPrgPhaseState(seed)
-    Canvas(modifier) {
-        if (size.width <= 6f || size.height <= 6f) return@Canvas
-        val angle = phaseState.value * 360f
-        val poses = GrealPlay.carouselPoses(8, angle, 12f)
-        val minDim = size.minDimension
-        val radiusX = minDim * 0.38f
-        val radiusY = minDim * 0.21f
-        val tileW = minDim * 0.15f
-        val tileH = tileW * 0.62f
-        val power = if (active) 1f else 0.76f
-        poses.forEach { pose ->
-            val color = lerp(accent, INFINITE_PALETTE[pose.index % INFINITE_PALETTE.size], 0.45f)
-            val center = Offset(
-                size.width / 2f + pose.x * radiusX,
-                size.height / 2f + pose.y * radiusY
-            )
-            val w = tileW * pose.scale
-            val h = tileH * pose.scale
-            val left = clampTo(center.x - w / 2f, 0f, (size.width - w).coerceAtLeast(0f))
-            val top = clampTo(center.y - h / 2f, 0f, (size.height - h).coerceAtLeast(0f))
-            rotate(pose.rotation, center) {
-                drawRoundRect(
-                    brush = Brush.linearGradient(
-                        listOf(Color.Black.copy(alpha = 0.20f * pose.alpha * power), Color.Transparent)
-                    ),
-                    topLeft = Offset(left + w * 0.07f, top + h * 0.58f),
-                    size = Size(w * 0.90f, h * 0.48f),
-                    cornerRadius = CornerRadius(h * 0.45f, h * 0.45f)
-                )
-                drawRoundRect(
-                    brush = Brush.linearGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.55f * pose.alpha * power),
-                            color.copy(alpha = 0.82f * pose.alpha * power),
-                            Color.Black.copy(alpha = 0.34f * pose.alpha * power)
-                        ),
-                        start = Offset(left, top),
-                        end = Offset(left + w, top + h)
-                    ),
-                    topLeft = Offset(left, top),
-                    size = Size(w, h),
-                    cornerRadius = CornerRadius(h * 0.42f, h * 0.42f)
-                )
-                drawRoundRect(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color.White.copy(alpha = 0.52f * pose.alpha * power), Color.Transparent),
-                        center = Offset(left + w * 0.28f, top + h * 0.26f),
-                        radius = w * 0.42f
-                    ),
-                    topLeft = Offset(left + w * 0.10f, top + h * 0.12f),
-                    size = Size(w * 0.80f, h * 0.76f),
-                    cornerRadius = CornerRadius(h * 0.38f, h * 0.38f)
-                )
-            }
-        }
-    }
+    ScriptInfiniteOrbit(modifier, accent, seed, active)
 }
 
 /** Главная бесконечная карусель антистресса: 3D-плитки уходят вглубь и возвращаются без конца. */
@@ -202,7 +81,7 @@ fun GrealInfiniteCarousel(
     modifier: Modifier = Modifier,
     angle: State<Float>,
     tilt: State<Float>,
-    accent: Color = Greal.AuroraViolet,
+    accent: Color = ScriptPalette.Accent,
     count: Int = GrealPlay.CAROUSEL_TILES
 ) {
     val shimmer = rememberPrgPhaseState(0xC0FFEE)
@@ -222,7 +101,7 @@ fun GrealInfiniteCarousel(
                     Color.Transparent,
                     accent.copy(alpha = 0.13f),
                     Color.White.copy(alpha = 0.09f),
-                    Greal.AuroraCyan.copy(alpha = 0.11f),
+                    ScriptPalette.Accent2.copy(alpha = 0.11f),
                     Color.Transparent
                 ),
                 start = Offset((size.width - ribbonWidth) / 2f, size.height * 0.50f),
@@ -347,7 +226,7 @@ fun GrealBubbleField(
     modifier: Modifier = Modifier,
     seconds: State<Float>,
     popped: State<Map<Int, Float>>,
-    accent: Color = Greal.AuroraViolet,
+    accent: Color = ScriptPalette.Accent,
     seed: Int = 7331,
     count: Int = GrealPlay.BUBBLE_COUNT
 ) {
@@ -413,7 +292,7 @@ fun GrealBubbleField(
 fun GrealRippleField(
     modifier: Modifier = Modifier,
     seconds: State<Float>,
-    accent: Color = Greal.AuroraViolet
+    accent: Color = ScriptPalette.Accent
 ) {
     val phaseState = rememberPrgPhaseState(0x9171)
     Canvas(modifier) {
@@ -451,7 +330,7 @@ fun GrealRippleOverlay(
     modifier: Modifier = Modifier,
     seconds: State<Float>,
     ripples: State<List<GrealPlay.Ripple>>,
-    accent: Color = Greal.AuroraViolet
+    accent: Color = ScriptPalette.Accent
 ) {
     Canvas(modifier) {
         val now = seconds.value

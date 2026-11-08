@@ -1,6 +1,6 @@
 package com.gsynk.app
 
-import com.gsynk.app.core.Blade
+import com.gsynk.app.core.Script
 import com.gsynk.app.ui.Greal
 import com.gsynk.app.ui.grealOrbDiameterDp
 import com.gsynk.app.ui.grealDepthTransform
@@ -17,8 +17,8 @@ class GrealDesignTest {
 
     @Test
     fun bladeIsTheDesignSystem() {
-        assertEquals("GSYNK Blades — Xbox 360 Blade Dashboard", Blade.VERSION)
-        assertEquals(Blade.VERSION, com.gsynk.app.ui.Gioui.UI_VERSION)
+        assertEquals("GSYNK Script UI — Monolith baseline 1.0", Script.VERSION)
+        assertEquals(Script.VERSION, com.gsynk.app.ui.Gioui.UI_VERSION)
     }
 
     @Test
@@ -45,7 +45,7 @@ class GrealDesignTest {
         val greal = File("src/main/java/com/gsynk/app/ui/GrealDesign.kt").readText()
         assertFalse("старый кассетный фон вернулся", greal.contains("GrealTapeBackdrop"))
         val backdropStart = greal.indexOf("fun GrealDepthBackdrop(")
-        val backdropEnd = greal.indexOf("Объёмная сфера GREAL", backdropStart)
+        val backdropEnd = greal.indexOf("Объёмная сфера SCRIPT", backdropStart)
         assertTrue(backdropStart >= 0 && backdropEnd > backdropStart)
         val backdrop = greal.substring(backdropStart, backdropEnd)
         assertFalse("в заднем плане снова линии", backdrop.contains("drawLine("))

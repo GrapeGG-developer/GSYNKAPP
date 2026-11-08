@@ -110,7 +110,7 @@ private data class StartGroupData(
 )
 
 /**
- * Геометрия «жидкого окна» GREAL.
+ * Геометрия «жидкого окна» SCRIPT.
  *
  * Окно приложения не появляется из воздуха и не анимирует логотип: оно
  * стартует из реального прямоугольника нажатой плитки, разными скоростями
@@ -168,7 +168,7 @@ internal fun liquidMinimizeRect(index: Int): LiquidWindowRect {
     )
 }
 
-/** Данные одной свёрнутой GREAL-закладки для пустого дома. */
+/** Данные одной свёрнутой SCRIPT-закладки для пустого дома. */
 data class MinimizedWindowUi(
     val title: String,
     val route: String?,
@@ -344,7 +344,7 @@ internal fun startPageChunks(
 }
 
 /**
- * Одна панель глубокой 3D-сцены GREAL. Положение берётся из реального
+ * Одна панель глубокой 3D-сцены SCRIPT. Положение берётся из реального
  * LazyListState: центр экрана смотрит прямо, прошлое и будущее уходят
  * в перспективу без кассетных линий и кругов.
  */
@@ -371,24 +371,18 @@ private fun GrealDepthPanel(
     Box(
         Modifier.graphicsLayer {
             transformOrigin = TransformOrigin(0.5f, transform.pivotY)
-            rotationX = transform.rotationX
-            rotationY = transform.rotationY
             scaleX = transform.scale
             scaleY = transform.scale
             alpha = transform.alpha
             translationX = transform.translationXD * density
             translationY = transform.translationYDp * density
-            cameraDistance = 10.5f * density
             shape = RoundedCornerShape(20.dp)
             clip = false
-            shadowElevation = transform.shadowElevation
-            ambientShadowColor = Color(0xFF7C3AED).copy(alpha = 0.26f)
-            spotShadowColor = Color(0xFF22D3EE).copy(alpha = 0.22f)
         }
     ) { content() }
 }
 
-/** Маленькая физическая кнопка-сфера GREAL для шапок и активных углов. */
+/** Маленькая физическая кнопка-сфера SCRIPT для шапок и активных углов. */
 @Composable
 internal fun GrealControlOrb(
     text: String,
@@ -409,12 +403,6 @@ internal fun GrealControlOrb(
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
-                rotationX = if (pressed) -16f else -3f
-                rotationY = if (pressed) 13f else 3f
-                cameraDistance = 9f * density
-                shadowElevation = if (pressed) 4f else 16f
-                ambientShadowColor = accent.copy(alpha = 0.34f)
-                spotShadowColor = accent.copy(alpha = 0.42f)
             }
             .clip(CircleShape)
             .background(
@@ -518,7 +506,7 @@ fun PortraitRequiredScreen() {
 }
 
 /**
- * Пустой портретный дом GREAL. Свёрнутые окна живут не одной закладкой,
+ * Пустой портретный дом SCRIPT. Свёрнутые окна живут не одной закладкой,
  * а стопкой активных 3D-углов слева сверху: касание возвращает окно,
  * маленький × закрывает именно эту закладку, касание фона открывает «Пуск».
  */
@@ -554,12 +542,6 @@ fun EmptyHomeScreen(
                                 .width(184.dp)
                                 .height(72.dp)
                                 .graphicsLayer {
-                                    rotationX = -11f
-                                    rotationY = 14f
-                                    cameraDistance = 9f * density
-                                    shadowElevation = 27f
-                                    ambientShadowColor = window.color.copy(alpha = 0.34f)
-                                    spotShadowColor = window.color.copy(alpha = 0.42f)
                                     shape = RoundedCornerShape(18.dp)
                                     clip = false
                                 }
@@ -642,7 +624,7 @@ fun EmptyHomeScreen(
                     if (minimizedWindows.isNotEmpty()) {
                         "активных окон: " + minimizedWindows.size + " — они свёрнуты в 3D-углы слева сверху"
                     } else {
-                        "GREAL · 3D-лента времени: прошлое сверху, будущее снизу"
+                        "SCRIPT · строки, главы и активная строка"
                     },
                     color = Color.White.copy(alpha = 0.82f),
                     fontSize = 15.sp,
@@ -667,10 +649,10 @@ fun EmptyHomeScreen(
 }
 
 /**
- * GSYNK Blades — портретная оболочка в духе Xbox 360 Blade Dashboard.
+ * GSYNK Script UI — портретная оболочка с неизменным каркасом Monolith.
  *
- * `StartMenuScreen` напрямую открывает [BladeStartScreen] с горизонтальными
- * вкладками-лезвиями и вертикальным списком функций. Старые помощники раскладки
+ * `StartMenuScreen` напрямую открывает [ScriptStartScreen] с главами,
+ * активной строкой и нумерованными строками функций. Старые помощники раскладки
  * ниже сохранены только для регрессионных проверок чистой геометрии.
  */
 @Composable
@@ -682,7 +664,7 @@ fun StartMenuScreen(
     onToggleFavorite: (Catalog.Entry) -> Unit,
     onCloseHome: () -> Unit
 ) {
-    BladeStartScreen(
+    ScriptStartScreen(
         favorites = favorites,
         minimizedRoutes = minimizedRoutes,
         liveLinesFor = liveLinesFor,
@@ -753,12 +735,6 @@ private fun TimelinePastCard(
                 launchOrigin = coordinates.toLiquidWindowOrigin(entry)
             }
             .graphicsLayer {
-                rotationX = -6f
-                rotationY = 5f
-                cameraDistance = 10f * density
-                shadowElevation = 20f
-                ambientShadowColor = entry.color.copy(alpha = 0.30f)
-                spotShadowColor = entry.color.copy(alpha = 0.38f)
             }
             .clip(shape)
             .background(
@@ -841,12 +817,6 @@ private fun TimelineNowCard() {
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
             .graphicsLayer {
-                rotationX = -5f
-                rotationY = -5f
-                cameraDistance = 10f * density
-                shadowElevation = 26f
-                ambientShadowColor = Color(0xFF8B5CF6).copy(alpha = 0.34f)
-                spotShadowColor = Color(0xFF22D3EE).copy(alpha = 0.34f)
             }
             .clip(shape)
             .background(
@@ -881,7 +851,7 @@ private fun TimelineNowCard() {
                 )
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(timeText, color = TextPrimary, fontSize = 35.sp, fontWeight = FontWeight.Light, letterSpacing = 1.sp)
-                    Text("лента · GREAL", color = Color.White.copy(alpha = 0.68f), fontSize = 8.sp, letterSpacing = 1.sp)
+                    Text("лента · SCRIPT", color = Color.White.copy(alpha = 0.68f), fontSize = 8.sp, letterSpacing = 1.sp)
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -934,12 +904,6 @@ private fun TimelineGroupSection(
             Modifier
                 .fillMaxWidth()
                 .graphicsLayer {
-                    rotationX = -3.5f
-                    rotationY = 3.5f
-                    cameraDistance = 11f * density
-                    shadowElevation = 28f
-                    ambientShadowColor = accent.copy(alpha = 0.32f)
-                    spotShadowColor = accent.copy(alpha = 0.38f)
                 }
                 .clip(shape)
                 .background(
@@ -1075,13 +1039,7 @@ private fun StartTile(
                 scaleX = enterScale * pressScaleX
                 scaleY = enterScale * pressScaleY
                 translationY = (1f - enterAlpha) * 18f
-                rotationX = (if (pressed) -17f else sin(phase * 2f * PI.toFloat()) * 7.5f)
-                rotationY = (if (pressed) 14f else cos(phase * 2f * PI.toFloat()) * 9.5f)
                 rotationZ = if (pressed) 0f else sin(phase * 2f * PI.toFloat() + index * 0.37f) * 9f
-                cameraDistance = 8.5f * density
-                shadowElevation = if (pressed) 6f else 18f
-                ambientShadowColor = entry.color.copy(alpha = 0.30f)
-                spotShadowColor = entry.color.copy(alpha = 0.38f)
             }
             .width(width)
             .height(height)
@@ -1208,7 +1166,7 @@ fun MetroAppShell(
         launchOrigin
     }
     val shellEntry = Catalog.ALL.firstOrNull { entry -> entry.route == targetOrigin.route } ?: fallbackEntry
-    val shellDescription = shellEntry?.subtitle ?: "приложение GSYNK · GREAL"
+    val shellDescription = shellEntry?.subtitle ?: "приложение GSYNK · SCRIPT"
 
     val progress = remember(title) { Animatable(0f) }
     LaunchedEffect(title, exitMode) {
@@ -1289,31 +1247,18 @@ fun MetroAppShell(
         Box(
             Modifier
                 .fillMaxSize()
-                .then(
-                    if (windowBlurDp > 0.5f) {
-                        Modifier.blur(windowBlurDp.dp, BlurredEdgeTreatment.Unbounded)
-                    } else {
-                        Modifier
-                    }
-                )
                 .graphicsLayer {
                     transformOrigin = TransformOrigin(rect.centerX, rect.centerY)
                     scaleX = rect.width * (1f + liquidPulse * 0.018f)
                     scaleY = rect.height * (1f - liquidPulse * 0.055f)
                     alpha = contentAlpha
-                    rotationX = (0.5f - targetOrigin.centerY) * 21f * (1f - p) + rollDegrees * rollSign * 0.72f
-                    rotationY = (targetOrigin.centerX - 0.5f) * 17f * (1f - p) + liquidPulse * 3.2f
-                    cameraDistance = 10f * density
                     shape = RoundedCornerShape(localCorner)
                     clip = true
-                    shadowElevation = 14f + liquidPulse * 46f
-                    ambientShadowColor = accent.copy(alpha = 0.38f)
-                    spotShadowColor = accent.copy(alpha = 0.46f)
                 }
         ) {
             AnimatedGrapeBackground {
                 Column(Modifier.fillMaxSize()) {
-                    BladeSurface(
+                    ScriptSurface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.statusBars)
@@ -1327,13 +1272,13 @@ fun MetroAppShell(
                                 .padding(horizontal = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            BladeControlOrb(
+                            ScriptControlButton(
                                 text = "—",
                                 modifier = Modifier.size(36.dp),
                                 onClick = { requestExit(onMinimize) }
                             )
                             Spacer(Modifier.width(7.dp))
-                            BladeIcon(
+                            ScriptIcon(
                                 iconRes = shellEntry?.iconRes ?: targetOrigin.iconRes,
                                 modifier = Modifier.size(39.dp),
                                 active = true
@@ -1350,21 +1295,21 @@ fun MetroAppShell(
                                 )
                                 Text(
                                     shellDescription,
-                                    color = BladePalette.DimWhite,
+                                    color = ScriptPalette.DimWhite,
                                     fontSize = 9.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
                             Text(
-                                "BLADE",
-                                color = BladePalette.Lime,
+                                "SCRIPT",
+                                color = ScriptPalette.Lime,
                                 fontSize = 8.sp,
                                 letterSpacing = 1.sp,
                                 maxLines = 1
                             )
                             Spacer(Modifier.width(7.dp))
-                            BladeControlOrb(
+                            ScriptControlButton(
                                 text = "×",
                                 modifier = Modifier.size(38.dp),
                                 danger = true,
@@ -1382,9 +1327,9 @@ fun MetroAppShell(
                 }
             }
 
-            BladeFocusFrame(Modifier.matchParentSize(), strength = 0.20f + liquidPulse * 0.52f)
+            ScriptFocusBar(Modifier.matchParentSize(), strength = 0.20f + liquidPulse * 0.52f)
 
-            // Тонкий световой пробег Blade на середине morph-а: окно выглядит живым,
+            // Тонкий световой пробег Script на середине morph-а: окно выглядит живым,
             // но после раскрытия полностью исчезает и не мешает содержимому.
             if (liquidPulse > 0.01f) {
                 Box(
@@ -1405,7 +1350,7 @@ fun MetroAppShell(
             }
         }
 
-        // Семя окна: иконка Blade с подписью снизу в том же летящем
+        // Семя окна: иконка Script с подписью снизу в том же летящем
         // прямоугольнике. Оно растворяется и размывается в настоящем окне.
         if (seedAlpha > 0.01f) {
             val seedWidth = maxWidth * rect.width
@@ -1418,18 +1363,8 @@ fun MetroAppShell(
                 Modifier
                     .offset(x = maxWidth * rect.left, y = maxHeight * rect.top)
                     .size(width = seedWidth, height = seedHeight)
-                    .then(
-                        if (windowBlurDp > 0.5f) {
-                            Modifier.blur((windowBlurDp * 0.65f).dp, BlurredEdgeTreatment.Unbounded)
-                        } else {
-                            Modifier
-                        }
-                    )
                     .graphicsLayer {
                         alpha = seedAlpha
-                        rotationX = rollDegrees * rollSign * 0.7f
-                        rotationY = (targetOrigin.centerX - 0.5f) * 16f * (1f - p)
-                        cameraDistance = 9f * density
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -1438,7 +1373,7 @@ fun MetroAppShell(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    BladeIcon(iconRes = targetOrigin.iconRes, modifier = Modifier.size(seedOrbSize), active = true)
+                    ScriptIcon(iconRes = targetOrigin.iconRes, modifier = Modifier.size(seedOrbSize), active = true)
                     if (seedWidth >= 62.dp && seedHeight >= 48.dp) {
                         Spacer(Modifier.height(3.dp))
                         Box(

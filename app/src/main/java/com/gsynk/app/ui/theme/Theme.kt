@@ -16,11 +16,11 @@ import androidx.compose.ui.unit.sp
 import com.gsynk.app.R
 
 /**
- * Единый шрифт GREAL — Inter с полноценной кириллицей.
+ * Единый шрифт SCRIPT — Inter с полноценной кириллицей.
  *
  * Характер у типографики новый: заголовки компактные и уверенные (Medium/SemiBold,
  * без гигантских «плакатов»), текст спокойный Regular, подписи Medium с лёгкой
- * разрядкой. Шкала совпадает с Gioui.Type, чтобы GREAL-экраны звучали одним голосом.
+ * разрядкой. Шкала совпадает с Gioui.Type, чтобы SCRIPT-экраны звучали одним голосом.
  */
 val GsynkFont = FontFamily(
     Font(R.font.inter_thin, FontWeight.Thin),
@@ -53,7 +53,7 @@ private val GsynkColors = darkColorScheme(
 
 private val GsynkTypography = Typography().let { base ->
     base.copy(
-        // заголовки GREAL — компактные и уверенные
+        // заголовки SCRIPT — компактные и уверенные
         displaySmall = TextStyle(
             fontFamily = GsynkFont, fontWeight = FontWeight.SemiBold, fontSize = 30.sp, letterSpacing = (-0.8).sp
         ),

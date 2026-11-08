@@ -136,7 +136,7 @@ import kotlin.math.sin
 // ————————————————————————————————————————————————
 
 /**
- * Один общий часовой State GREAL на всё приложение.
+ * Один общий часовой State SCRIPT на всё приложение.
  *
  * Раньше каждая плитка, блик и сфера заводили собственный
  * `rememberInfiniteTransition`; теперь они читают один State в фазе рисования.
@@ -178,10 +178,10 @@ fun AnimatedGrapeBackground(
     val speedScale = (24_000f / UiTweaks.breathMs.toFloat()).coerceIn(0.5f, 2f)
     if (tweakRevision < 0) return
 
-    // Blade UI: общий зелёно-чёрный фон со световым пробегом. GREAL-аврора
+    // Script UI: общий зелёно-чёрный фон со световым пробегом. SCRIPT-аврора
     // больше не запускается; общий phase сохраняется для совместимых бликов.
     Box(modifier.fillMaxSize()) {
-        BladeBackground(Modifier.matchParentSize(), speedScale = speedScale)
+        ScriptBackground(Modifier.matchParentSize(), speedScale = speedScale)
         CompositionLocalProvider(
             LocalGrealAuroraActive provides true,
             LocalGrealPhase provides sharedPhase
@@ -192,7 +192,7 @@ fun AnimatedGrapeBackground(
 }
 
 /**
- * Фаза GREAL со сдвигом для конкретной поверхности. Возвращает State: тяжёлые
+ * Фаза SCRIPT со сдвигом для конкретной поверхности. Возвращает State: тяжёлые
  * Canvas'ы читают его внутри `draw`, а не перестраивают композицию каждый кадр.
  */
 @Composable
@@ -248,75 +248,19 @@ internal fun prgEdgeGlints(seed: Int): List<PrgEdgeGlint> {
 }
 
 /**
- * Блики GREAL живут только на краях поверхности.
+ * Блики SCRIPT живут только на краях поверхности.
  * Каждый короткий сегмент случайно выбирает сторону, позицию, длину, скорость и оттенок.
  */
 @Composable
 fun PrgGlassSheen(
     modifier: Modifier = Modifier,
-    accent: Color = BladePalette.Lime,
+    accent: Color = ScriptPalette.Accent,
     seed: Int = 0
 ) {
-    val skin = LocalSkinValues.current
-    val phaseState = rememberPrgPhaseState(seed)
-    val glints = remember(seed) { prgEdgeGlints(seed) }
-    val glare = (skin.prgGlare.coerceIn(0, 100) / 100f) * if (skin.level == 0 || LocalGiouiEffects.current == Gioui.Effects.PLAIN) 0.35f else 1f
-    if (glare <= 0.01f) return
-    Canvas(modifier) {
-        val phase = phaseState.value
-        val inset = 1.15.dp.toPx().coerceAtMost(size.minDimension * 0.20f).coerceAtLeast(0.6f)
-        glints.forEach { glint ->
-            val localPhase = (phase * glint.speed + glint.phase) % 1f
-            val wave = 0.5f + 0.5f * sin(localPhase * (2f * PI).toFloat())
-            val pulse = 0.38f + 0.62f * wave
-            val glintStart = (glint.start + sin(localPhase * (2f * PI).toFloat()) * glint.drift)
-                .coerceIn(0.025f, (0.975f - glint.length).coerceAtLeast(0.03f))
-            val glintEnd = glintStart + glint.length
-            val startPoint: Offset
-            val endPoint: Offset
-            when (glint.edge) {
-                0 -> {
-                    startPoint = Offset(size.width * glintStart, inset)
-                    endPoint = Offset(size.width * glintEnd, inset)
-                }
-                1 -> {
-                    startPoint = Offset(size.width - inset, size.height * glintStart)
-                    endPoint = Offset(size.width - inset, size.height * glintEnd)
-                }
-                2 -> {
-                    startPoint = Offset(size.width * glintEnd, size.height - inset)
-                    endPoint = Offset(size.width * glintStart, size.height - inset)
-                }
-                else -> {
-                    startPoint = Offset(inset, size.height * glintEnd)
-                    endPoint = Offset(inset, size.height * glintStart)
-                }
-            }
-            val color = lerp(Color.White, accent, glint.accentMix * 0.55f)
-            drawLine(
-                color = color.copy(alpha = 0.12f * glare * glint.alpha * pulse),
-                start = startPoint,
-                end = endPoint,
-                strokeWidth = 3.4.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawLine(
-                color = color.copy(alpha = 0.52f * glare * glint.alpha * pulse),
-                start = startPoint,
-                end = endPoint,
-                strokeWidth = 1.15.dp.toPx(),
-                cap = StrokeCap.Round
-            )
-            drawCircle(
-                color = color.copy(alpha = 0.34f * glare * glint.alpha * pulse),
-                radius = 1.55.dp.toPx(),
-                center = if (glint.accentMix >= 0.5f) endPoint else startPoint
-            )
-        }
-    }
+    ScriptEdgeMark(modifier, accent, seed)
 }
 
-/** Единственная поверхность приложения: физический материал GREAL поверх realtime-авроры. */
+/** Единая плоская поверхность Script UI: 2D-градиент без стекла. */
 @Composable
 fun PrgGlassSurface(
     modifier: Modifier = Modifier,
@@ -335,14 +279,14 @@ fun PrgGlassSurface(
                 Brush.verticalGradient(
                     listOf(
                         Color.White.copy(alpha = 0.08f),
-                        BladePalette.Green.copy(alpha = if (focused) 0.26f else 0.14f),
-                        BladePalette.Ink.copy(alpha = 0.46f)
+                        ScriptPalette.Green.copy(alpha = if (focused) 0.26f else 0.14f),
+                        ScriptPalette.Ink.copy(alpha = 0.46f)
                     )
                 )
             )
             .border(
                 1.dp,
-                if (focused) BladePalette.Lime.copy(alpha = 0.62f) else Color.White.copy(alpha = 0.16f),
+                if (focused) ScriptPalette.Lime.copy(alpha = 0.62f) else Color.White.copy(alpha = 0.16f),
                 shape
             )
             .then(
@@ -357,7 +301,7 @@ fun PrgGlassSurface(
                 }
             )
     ) {
-        BladeFocusFrame(Modifier.matchParentSize(), strength = if (focused) 0.55f else 0.08f)
+        ScriptFocusBar(Modifier.matchParentSize(), strength = if (focused) 0.55f else 0.08f)
         Column(Modifier.padding(contentPadding), content = content)
     }
 }
@@ -444,7 +388,7 @@ fun PrimaryButton(
             .clip(shape)
             .background(
                 Brush.verticalGradient(
-                    listOf(BladePalette.Lime, BladePalette.Green, BladePalette.Ink)
+                    listOf(ScriptPalette.Lime, ScriptPalette.Green, ScriptPalette.Ink)
                 )
             )
             .border(1.dp, Color.White.copy(alpha = 0.42f), shape)
@@ -452,7 +396,7 @@ fun PrimaryButton(
             .padding(horizontal = 20.dp, vertical = 13.dp),
         contentAlignment = Alignment.Center
     ) {
-        BladeFocusFrame(Modifier.matchParentSize(), strength = if (enabled) 0.38f else 0.08f)
+        ScriptFocusBar(Modifier.matchParentSize(), strength = if (enabled) 0.38f else 0.08f)
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
                 Icon(
@@ -480,7 +424,7 @@ fun SecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
-    tint: Color = BladePalette.White,
+    tint: Color = ScriptPalette.White,
     enabled: Boolean = true
 ) {
     val shape = skinShape("button")
@@ -497,15 +441,15 @@ fun SecondaryButton(
             .clip(shape)
             .background(
                 Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.09f), BladePalette.Green.copy(alpha = 0.24f), BladePalette.Ink.copy(alpha = 0.50f))
+                    listOf(Color.White.copy(alpha = 0.09f), ScriptPalette.Green.copy(alpha = 0.24f), ScriptPalette.Ink.copy(alpha = 0.50f))
                 )
             )
-            .border(1.dp, BladePalette.Lime.copy(alpha = 0.42f), shape)
+            .border(1.dp, ScriptPalette.Lime.copy(alpha = 0.42f), shape)
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled) { onClick() }
             .padding(horizontal = 18.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        BladeFocusFrame(Modifier.matchParentSize(), strength = if (enabled) 0.22f else 0.06f)
+        ScriptFocusBar(Modifier.matchParentSize(), strength = if (enabled) 0.22f else 0.06f)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             if (icon != null) {
                 Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
@@ -622,8 +566,8 @@ fun NeoSlider(
                     Brush.radialGradient(
                         listOf(
                             Color.White.copy(alpha = 0.98f),
-                            if (enabled) BladePalette.Lime.copy(alpha = 0.86f) else Color(0xFF8E82A8),
-                            if (enabled) BladePalette.Lime.copy(alpha = 0.88f) else Color(0xFF554D6E)
+                            if (enabled) ScriptPalette.Lime.copy(alpha = 0.86f) else Color(0xFF8E82A8),
+                            if (enabled) ScriptPalette.Lime.copy(alpha = 0.88f) else Color(0xFF554D6E)
                         )
                     )
                 )
@@ -646,12 +590,12 @@ fun DayChip(
 ) {
     val shape = skinShape("toggle")
     val bg by animateColorAsState(
-        targetValue = if (selected) BladePalette.Green.copy(alpha = 0.62f) else Color.White.copy(alpha = 0.07f),
+        targetValue = if (selected) ScriptPalette.Green.copy(alpha = 0.62f) else Color.White.copy(alpha = 0.07f),
         animationSpec = tween(220),
         label = "dayBg"
     )
     val border by animateColorAsState(
-        targetValue = if (selected) BladePalette.Lime else ChipBorder,
+        targetValue = if (selected) ScriptPalette.Lime else ChipBorder,
         animationSpec = tween(220),
         label = "dayBorder"
     )
@@ -689,8 +633,8 @@ fun TagChip(
     Box(
         Modifier
             .clip(shape)
-            .background(if (selected) BladePalette.Green.copy(alpha = 0.60f) else Color.White.copy(alpha = 0.07f))
-            .border(1.dp, if (selected) BladePalette.Lime else ChipBorder, shape)
+            .background(if (selected) ScriptPalette.Green.copy(alpha = 0.60f) else Color.White.copy(alpha = 0.07f))
+            .border(1.dp, if (selected) ScriptPalette.Lime else ChipBorder, shape)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(horizontal = 12.dp, vertical = 7.dp)
     ) {
@@ -805,11 +749,11 @@ fun PulseDot(color: Color, modifier: Modifier = Modifier) {
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    // Blade UI: подпись группы лаймовым акцентом.
+    // Script UI: подпись группы лаймовым акцентом.
     Text(
         text = text.lowercase(),
         modifier = modifier.padding(top = Gioui.unit, bottom = Gioui.unit / 2f),
-        color = BladePalette.Lime,
+        color = ScriptPalette.Lime,
         fontSize = Gioui.Type.groupHeader,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 1.6.sp
@@ -824,7 +768,7 @@ fun ThinDivider(modifier: Modifier = Modifier) {
             .height(1.dp)
             .background(
                 Brush.horizontalGradient(
-                    listOf(Color.Transparent, BladePalette.Lime.copy(alpha = 0.42f), Color.Transparent)
+                    listOf(Color.Transparent, ScriptPalette.Lime.copy(alpha = 0.42f), Color.Transparent)
                 )
             )
     )
@@ -892,14 +836,14 @@ fun GrapeTextField(
         shape = skinShape("sheet"),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = BladePalette.Lime,
+            focusedBorderColor = ScriptPalette.Lime,
             unfocusedBorderColor = ChipBorder,
             focusedContainerColor = Color.White.copy(alpha = 0.09f),
             unfocusedContainerColor = Color.White.copy(alpha = 0.055f),
             focusedTextColor = TextPrimary,
             unfocusedTextColor = TextPrimary,
             cursorColor = GrapeGreen,
-            focusedLabelColor = BladePalette.Lime,
+            focusedLabelColor = ScriptPalette.Lime,
             unfocusedLabelColor = TextDim
         ),
         modifier = modifier.fillMaxWidth()
@@ -936,7 +880,7 @@ fun GrapeScreen(
                     .padding(top = 4.dp, bottom = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                BladeControlOrb(
+                ScriptControlButton(
                     text = "←",
                     modifier = Modifier.size(38.dp),
                     onClick = onBack
@@ -945,7 +889,7 @@ fun GrapeScreen(
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = title.lowercase(),
-                        color = BladePalette.White,
+                        color = ScriptPalette.White,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1
@@ -986,7 +930,7 @@ fun GrapeScreen(
 fun GrapeLogoBurst(
     trigger: Int,
     modifier: Modifier = Modifier,
-    color: Color = BladePalette.Lime
+    color: Color = ScriptPalette.Lime
 ) {
     if (trigger == 0) return
     var elapsed by remember(trigger) { mutableFloatStateOf(0f) }
@@ -1065,7 +1009,7 @@ fun SortChip(
 ) {
     val shape = skinShape("toggle")
     val bg by animateColorAsState(
-        targetValue = if (selected) BladePalette.Green else BladePalette.Ink,
+        targetValue = if (selected) ScriptPalette.Green else ScriptPalette.Ink,
         animationSpec = tween(180),
         label = "sortBg"
     )
@@ -1073,13 +1017,13 @@ fun SortChip(
         modifier
             .clip(shape)
             .background(bg)
-            .border(1.dp, if (selected) BladePalette.Lime else Color.White.copy(alpha = 0.18f), shape)
+            .border(1.dp, if (selected) ScriptPalette.Lime else Color.White.copy(alpha = 0.18f), shape)
             .clickable { onClick() }
             .padding(horizontal = 13.dp, vertical = 7.dp)
     ) {
         Text(
             text = label,
-            color = if (selected) BladePalette.White else BladePalette.DimWhite,
+            color = if (selected) ScriptPalette.White else ScriptPalette.DimWhite,
             fontSize = Gioui.Type.caption,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             letterSpacing = 0.4.sp

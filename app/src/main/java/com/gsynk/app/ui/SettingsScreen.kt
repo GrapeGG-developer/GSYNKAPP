@@ -89,7 +89,7 @@ fun SettingsScreen(
                 )
                 Spacer(Modifier.width(9.dp))
                 Text(
-                    text = "GSYNK ${BuildConfig.VERSION_NAME} · GREAL",
+                    text = "GSYNK ${BuildConfig.VERSION_NAME} · SCRIPT",
                     color = TextDim,
                     fontSize = Gioui.Type.caption,
                     maxLines = 1,
@@ -141,22 +141,22 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // ————— Blade UI живёт отдельным единым приложением —————
+            // ————— Script UI живёт отдельным единым приложением —————
             Spacer(Modifier.height(16.dp))
-            SectionTitle("Blade — дизайн")
+            SectionTitle("Script — дизайн")
             Spacer(Modifier.height(8.dp))
             SurfaceCard(borderColor = CardBorder) {
-                Text("GSYNK Blades", color = BladePalette.Lime, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
+                Text("GSYNK Script UI", color = ScriptPalette.Lime, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
                 Text(
-                    "всё оформление собрано в одном приложении «Настройки Blade UI»: лезвия " + skin.prgOpacity +
-                        "%, рамка " + skin.prgGlow + "%, пробег " + skin.speed + "%, наклон " + skin.focus + "%",
+                    "постоянная система: типографика, строки, глифы, чёткая палитра и неизменный каркас. Градиент " + skin.prgOpacity +
+                        "%, акцент " + skin.prgGlow + "%, фон " + skin.speed + "%, фокус " + skin.focus + "%",
                     color = TextDim,
                     fontSize = Gioui.Type.caption
                 )
                 Spacer(Modifier.height(10.dp))
                 SecondaryButton(
-                    text = "Открыть настройки Blade UI",
-                    onClick = { Router.page("greal") },
+                    text = "Открыть настройки Script UI",
+                    onClick = { Router.page("script") },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -226,11 +226,6 @@ fun SettingRow(
         Modifier
             .fillMaxWidth()
             .graphicsLayer {
-                rotationX = -2.5f
-                cameraDistance = 13f * density
-                shadowElevation = 9f
-                ambientShadowColor = UiTweaks.accentStart.copy(alpha = 0.20f)
-                spotShadowColor = UiTweaks.accentStart.copy(alpha = 0.26f)
             }
             .clip(skinShape("card"))
             .background(

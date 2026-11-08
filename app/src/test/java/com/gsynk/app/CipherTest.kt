@@ -370,7 +370,7 @@ class CipherTest {
         assertEquals(13, values.toggle)
         assertEquals(21, values.capsule)
         assertEquals("prg", values.glass)
-        // чрезмерные формы через clamp не просочатся: GREAL остаётся собранным
+        // чрезмерные формы через clamp не просочатся: SCRIPT остаётся собранным
         val clamped = Skin.clamp(Skin.Values(tile = 500, card = 500, button = 500, toggle = 500, sheet = 500, capsule = 500))
         assertTrue(clamped.tile <= 10 && clamped.card <= 14 && clamped.button <= 12 && clamped.sheet <= 18 && clamped.capsule <= 22)
         assertTrue(Skin.PRESETS.any { it.first == "gioui" })

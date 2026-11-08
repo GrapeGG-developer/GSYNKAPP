@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 // ————————————————————————————————————————————————
-//  Палитра GREAL: глубокий ночной мир под северным сиянием.
+//  Палитра SCRIPT: глубокий ночной мир под северным сиянием.
 //  Поверх живого GPU-фона лежат физические полупрозрачные материалы,
 //  а акценты переливаются от винограда к циану, изумруду, розе и янтарю.
 // ————————————————————————————————————————————————
@@ -56,7 +56,7 @@ val GrapeDiagonalSolid = Brush.linearGradient(
     listOf(Color(0xFF1A1230), Color(0xFF12101F))
 )
 
-/** Градиенты карточек GREAL: физические переливы северного сияния. */
+/** Градиенты карточек SCRIPT: физические переливы северного сияния. */
 object GioBrush {
     val Violet = Brush.linearGradient(listOf(Color(0xFF4C1D95), Color(0xFF7C3AED), Color(0xFFA855F7)))
     val Cyan = Brush.linearGradient(listOf(Color(0xFF0E7490), Color(0xFF22D3EE), Color(0xFF67E8F9)))

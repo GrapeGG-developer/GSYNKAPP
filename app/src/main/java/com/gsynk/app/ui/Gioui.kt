@@ -65,7 +65,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gsynk.app.core.Blade
+import com.gsynk.app.core.Script
 import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.Skin
 import com.gsynk.app.ui.theme.TextDim
@@ -75,7 +75,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 /**
- * Внутренний каркас GREAL (бывший GIOUI).
+ * Внутренний каркас SCRIPT (бывший GIOUI).
  *
  * Единая дизайн-система Grape Realism:
  *  * бесшовные физические формы: сферы, фаски, активные 3D-углы и мягкие кромки;
@@ -271,7 +271,7 @@ object Gioui {
     }
 
     /** Текущая метка интерфейса — показывается в настройках и отчётах. */
-    const val UI_VERSION = Blade.VERSION
+    const val UI_VERSION = Script.VERSION
 }
 
 /** Уровень эффектов, доступный всему интерфейсу без лишних вызовов. */
@@ -300,7 +300,7 @@ fun skinRadius(kind: String): Dp {
 @Composable
 fun skinShape(kind: String): Shape = RoundedCornerShape(skinRadius(kind))
 
-/** Материал из настроек: единственный UI — GREAL. */
+/** Материал из настроек: единственный UI — SCRIPT. */
 @Composable
 fun skinGlass(): Glass.Kind = Glass.Kind.PRG
 
@@ -417,12 +417,6 @@ fun GioCard(
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = if (pressed) pressScale * 1.025f else 1f
-                rotationX = if (pressed) -10f else -2f
-                rotationY = if (pressed) 8f else 2f
-                cameraDistance = 10f * density
-                shadowElevation = if (pressed) 5f else 22f
-                ambientShadowColor = color.copy(alpha = 0.30f)
-                spotShadowColor = color.copy(alpha = 0.38f)
             }
             .clip(Gioui.Shapes.tile)
             .background(
@@ -460,7 +454,7 @@ fun GioCard(
                 }
             )
     ) {
-        // Физический материал GREAL: текстура и краевой свет поверх авроры.
+        // Физический материал SCRIPT: текстура и краевой свет поверх авроры.
         GrealTexture(Modifier.matchParentSize(), accent = color, seed = title.hashCode(), density = 0.36f)
         if (effects != Gioui.Effects.PLAIN) {
             PrgGlassSheen(Modifier.matchParentSize(), accent = color, seed = title.hashCode())
@@ -606,7 +600,7 @@ fun GioGroup(header: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Совместимый вызов старого блика: в GREAL свет живёт сегментами по краям. */
+/** Совместимый вызов старого блика: в SCRIPT свет живёт сегментами по краям. */
 @Composable
 fun GioSheen(color: Color, strong: Boolean) {
     PrgGlassSheen(

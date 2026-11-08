@@ -379,7 +379,8 @@ fun MainScreen(vm: MainViewModel) {
             "panel:scenes" -> return "сцены сейчас"
             "panel:update", "flag:update" -> return "обновление"
             "page:news" -> return "новости"
-            "page:antistress" -> return "антистресс GREAL"
+            "page:script" -> return "настройки Script UI"
+            "page:antistress" -> return "антистресс Script"
         }
         Catalog.ALL.firstOrNull { it.route == route }?.let { return it.title }
         return route
@@ -416,7 +417,7 @@ fun MainScreen(vm: MainViewModel) {
             route = routeNow,
             title = titleForRoute(routeNow)
         )
-        // GREAL-мультизадачность: в активных 3D-углах живёт до четырёх окон.
+        // SCRIPT-мультизадачность: в активных 3D-углах живёт до четырёх окон.
         minimizedApps = (listOf(saved) + minimizedApps.filterNot { it.route == routeNow }).take(4)
         panel = null
         featureRoute = null
@@ -517,7 +518,7 @@ fun MainScreen(vm: MainViewModel) {
         "smartdecode" -> listOf("слой за слоем до исходного текста", "одинаковый шифр несколько раз — не проблема")
         else -> buildList {
             add(entry.subtitle)
-            if (entry.fresh) add("новое в GREAL")
+            if (entry.fresh) add("новое в SCRIPT")
             add(entry.group.hint)
         }
     }
@@ -563,9 +564,6 @@ fun MainScreen(vm: MainViewModel) {
                     scaleY = (0.92f + 0.08f * reveal) * (1f - 0.055f * backdrop)
                     alpha = reveal * (1f - 0.30f * backdrop)
                     translationY = (1f - reveal) * 58f + backdrop * 22f
-                    rotationX = (1f - reveal) * 12f + backdrop * 6.5f
-                    rotationY = backdrop * -4.5f
-                    cameraDistance = 11f * density
                     shape = RoundedCornerShape(((1f - reveal) * 30f).dp)
                     clip = reveal < 0.999f
                 }

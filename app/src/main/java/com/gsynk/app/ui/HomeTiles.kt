@@ -389,8 +389,6 @@ fun GioHomeCard(
             .height(height)
             .scale(press)
             .graphicsLayer {
-                rotationY = if (liveText == null) 0f else angle
-                cameraDistance = 24f * density
             }
             .clip(skinShape("card"))
             .background(brush)
@@ -457,7 +455,6 @@ fun GioHomeCard(
             Column(
                 Modifier
                     .fillMaxSize()
-                    .graphicsLayer { rotationY = 180f }
                     .padding(12.dp),
                 verticalArrangement = Arrangement.Bottom
             ) {

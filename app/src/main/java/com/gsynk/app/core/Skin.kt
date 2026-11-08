@@ -6,9 +6,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Кожа GREAL: единый набор материалов, света и бесшовных форм.
+ * Кожа SCRIPT: единый набор материалов, света и бесшовных форм.
  *
- * GREAL — скевоморфная система поверх живой авроры: панели полупрозрачны,
+ * SCRIPT — скевоморфная система поверх живой авроры: панели полупрозрачны,
  * кромки имеют фаску и тень, сферы и капсулы остаются главными объёмами,
  * а старые сохранённые значения по-прежнему ужимаются безопасными границами.
  */
@@ -29,7 +29,7 @@ object Skin {
         val grid: Boolean = false,
         val speed: Int = 100,
         val level: Int = 2,
-        /** GREAL: плотность материала, контурный свет, блики и темп движения света. */
+        /** SCRIPT: плотность материала, контурный свет, блики и темп движения света. */
         val prgOpacity: Int = 38,
         val prgGlow: Int = 68,
         val prgGlare: Int = 78,
@@ -41,7 +41,7 @@ object Skin {
     }
 
     val GLASSES: List<Pair<String, String>> = listOf(
-        "prg" to "GREAL",
+        "prg" to "SCRIPT",
         "matte" to "матовое",
         "liquid" to "жидкое",
         "frost" to "морозное",
@@ -127,14 +127,14 @@ object Skin {
             .apply()
     }
 
-    /** Готовые лица GREAL: одна физическая система, разный характер материала. */
+    /** Готовые лица SCRIPT: одна физическая система, разный характер материала. */
     val PRESETS: List<Triple<String, String, Values>> = listOf(
-        Triple("gioui", "GREAL Аврора", Values(tile = 9, card = 13, sheet = 17, button = 11, toggle = 13, capsule = 21, glass = "prg", blur = 18, focus = 58, rays = 7, grid = false, speed = 100, level = 2, prgOpacity = 38, prgGlow = 68, prgGlare = 78, prgMotion = 110)),
-        Triple("strict", "GREAL Гранит", Values(tile = 2, card = 5, sheet = 8, button = 3, toggle = 5, capsule = 12, glass = "prg", blur = 8, focus = 32, rays = 3, grid = true, speed = 90, level = 1, prgOpacity = 56, prgGlow = 34, prgGlare = 38, prgMotion = 80)),
-        Triple("soft", "GREAL Жидкое стекло", Values(tile = 10, card = 14, sheet = 18, button = 12, toggle = 14, capsule = 22, glass = "prg", blur = 24, focus = 80, rays = 6, grid = false, speed = 85, level = 2, prgOpacity = 30, prgGlow = 82, prgGlare = 90, prgMotion = 95)),
-        Triple("aqua", "GREAL Полярное сияние", Values(tile = 8, card = 12, sheet = 16, button = 10, toggle = 12, capsule = 20, glass = "prg", blur = 20, focus = 72, rays = 10, grid = false, speed = 125, level = 2, prgOpacity = 34, prgGlow = 76, prgGlare = 86, prgMotion = 130)),
-        Triple("light", "GREAL Лёгкий", Values(tile = 5, card = 8, sheet = 11, button = 6, toggle = 8, capsule = 16, glass = "prg", blur = 0, focus = 28, rays = 0, grid = false, speed = 120, level = 0, prgOpacity = 50, prgGlow = 22, prgGlare = 24, prgMotion = 60)),
-        Triple("compact", "GREAL Компактный", Values(tile = 5, card = 8, sheet = 11, button = 5, toggle = 8, capsule = 15, glass = "prg", blur = 9, focus = 40, rays = 4, grid = false, speed = 110, level = 1, prgOpacity = 48, prgGlow = 48, prgGlare = 54, prgMotion = 115))
+        Triple("gioui", "SCRIPT Аврора", Values(tile = 9, card = 13, sheet = 17, button = 11, toggle = 13, capsule = 21, glass = "prg", blur = 18, focus = 58, rays = 7, grid = false, speed = 100, level = 2, prgOpacity = 38, prgGlow = 68, prgGlare = 78, prgMotion = 110)),
+        Triple("strict", "SCRIPT Гранит", Values(tile = 2, card = 5, sheet = 8, button = 3, toggle = 5, capsule = 12, glass = "prg", blur = 8, focus = 32, rays = 3, grid = true, speed = 90, level = 1, prgOpacity = 56, prgGlow = 34, prgGlare = 38, prgMotion = 80)),
+        Triple("soft", "SCRIPT Жидкое стекло", Values(tile = 10, card = 14, sheet = 18, button = 12, toggle = 14, capsule = 22, glass = "prg", blur = 24, focus = 80, rays = 6, grid = false, speed = 85, level = 2, prgOpacity = 30, prgGlow = 82, prgGlare = 90, prgMotion = 95)),
+        Triple("aqua", "SCRIPT Полярное сияние", Values(tile = 8, card = 12, sheet = 16, button = 10, toggle = 12, capsule = 20, glass = "prg", blur = 20, focus = 72, rays = 10, grid = false, speed = 125, level = 2, prgOpacity = 34, prgGlow = 76, prgGlare = 86, prgMotion = 130)),
+        Triple("light", "SCRIPT Лёгкий", Values(tile = 5, card = 8, sheet = 11, button = 6, toggle = 8, capsule = 16, glass = "prg", blur = 0, focus = 28, rays = 0, grid = false, speed = 120, level = 0, prgOpacity = 50, prgGlow = 22, prgGlare = 24, prgMotion = 60)),
+        Triple("compact", "SCRIPT Компактный", Values(tile = 5, card = 8, sheet = 11, button = 5, toggle = 8, capsule = 15, glass = "prg", blur = 9, focus = 40, rays = 4, grid = false, speed = 110, level = 1, prgOpacity = 48, prgGlow = 48, prgGlare = 54, prgMotion = 115))
     )
     /** Итоговый уровень с поправкой на железо: слабому телефону полный набор не отдаём. */
     fun effectiveLevel(profile: DeviceProfile.Info, requested: Int): Int =

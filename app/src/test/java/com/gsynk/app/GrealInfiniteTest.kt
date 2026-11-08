@@ -12,7 +12,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Стабильность бесконечной GREAL-графики и нового антистресс-приложения. */
+/** Стабильность бесконечной SCRIPT-графики и нового антистресс-приложения. */
 class GrealInfiniteTest {
 
     @Test
@@ -107,14 +107,14 @@ class GrealInfiniteTest {
         assertTrue("страница не зарегистрирована", GiouiPageIds.contains("antistress"))
         val router = File("src/main/java/com/gsynk/app/ui/GiouiScreens.kt").readText()
         assertTrue("роутер не открывает антистресс", router.contains("\"antistress\" -> {"))
-        assertEquals("5.9.0", ReleaseNews.VERSION)
+        assertEquals("6.0.0", ReleaseNews.VERSION)
         val build = File("build.gradle.kts").readText()
-        assertTrue(build.contains("versionCode = 37"))
-        assertTrue(build.contains("versionName = \"5.9.0\""))
+        assertTrue(build.contains("versionCode = 38"))
+        assertTrue(build.contains("versionName = \"6.0.0\""))
     }
 
     @Test
-    fun effectsUseSharedClockAndBladeBackground() {
+    fun effectsUseSharedClockAndScriptBackground() {
         val components = File("src/main/java/com/gsynk/app/ui/Components.kt").readText()
         assertTrue(components.contains("val LocalGrealPhase"))
         assertTrue(components.contains("fun rememberSharedGrealPhase()"))
@@ -124,13 +124,13 @@ class GrealInfiniteTest {
             "лёгкая фаза больше не должна создавать свою бесконечную анимацию",
             components.contains("fun rememberPrgPhase(seed: Int = 0): Float = rememberPrgPhaseState(seed).value")
         )
-        assertTrue(components.contains("BladeBackground(") && components.contains("BladeFocusFrame("))
-        val design = File("src/main/java/com/gsynk/app/ui/BladeDesign.kt").readText()
-        assertTrue(design.contains("fun BladeBackground(") && design.contains("fun BladeFocusFrame("))
-        assertFalse(design.contains("Color.Gray") || design.contains("drawLine("))
-        val start = File("src/main/java/com/gsynk/app/ui/BladeStartScreen.kt").readText()
-        assertTrue(start.contains("BladeBackground(") && start.contains("BladeIcon("))
-        assertFalse(start.contains("AnimatedGrapeBackground") || start.contains("GrealAuroraField"))
+        assertTrue(components.contains("ScriptBackground(") && components.contains("ScriptFocusBar("))
+        val design = File("src/main/java/com/gsynk/app/ui/ScriptDesign.kt").readText()
+        assertTrue(design.contains("fun ScriptBackground(") && design.contains("fun ScriptFocusBar("))
+        assertFalse(design.contains("Color.Gray") || design.contains("drawLine(") || design.contains("drawCircle(") || design.contains("blur(") || design.contains("cameraDistance") || design.contains("rotationX") || design.contains("rotationY") || design.contains("shadowElevation") || design.contains("ShaderBrush") || design.contains("RuntimeShader"))
+        val script = File("src/main/java/com/gsynk/app/ui/ScriptStartScreen.kt").readText()
+        assertTrue(script.contains("ScriptBackground(") && script.contains("ScriptIcon(") && script.contains("ScriptSurface("))
+        assertFalse(script.contains("AnimatedGrapeBackground") || script.contains("GrealAuroraField") || script.contains("Blade") || script.contains("Xmb") || script.contains("cameraDistance") || script.contains("rotationX") || script.contains("rotationY") || script.contains("blur(") || script.contains("shadowElevation"))
     }
 
     @Test

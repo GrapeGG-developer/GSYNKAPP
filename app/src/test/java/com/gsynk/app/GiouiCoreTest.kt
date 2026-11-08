@@ -409,7 +409,7 @@ class GiouiCoreTest {
 
     @Test
     fun grealIsTheOnlyUiSystem() {
-        assertEquals("GSYNK Blades — Xbox 360 Blade Dashboard", com.gsynk.app.ui.Gioui.UI_VERSION)
+        assertEquals("GSYNK Script UI — Monolith baseline 1.0", com.gsynk.app.ui.Gioui.UI_VERSION)
         val uiDir = java.io.File("src/main/java/com/gsynk/app/ui")
         assertTrue("старый файл дизайн-системы остался", !java.io.File(uiDir, "Metro.kt").exists())
         val leftovers = uiDir.listFiles()!!.filter { it.extension == "kt" }
