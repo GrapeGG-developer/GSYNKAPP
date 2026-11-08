@@ -65,8 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.gsynk.app.BuildConfig
 import com.gsynk.app.R
-import com.gsynk.app.core.Xmb
-import com.gsynk.app.ui.theme.GrapeVioletSoft
+import com.gsynk.app.core.Blade
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import kotlin.math.abs
@@ -75,14 +74,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * GREAL XMB Motion — «Пуск» в стиле XrossMediaBar с настоящей инерцией.
+ * GSYNK Blades — «Пуск» в духе классического Xbox 360 Blade Dashboard.
  *
- * Один общий gesture-детектор ведёт непрерывную фазу категорий и фазу пунктов.
- * Элементы считают циклическое расстояние до фокуса, поэтому ряд едет под
- * пальцем, после отпускания добавляет инерцию и пружинно доводится до целого
- * индекса. Явные кнопки ←/→/↑/↓ и «открыть» дублируют жесты для точного управления.
+ * Горизонтальные вкладки-лезвия, вертикальный список функций внутри выбранного
+ * лезвия, лаймовая рамка фокуса, белые иконки и зелёно-чёрный фон. Навигация
+ * остаётся плавной: непрерывная фаза, инерция, пружинное доведение и крупные
+ * экранные кнопки ←/→/↑/↓/OK.
  */
-private data class XmbCategory(
+private data class BladeCategory(
     val key: String,
     val title: String,
     val hint: String,
@@ -90,15 +89,15 @@ private data class XmbCategory(
     val entries: List<Catalog.Entry>
 )
 
-private enum class XmbAxis { NONE, HORIZONTAL, VERTICAL }
+private enum class BladeAxis { NONE, HORIZONTAL, VERTICAL }
 
-private val XmbSpring = spring<Float>(
+private val BladeSpring = spring<Float>(
     dampingRatio = Spring.DampingRatioLowBouncy,
     stiffness = Spring.StiffnessMedium
 )
 
 @Composable
-fun XmbStartScreen(
+fun BladeStartScreen(
     favorites: Set<String>,
     minimizedRoutes: Set<String>,
     liveLinesFor: (Catalog.Entry) -> List<String>,
@@ -108,8 +107,7 @@ fun XmbStartScreen(
 ) {
     val context = LocalContext.current
     val haptics = LocalHapticFeedback.current
-    val accent = UiTweaks.accentStart
-    val categories = remember(favorites) { xmbCategories(favorites) }
+    val categories = remember(favorites) { bladeCategories(favorites) }
     val categoryCount = categories.size.coerceAtLeast(1)
     val categoryPhase = remember { Animatable(0f) }
     val itemPhase = remember { Animatable(0f) }
@@ -123,8 +121,8 @@ fun XmbStartScreen(
     val entries = category?.entries.orEmpty()
     val entryCount = entries.size.coerceAtLeast(1)
     val focusedEntry = entries.getOrNull(selectedItem.coerceIn(0, entries.lastIndex.coerceAtLeast(0)))
-    val categoryStepPx = with(LocalDensity.current) { Xmb.CATEGORY_STEP_DP.dp.toPx() }
-    val itemStepPx = with(LocalDensity.current) { 68.dp.toPx() }
+    val categoryStepPx = with(LocalDensity.current) { Blade.TAB_STEP_DP.dp.toPx() }
+    val itemStepPx = with(LocalDensity.current) { Blade.ITEM_STEP_DP.dp.toPx() }
 
     fun feedback(long: Boolean = false) {
         UiTweaks.tap(context, long = long)
@@ -132,57 +130,57 @@ fun XmbStartScreen(
     }
 
     suspend fun settleCategory(velocityIndexPerSecond: Float) {
-        val target = Xmb.settleTarget(categoryPhase.value, velocityIndexPerSecond)
-        val index = Xmb.wrap(target.roundToInt(), categoryCount)
+        val target = Blade.settleTarget(categoryPhase.value, velocityIndexPerSecond)
+        val index = Blade.wrap(target.roundToInt(), categoryCount)
         if (index != selectedCategory) {
             selectedCategory = index
             selectedItem = 0
             focusedOrigin = null
-            scope.launch { itemPhase.animateTo(0f, animationSpec = XmbSpring) }
+            scope.launch { itemPhase.animateTo(0f, animationSpec = BladeSpring) }
         }
-        categoryPhase.animateTo(target, animationSpec = XmbSpring)
+        categoryPhase.animateTo(target, animationSpec = BladeSpring)
     }
 
     suspend fun settleItem(velocityIndexPerSecond: Float) {
-        val target = Xmb.settleTarget(itemPhase.value, velocityIndexPerSecond)
-        selectedItem = Xmb.wrap(target.roundToInt(), entryCount)
-        itemPhase.animateTo(target, animationSpec = XmbSpring)
+        val target = Blade.settleTarget(itemPhase.value, velocityIndexPerSecond)
+        selectedItem = Blade.wrap(target.roundToInt(), entryCount)
+        itemPhase.animateTo(target, animationSpec = BladeSpring)
     }
 
     fun moveCategory(delta: Int) {
         feedback()
         scope.launch {
-            val current = Xmb.wrap(categoryPhase.value.roundToInt(), categoryCount)
-            val index = Xmb.wrap(current + delta, categoryCount)
-            val target = Xmb.nearestPhase(categoryPhase.value, index, categoryCount)
+            val current = Blade.wrap(categoryPhase.value.roundToInt(), categoryCount)
+            val index = Blade.wrap(current + delta, categoryCount)
+            val target = Blade.nearestPhase(categoryPhase.value, index, categoryCount)
             selectedCategory = index
             selectedItem = 0
             focusedOrigin = null
-            launch { itemPhase.animateTo(0f, animationSpec = XmbSpring) }
-            categoryPhase.animateTo(target, animationSpec = XmbSpring)
+            scope.launch { itemPhase.animateTo(0f, animationSpec = BladeSpring) }
+            categoryPhase.animateTo(target, animationSpec = BladeSpring)
         }
     }
 
     fun selectCategory(index: Int) {
         feedback()
         scope.launch {
-            val target = Xmb.nearestPhase(categoryPhase.value, index, categoryCount)
+            val target = Blade.nearestPhase(categoryPhase.value, index, categoryCount)
             selectedCategory = index
             selectedItem = 0
             focusedOrigin = null
-            launch { itemPhase.animateTo(0f, animationSpec = XmbSpring) }
-            categoryPhase.animateTo(target, animationSpec = XmbSpring)
+            scope.launch { itemPhase.animateTo(0f, animationSpec = BladeSpring) }
+            categoryPhase.animateTo(target, animationSpec = BladeSpring)
         }
     }
 
     fun moveItem(delta: Int) {
         feedback()
         scope.launch {
-            val current = Xmb.wrap(itemPhase.value.roundToInt(), entryCount)
-            val index = Xmb.wrap(current + delta, entryCount)
-            val target = Xmb.nearestPhase(itemPhase.value, index, entryCount)
+            val current = Blade.wrap(itemPhase.value.roundToInt(), entryCount)
+            val index = Blade.wrap(current + delta, entryCount)
+            val target = Blade.nearestPhase(itemPhase.value, index, entryCount)
             selectedItem = index
-            itemPhase.animateTo(target, animationSpec = XmbSpring)
+            itemPhase.animateTo(target, animationSpec = BladeSpring)
         }
     }
 
@@ -193,9 +191,9 @@ fun XmbStartScreen(
         } else {
             feedback()
             scope.launch {
-                val target = Xmb.nearestPhase(itemPhase.value, index, entryCount)
+                val target = Blade.nearestPhase(itemPhase.value, index, entryCount)
                 selectedItem = index
-                itemPhase.animateTo(target, animationSpec = XmbSpring)
+                itemPhase.animateTo(target, animationSpec = BladeSpring)
             }
         }
     }
@@ -206,23 +204,25 @@ fun XmbStartScreen(
         onOpen(entry, focusedOrigin)
     }
 
-    AnimatedGrapeBackground {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .windowInsetsPadding(WindowInsets.navigationBars)
-        ) {
-            XmbHeader(
+    Box(
+        Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+    ) {
+        BladeBackground(Modifier.matchParentSize())
+        BladeFocusFrame(Modifier.matchParentSize(), strength = 0.10f)
+        Column(Modifier.fillMaxSize()) {
+            BladeHeader(
                 minimizedCount = minimizedRoutes.size,
-                accent = accent,
                 onCloseHome = onCloseHome
             )
             Box(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .xmbMotionGestures(
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .bladeMotionGestures(
                         categoryStepPx = categoryStepPx,
                         itemStepPx = itemStepPx,
                         categoryPhase = categoryPhase,
@@ -233,97 +233,88 @@ fun XmbStartScreen(
                         onDragChange = { dragging = it }
                     )
             ) {
-                GrealDepthBackdrop(
-                    Modifier.matchParentSize(),
-                    scrollPixels = categoryPhase.value * 140f + itemPhase.value * 18f
-                )
-                GrealParallaxShards(Modifier.matchParentSize(), accent = accent)
-                XmbWaveField(
-                    Modifier.matchParentSize(),
-                    accent = accent,
-                    motion = if (dragging) 1f else 0f
-                )
-                XmbFocusBeam(Modifier.matchParentSize(), accent = accent)
-
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                BladeSurface(
+                    modifier = Modifier.matchParentSize(),
+                    shape = RoundedCornerShape(14.dp),
+                    focused = false
                 ) {
-                    XmbCategoryRail(
-                        categories = categories,
-                        phase = categoryPhase.value,
-                        selectedIndex = selectedCategory,
-                        accent = accent,
-                        onSelect = { index -> selectCategory(index) }
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    AnimatedContent(
-                        targetState = category?.hint.orEmpty().lowercase(),
-                        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-                        label = "xmbCategoryHint"
-                    ) { hint ->
-                        Text(
-                            text = hint,
-                            color = Color.White.copy(alpha = 0.58f),
-                            fontSize = 10.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Box(
+                    Column(
                         Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
+                            .fillMaxSize()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        XmbItemColumn(
-                            entries = entries,
-                            phase = itemPhase.value,
-                            selectedIndex = selectedItem,
-                            favorites = favorites,
-                            minimizedRoutes = minimizedRoutes,
-                            liveLinesFor = liveLinesFor,
-                            accent = accent,
-                            onActivate = { index, entry, origin -> activateItem(index, entry, origin) },
-                            onToggleFavorite = onToggleFavorite,
-                            onFocusOrigin = { origin -> focusedOrigin = origin }
+                        BladeTabRail(
+                            categories = categories,
+                            phase = categoryPhase.value,
+                            selectedIndex = selectedCategory,
+                            onSelect = { index -> selectCategory(index) }
+                        )
+                        Spacer(Modifier.height(5.dp))
+                        AnimatedContent(
+                            targetState = category?.hint.orEmpty().lowercase(),
+                            transitionSpec = { fadeIn(tween(160)) togetherWith fadeOut(tween(110)) },
+                            label = "bladeCategoryHint"
+                        ) { hint ->
+                            Text(
+                                text = hint,
+                                color = BladePalette.DimWhite,
+                                fontSize = 10.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                        ) {
+                            BladeItemColumn(
+                                entries = entries,
+                                phase = itemPhase.value,
+                                selectedIndex = selectedItem,
+                                favorites = favorites,
+                                minimizedRoutes = minimizedRoutes,
+                                liveLinesFor = liveLinesFor,
+                                onActivate = { index, entry, origin -> activateItem(index, entry, origin) },
+                                onToggleFavorite = onToggleFavorite,
+                                onFocusOrigin = { origin -> focusedOrigin = origin }
+                            )
+                        }
+                        BladeControlBar(
+                            onLeft = { moveCategory(-1) },
+                            onRight = { moveCategory(1) },
+                            onUp = { moveItem(-1) },
+                            onDown = { moveItem(1) },
+                            onOpen = { openFocused() }
+                        )
+                        Text(
+                            text = if (dragging) "тяните лезвие · отпустите с инерцией" else "← → лезвия · ↑ ↓ функции · касание или OK",
+                            color = BladePalette.DimWhite.copy(alpha = 0.62f),
+                            fontSize = 9.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
                         )
                     }
-                    XmbControlBar(
-                        accent = accent,
-                        onLeft = { moveCategory(-1) },
-                        onRight = { moveCategory(1) },
-                        onUp = { moveItem(-1) },
-                        onDown = { moveItem(1) },
-                        onOpen = { openFocused() }
-                    )
-                    Text(
-                        text = if (dragging) "тяните · отпустите с инерцией" else "← → категории · ↑ ↓ функции · коснитесь или «открыть»",
-                        color = Color.White.copy(alpha = 0.44f),
-                        fontSize = 9.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    )
                 }
             }
         }
     }
 }
 
-private fun xmbCategories(favorites: Set<String>): List<XmbCategory> = buildList {
+private fun bladeCategories(favorites: Set<String>): List<BladeCategory> = buildList {
     if (favorites.isNotEmpty()) {
         val favoriteEntries = Catalog.ALL
             .filter { it.id in favorites }
             .sortedByDescending { it.hot }
         if (favoriteEntries.isNotEmpty()) {
             add(
-                XmbCategory(
+                BladeCategory(
                     key = "favorites",
                     title = "моё",
                     hint = "закреплённые функции — долгое нажатие добавляет или убирает",
@@ -342,11 +333,11 @@ private fun xmbCategories(favorites: Set<String>): List<XmbCategory> = buildList
             )
         if (entries.isNotEmpty()) {
             add(
-                XmbCategory(
+                BladeCategory(
                     key = group.name,
                     title = group.title,
                     hint = group.hint,
-                    iconRes = xmbGroupIcon(group),
+                    iconRes = bladeGroupIcon(group),
                     entries = entries
                 )
             )
@@ -354,7 +345,7 @@ private fun xmbCategories(favorites: Set<String>): List<XmbCategory> = buildList
     }
 }
 
-private fun xmbGroupIcon(group: Catalog.Group): Int = when (group) {
+private fun bladeGroupIcon(group: Catalog.Group): Int = when (group) {
     Catalog.Group.CONNECT -> R.drawable.ic_devices
     Catalog.Group.SCHEDULE -> R.drawable.ic_schedule
     Catalog.Group.SCREEN -> R.drawable.ic_brightness
@@ -368,7 +359,7 @@ private fun xmbGroupIcon(group: Catalog.Group): Int = when (group) {
 }
 
 /** Один общий детектор: непрерывный drag, инерция, без конфликта с tap/long-press. */
-private fun Modifier.xmbMotionGestures(
+private fun Modifier.bladeMotionGestures(
     categoryStepPx: Float,
     itemStepPx: Float,
     categoryPhase: Animatable<Float, AnimationVector1D>,
@@ -389,7 +380,7 @@ private fun Modifier.xmbMotionGestures(
         var lastTime = down.uptimeMillis
         var totalX = 0f
         var totalY = 0f
-        var axis = XmbAxis.NONE
+        var axis = BladeAxis.NONE
         var gestureDragging = false
         var lastCategoryVelocity = 0f
         var lastItemVelocity = 0f
@@ -409,7 +400,7 @@ private fun Modifier.xmbMotionGestures(
 
             if (!gestureDragging && (abs(totalX) > slop || abs(totalY) > slop)) {
                 gestureDragging = true
-                axis = if (abs(totalX) >= abs(totalY)) XmbAxis.HORIZONTAL else XmbAxis.VERTICAL
+                axis = if (abs(totalX) >= abs(totalY)) BladeAxis.HORIZONTAL else BladeAxis.VERTICAL
                 onDragChange(true)
                 motionScope.launch {
                     categoryPhase.stop()
@@ -419,23 +410,19 @@ private fun Modifier.xmbMotionGestures(
             if (gestureDragging) {
                 change.consume()
                 when (axis) {
-                    XmbAxis.HORIZONTAL -> {
+                    BladeAxis.HORIZONTAL -> {
                         val phaseDelta = -dx / safeCategoryStep
-                        motionScope.launch {
-                            categoryPhase.snapTo(categoryPhase.value + phaseDelta)
-                        }
+                        motionScope.launch { categoryPhase.snapTo(categoryPhase.value + phaseDelta) }
                         val instant = (phaseDelta / dt).coerceIn(-12f, 12f)
                         lastCategoryVelocity = lastCategoryVelocity * 0.55f + instant * 0.45f
                     }
-                    XmbAxis.VERTICAL -> {
+                    BladeAxis.VERTICAL -> {
                         val phaseDelta = -dy / safeItemStep
-                        motionScope.launch {
-                            itemPhase.snapTo(itemPhase.value + phaseDelta)
-                        }
+                        motionScope.launch { itemPhase.snapTo(itemPhase.value + phaseDelta) }
                         val instant = (phaseDelta / dt).coerceIn(-12f, 12f)
                         lastItemVelocity = lastItemVelocity * 0.55f + instant * 0.45f
                     }
-                    XmbAxis.NONE -> Unit
+                    BladeAxis.NONE -> Unit
                 }
             }
             previous = current
@@ -444,40 +431,27 @@ private fun Modifier.xmbMotionGestures(
         if (gestureDragging) {
             onDragChange(false)
             when (axis) {
-                XmbAxis.HORIZONTAL -> onCategorySettle(lastCategoryVelocity)
-                XmbAxis.VERTICAL -> onItemSettle(lastItemVelocity)
-                XmbAxis.NONE -> Unit
+                BladeAxis.HORIZONTAL -> onCategorySettle(lastCategoryVelocity)
+                BladeAxis.VERTICAL -> onItemSettle(lastItemVelocity)
+                BladeAxis.NONE -> Unit
             }
         }
     }
 }
 
 @Composable
-private fun XmbHeader(
+private fun BladeHeader(
     minimizedCount: Int,
-    accent: Color,
     onCloseHome: () -> Unit
 ) {
-    val shape = RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp)
-    Box(
-        Modifier
+    val shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+    BladeSurface(
+        modifier = Modifier
             .fillMaxWidth()
-            .height(42.dp)
-            .clip(shape)
-            .background(
-                Brush.horizontalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.14f),
-                        accent.copy(alpha = 0.28f),
-                        Color(0xFF22D3EE).copy(alpha = 0.12f),
-                        Color.Black.copy(alpha = 0.18f)
-                    )
-                )
-            )
-            .border(1.dp, Color.White.copy(alpha = 0.22f), shape)
+            .height(46.dp),
+        shape = shape,
+        focused = false
     ) {
-        GrealTexture(Modifier.matchParentSize(), accent = accent, seed = 581, density = 0.30f)
-        PrgGlassSheen(Modifier.matchParentSize(), accent = accent, seed = 581)
         Row(
             Modifier
                 .fillMaxSize()
@@ -487,15 +461,15 @@ private fun XmbHeader(
             Image(
                 painter = painterResource(R.drawable.grapescript_logo),
                 contentDescription = "Логотип Grape Script",
-                modifier = Modifier.height(27.dp),
+                modifier = Modifier.height(28.dp),
                 contentScale = ContentScale.Fit
             )
             Spacer(Modifier.width(7.dp))
-            Text("GSYNK", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Light, letterSpacing = 1.sp)
+            Text("GSYNK", color = BladePalette.White, fontSize = 18.sp, fontWeight = FontWeight.Light, letterSpacing = 1.sp)
             Spacer(Modifier.width(8.dp))
             Text(
-                "пуск · " + BuildConfig.VERSION_NAME + " EXP · GREAL XMB Motion",
-                color = Color.White.copy(alpha = 0.70f),
+                "blades · " + BuildConfig.VERSION_NAME + " EXP · " + Blade.VERSION.takeWhile { it != '—' }.trim(),
+                color = BladePalette.DimWhite,
                 fontSize = 10.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -504,19 +478,18 @@ private fun XmbHeader(
             if (minimizedCount > 0) {
                 Box(
                     Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.White.copy(alpha = 0.13f))
-                        .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(50))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(BladePalette.Green.copy(alpha = 0.32f))
+                        .border(1.dp, BladePalette.Lime.copy(alpha = 0.52f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
-                    Text(minimizedCount.toString() + " окн.", color = TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                    Text(minimizedCount.toString() + " окн.", color = BladePalette.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.width(7.dp))
             }
-            GrealControlOrb(
+            BladeControlOrb(
                 text = "⌂",
-                accent = accent,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(34.dp),
                 onClick = onCloseHome
             )
         }
@@ -524,11 +497,10 @@ private fun XmbHeader(
 }
 
 @Composable
-private fun XmbCategoryRail(
-    categories: List<XmbCategory>,
+private fun BladeTabRail(
+    categories: List<BladeCategory>,
     phase: Float,
     selectedIndex: Int,
-    accent: Color,
     onSelect: (Int) -> Unit
 ) {
     val context = LocalContext.current
@@ -536,28 +508,29 @@ private fun XmbCategoryRail(
     BoxWithConstraints(
         Modifier
             .fillMaxWidth()
-            .height(122.dp)
+            .height(112.dp)
     ) {
         val localDensity = LocalDensity.current
-        val stepPx = with(localDensity) { Xmb.CATEGORY_STEP_DP.dp.toPx() }
+        val stepPx = with(localDensity) { Blade.TAB_STEP_DP.dp.toPx() }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             categories.forEachIndexed { index, category ->
-                val distance = Xmb.cyclicDistance(index, phase, categories.size)
-                if (abs(distance) <= 3.25f) {
+                val distance = Blade.cyclicDistance(index, phase, categories.size)
+                if (abs(distance) <= 3.2f) {
                     val focused = index == selectedIndex
-                    val scale = Xmb.categoryScale(distance)
-                    val layerAlpha = Xmb.categoryAlpha(distance)
-                    Column(
-                        Modifier
+                    val scale = Blade.tabScale(distance)
+                    val layerAlpha = Blade.tabAlpha(distance)
+                    BladeSurface(
+                        modifier = Modifier
                             .align(Alignment.Center)
-                            .width(Xmb.CATEGORY_STEP_DP.dp)
+                            .width(Blade.TAB_STEP_DP.dp)
+                            .height(94.dp)
                             .graphicsLayer {
                                 translationX = distance * stepPx
                                 scaleX = scale
                                 scaleY = scale
                                 this.alpha = layerAlpha
-                                rotationY = Xmb.categoryRotationY(distance)
-                                cameraDistance = 8f * density
+                                rotationY = Blade.tabSkew(distance)
+                                cameraDistance = 9f * density
                             }
                             .combinedClickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -568,36 +541,30 @@ private fun XmbCategoryRail(
                                     onSelect(index)
                                 }
                             ),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        shape = RoundedCornerShape(10.dp),
+                        focused = focused
                     ) {
-                        Box(Modifier.size(58.dp), contentAlignment = Alignment.Center) {
-                            if (focused) {
-                                GrealInfiniteOrbit(
-                                    Modifier.matchParentSize(),
-                                    accent = accent,
-                                    seed = category.key.hashCode(),
-                                    active = true
-                                )
-                            }
-                            GrealOrbFace(
-                                modifier = Modifier.size(if (focused) 52.dp else 44.dp),
-                                accent = if (focused) accent else accent.copy(alpha = 0.72f),
+                        Column(
+                            Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            BladeIcon(
                                 iconRes = category.iconRes,
-                                seed = category.key.hashCode(),
-                                active = focused,
-                                iconScale = 0.50f
+                                modifier = Modifier.size(40.dp),
+                                active = focused
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = category.title.lowercase(),
+                                color = if (focused) BladePalette.White else BladePalette.DimWhite,
+                                fontSize = if (focused) 10.sp else 8.sp,
+                                fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Light,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center
                             )
                         }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = category.title.lowercase(),
-                            color = if (focused) TextPrimary else Color.White.copy(alpha = 0.64f),
-                            fontSize = if (focused) 11.sp else 9.sp,
-                            fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Light,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center
-                        )
                     }
                 }
             }
@@ -606,33 +573,32 @@ private fun XmbCategoryRail(
 }
 
 @Composable
-private fun XmbItemColumn(
+private fun BladeItemColumn(
     entries: List<Catalog.Entry>,
     phase: Float,
     selectedIndex: Int,
     favorites: Set<String>,
     minimizedRoutes: Set<String>,
     liveLinesFor: (Catalog.Entry) -> List<String>,
-    accent: Color,
     onActivate: (Int, Catalog.Entry, LiquidWindowOrigin?) -> Unit,
     onToggleFavorite: (Catalog.Entry) -> Unit,
     onFocusOrigin: (LiquidWindowOrigin?) -> Unit
 ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val rowHeight = minOf(68.dp, maxHeight / (Xmb.VISIBLE_ITEMS + 0.6f))
         val localDensity = LocalDensity.current
-        val rowStepPx = with(localDensity) { (rowHeight + 6.dp).toPx() }
+        val rowHeight = minOf(Blade.ITEM_STEP_DP.dp, maxHeight / (Blade.VISIBLE_ITEMS + 0.6f))
+        val rowStepPx = with(localDensity) { (rowHeight + 5.dp).toPx() }
         if (entries.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("в этой категории пока нет функций", color = TextDim, fontSize = 12.sp)
+                Text("в этом лезвии пока нет функций", color = TextDim, fontSize = 12.sp)
             }
             return@BoxWithConstraints
         }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             entries.forEachIndexed { index, entry ->
-                val distance = Xmb.cyclicDistance(index, phase, entries.size)
+                val distance = Blade.cyclicDistance(index, phase, entries.size)
                 if (abs(distance) <= 3.6f) {
-                    XmbItemRow(
+                    BladeItemRow(
                         entry = entry,
                         index = index,
                         distance = distance,
@@ -642,7 +608,6 @@ private fun XmbItemColumn(
                         liveLine = liveLinesFor(entry).firstOrNull { it.isNotBlank() }?.trim(),
                         favorite = entry.id in favorites,
                         minimized = entry.route in minimizedRoutes,
-                        accent = accent,
                         onActivate = onActivate,
                         onToggleFavorite = onToggleFavorite,
                         onFocusOrigin = onFocusOrigin
@@ -654,7 +619,7 @@ private fun XmbItemColumn(
 }
 
 @Composable
-private fun BoxScope.XmbItemRow(
+private fun BoxScope.BladeItemRow(
     entry: Catalog.Entry,
     index: Int,
     distance: Float,
@@ -664,22 +629,20 @@ private fun BoxScope.XmbItemRow(
     liveLine: String?,
     favorite: Boolean,
     minimized: Boolean,
-    accent: Color,
     onActivate: (Int, Catalog.Entry, LiquidWindowOrigin?) -> Unit,
     onToggleFavorite: (Catalog.Entry) -> Unit,
     onFocusOrigin: (LiquidWindowOrigin?) -> Unit
 ) {
     val context = LocalContext.current
     var launchOrigin by remember(entry.id) { mutableStateOf<LiquidWindowOrigin?>(null) }
-    val scale = Xmb.itemScale(distance)
-    val layerAlpha = Xmb.itemAlpha(distance)
+    val scale = Blade.itemScale(distance)
+    val layerAlpha = Blade.itemAlpha(distance)
     val badge = when {
         minimized -> "активно"
         entry.fresh -> "ново"
         favorite -> "моё"
         else -> null
     }
-    val shape = RoundedCornerShape(18.dp)
 
     LaunchedEffect(focused, launchOrigin) {
         if (focused) onFocusOrigin(launchOrigin)
@@ -688,7 +651,7 @@ private fun BoxScope.XmbItemRow(
     Box(
         Modifier
             .align(Alignment.Center)
-            .fillMaxWidth(0.94f)
+            .fillMaxWidth(0.96f)
             .height(rowHeight)
             .onGloballyPositioned { coordinates ->
                 launchOrigin = coordinates.toLiquidWindowOrigin(entry)
@@ -698,99 +661,69 @@ private fun BoxScope.XmbItemRow(
                 scaleX = scale
                 scaleY = scale
                 this.alpha = layerAlpha
-                translationX = Xmb.itemTranslationX(distance) * density
-                rotationX = Xmb.itemRotationX(distance)
-                cameraDistance = 9f * density
-                shadowElevation = if (focused) 18f else 4f
-                ambientShadowColor = accent.copy(alpha = 0.24f)
-                spotShadowColor = entry.color.copy(alpha = 0.30f)
+                translationX = Blade.itemTranslationX(distance) * density
+                rotationX = Blade.itemSkew(distance)
+                cameraDistance = 10f * density
+                shadowElevation = if (focused) 16f else 3f
+                ambientShadowColor = BladePalette.Lime.copy(alpha = 0.18f)
+                spotShadowColor = BladePalette.Green.copy(alpha = 0.28f)
             }
-            .clip(shape)
-            .background(
-                Brush.horizontalGradient(
-                    listOf(
-                        Color.White.copy(alpha = if (focused) 0.16f else 0.07f),
-                        entry.color.copy(alpha = if (focused) 0.22f else 0.10f),
-                        Color.Black.copy(alpha = 0.20f)
-                    )
-                )
-            )
-            .border(
-                1.dp,
-                if (focused) Color.White.copy(alpha = 0.42f) else Color.White.copy(alpha = 0.14f),
-                shape
-            )
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = { onActivate(index, entry, launchOrigin) },
-                onLongClick = {
-                    UiTweaks.tap(context, long = true)
-                    onToggleFavorite(entry)
-                }
-            )
     ) {
-        if (focused) {
-            GrealTexture(Modifier.matchParentSize(), accent = entry.color, seed = entry.id.hashCode(), density = 0.28f)
-            PrgGlassSheen(Modifier.matchParentSize(), accent = accent, seed = entry.id.hashCode())
-            GrealActiveCorners(Modifier.matchParentSize(), accent = accent, strength = 0.28f)
-        }
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        BladeSurface(
+            modifier = Modifier.matchParentSize(),
+            shape = RoundedCornerShape(10.dp),
+            focused = focused
         ) {
-            Box(
-                Modifier.size(rowHeight * 0.66f),
-                contentAlignment = Alignment.Center
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp)
+                    .combinedClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onActivate(index, entry, launchOrigin) },
+                        onLongClick = {
+                            UiTweaks.tap(context, long = true)
+                            onToggleFavorite(entry)
+                        }
+                    ),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (focused) {
-                    GrealInfiniteOrbit(
-                        Modifier.matchParentSize(),
-                        accent = entry.color,
-                        seed = entry.id.hashCode(),
-                        active = true
-                    )
-                }
-                GrealOrbFace(
-                    modifier = Modifier.size(rowHeight * 0.54f),
-                    accent = entry.color,
+                BladeIcon(
                     iconRes = entry.iconRes,
-                    seed = entry.id.hashCode(),
-                    active = focused,
-                    iconScale = 0.50f
+                    modifier = Modifier.size(rowHeight * 0.62f),
+                    active = focused
                 )
-            }
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = entry.title.lowercase(),
-                    color = if (focused) TextPrimary else Color.White.copy(alpha = 0.78f),
-                    fontSize = if (focused) 16.sp else 12.sp,
-                    fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Light,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (focused && !liveLine.isNullOrBlank()) {
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
                     Text(
-                        text = liveLine,
-                        color = Color.White.copy(alpha = 0.60f),
-                        fontSize = 9.sp,
+                        text = entry.title.lowercase(),
+                        color = if (focused) BladePalette.White else TextPrimary,
+                        fontSize = if (focused) 15.sp else 12.sp,
+                        fontWeight = if (focused) FontWeight.SemiBold else FontWeight.Light,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (focused && !liveLine.isNullOrBlank()) {
+                        Text(
+                            text = liveLine,
+                            color = BladePalette.DimWhite,
+                            fontSize = 9.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
-            }
-            if (badge != null) {
-                Box(
-                    Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(Color.Black.copy(alpha = 0.34f))
-                        .border(1.dp, Color.White.copy(alpha = 0.32f), RoundedCornerShape(50))
-                        .padding(horizontal = 7.dp, vertical = 2.dp)
-                ) {
-                    Text(badge, color = GrapeVioletSoft, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+                if (badge != null) {
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(BladePalette.Green.copy(alpha = 0.34f))
+                            .border(1.dp, BladePalette.Lime.copy(alpha = 0.58f), RoundedCornerShape(7.dp))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    ) {
+                        Text(badge, color = BladePalette.White, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
@@ -798,8 +731,7 @@ private fun BoxScope.XmbItemRow(
 }
 
 @Composable
-private fun XmbControlBar(
-    accent: Color,
+private fun BladeControlBar(
     onLeft: () -> Unit,
     onRight: () -> Unit,
     onUp: () -> Unit,
@@ -809,18 +741,20 @@ private fun XmbControlBar(
     Row(
         Modifier
             .fillMaxWidth()
-            .height(52.dp),
+            .height(48.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        GrealControlOrb("←", accent, Modifier.size(38.dp), onClick = onLeft)
-        GrealControlOrb("→", accent, Modifier.size(38.dp), onClick = onRight)
-        GrealControlOrb("↑", accent, Modifier.size(38.dp), onClick = onUp)
-        GrealControlOrb("↓", accent, Modifier.size(38.dp), onClick = onDown)
-        SecondaryButton(
-            text = "открыть",
-            onClick = onOpen,
-            modifier = Modifier.weight(1f)
+        BladeControlOrb("←", Modifier.size(38.dp), onClick = onLeft)
+        BladeControlOrb("→", Modifier.size(38.dp), onClick = onRight)
+        BladeControlOrb("↑", Modifier.size(38.dp), onClick = onUp)
+        BladeControlOrb("↓", Modifier.size(38.dp), onClick = onDown)
+        BladeControlOrb(
+            "OK",
+            Modifier
+                .weight(1f)
+                .height(38.dp),
+            onClick = onOpen
         )
     }
 }

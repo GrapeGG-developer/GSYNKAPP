@@ -141,21 +141,21 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // ————— GREAL UI живёт отдельным единым приложением —————
+            // ————— Blade UI живёт отдельным единым приложением —————
             Spacer(Modifier.height(16.dp))
-            SectionTitle("GREAL — дизайн")
+            SectionTitle("Blade — дизайн")
             Spacer(Modifier.height(8.dp))
             SurfaceCard(borderColor = CardBorder) {
-                Text("GREAL · Grape Realism Engine", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
+                Text("GSYNK Blades", color = BladePalette.Lime, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
                 Text(
-                    "всё оформление собрано в одном приложении «Настройки GREAL UI»: материал " + skin.prgOpacity +
-                        "%, свет " + skin.prgGlow + "%, блики " + skin.prgGlare + "%, формы " + skin.card + "/" + skin.toggle + " dp",
+                    "всё оформление собрано в одном приложении «Настройки Blade UI»: лезвия " + skin.prgOpacity +
+                        "%, рамка " + skin.prgGlow + "%, пробег " + skin.speed + "%, наклон " + skin.focus + "%",
                     color = TextDim,
                     fontSize = Gioui.Type.caption
                 )
                 Spacer(Modifier.height(10.dp))
                 SecondaryButton(
-                    text = "Открыть настройки GREAL UI",
+                    text = "Открыть настройки Blade UI",
                     onClick = { Router.page("greal") },
                     modifier = Modifier.fillMaxWidth()
                 )

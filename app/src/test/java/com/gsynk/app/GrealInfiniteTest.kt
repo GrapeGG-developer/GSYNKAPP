@@ -107,14 +107,14 @@ class GrealInfiniteTest {
         assertTrue("страница не зарегистрирована", GiouiPageIds.contains("antistress"))
         val router = File("src/main/java/com/gsynk/app/ui/GiouiScreens.kt").readText()
         assertTrue("роутер не открывает антистресс", router.contains("\"antistress\" -> {"))
-        assertEquals("5.8.1", ReleaseNews.VERSION)
+        assertEquals("5.9.0", ReleaseNews.VERSION)
         val build = File("build.gradle.kts").readText()
-        assertTrue(build.contains("versionCode = 36"))
-        assertTrue(build.contains("versionName = \"5.8.1\""))
+        assertTrue(build.contains("versionCode = 37"))
+        assertTrue(build.contains("versionName = \"5.9.0\""))
     }
 
     @Test
-    fun effectsUseOneSharedClockAndNoNestedGpuShader() {
+    fun effectsUseSharedClockAndBladeBackground() {
         val components = File("src/main/java/com/gsynk/app/ui/Components.kt").readText()
         assertTrue(components.contains("val LocalGrealPhase"))
         assertTrue(components.contains("fun rememberSharedGrealPhase()"))
@@ -124,13 +124,13 @@ class GrealInfiniteTest {
             "лёгкая фаза больше не должна создавать свою бесконечную анимацию",
             components.contains("fun rememberPrgPhase(seed: Int = 0): Float = rememberPrgPhaseState(seed).value")
         )
-        val design = File("src/main/java/com/gsynk/app/ui/GrealDesign.kt").readText()
-        assertTrue(design.contains("parentAuroraActive"))
-        assertTrue(design.contains("!parentAuroraActive"))
-        assertTrue(design.contains("Призматические каустики"))
-        val start = File("src/main/java/com/gsynk/app/ui/XmbStartScreen.kt").readText()
-        assertTrue(start.contains("GrealParallaxShards("))
-        assertTrue(start.contains("GrealInfiniteOrbit("))
+        assertTrue(components.contains("BladeBackground(") && components.contains("BladeFocusFrame("))
+        val design = File("src/main/java/com/gsynk/app/ui/BladeDesign.kt").readText()
+        assertTrue(design.contains("fun BladeBackground(") && design.contains("fun BladeFocusFrame("))
+        assertFalse(design.contains("Color.Gray") || design.contains("drawLine("))
+        val start = File("src/main/java/com/gsynk/app/ui/BladeStartScreen.kt").readText()
+        assertTrue(start.contains("BladeBackground(") && start.contains("BladeIcon("))
+        assertFalse(start.contains("AnimatedGrapeBackground") || start.contains("GrealAuroraField"))
     }
 
     @Test

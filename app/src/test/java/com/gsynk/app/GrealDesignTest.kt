@@ -1,5 +1,6 @@
 package com.gsynk.app
 
+import com.gsynk.app.core.Blade
 import com.gsynk.app.ui.Greal
 import com.gsynk.app.ui.grealOrbDiameterDp
 import com.gsynk.app.ui.grealDepthTransform
@@ -15,9 +16,9 @@ import org.junit.Test
 class GrealDesignTest {
 
     @Test
-    fun grealIsTheDesignSystem() {
-        assertEquals("GREAL — Grape Realism Engine", Greal.VERSION)
-        assertEquals(Greal.VERSION, com.gsynk.app.ui.Gioui.UI_VERSION)
+    fun bladeIsTheDesignSystem() {
+        assertEquals("GSYNK Blades — Xbox 360 Blade Dashboard", Blade.VERSION)
+        assertEquals(Blade.VERSION, com.gsynk.app.ui.Gioui.UI_VERSION)
     }
 
     @Test

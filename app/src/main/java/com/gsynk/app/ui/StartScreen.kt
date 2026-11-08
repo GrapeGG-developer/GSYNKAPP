@@ -667,12 +667,11 @@ fun EmptyHomeScreen(
 }
 
 /**
- * GREAL XMB — портретная оболочка XrossMediaBar.
+ * GSYNK Blades — портретная оболочка в духе Xbox 360 Blade Dashboard.
  *
- * Старая 3D-лента времени больше не рисуется: `StartMenuScreen` теперь напрямую
- * открывает [XmbStartScreen] с горизонтальными категориями, вертикальным рядом
- * функций под фокусом и теми же физическими эффектами GREAL. Старые помощники
- * раскладки ниже сохранены только для регрессионных проверок чистой геометрии.
+ * `StartMenuScreen` напрямую открывает [BladeStartScreen] с горизонтальными
+ * вкладками-лезвиями и вертикальным списком функций. Старые помощники раскладки
+ * ниже сохранены только для регрессионных проверок чистой геометрии.
  */
 @Composable
 fun StartMenuScreen(
@@ -683,7 +682,7 @@ fun StartMenuScreen(
     onToggleFavorite: (Catalog.Entry) -> Unit,
     onCloseHome: () -> Unit
 ) {
-    XmbStartScreen(
+    BladeStartScreen(
         favorites = favorites,
         minimizedRoutes = minimizedRoutes,
         liveLinesFor = liveLinesFor,
@@ -1314,46 +1313,30 @@ fun MetroAppShell(
         ) {
             AnimatedGrapeBackground {
                 Column(Modifier.fillMaxSize()) {
-                    Box(
-                        Modifier
+                    BladeSurface(
+                        modifier = Modifier
                             .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.statusBars)
-                            .height(52.dp)
-                            .clip(RoundedCornerShape(bottomStart = 19.dp, bottomEnd = 19.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(
-                                        Color.White.copy(alpha = 0.15f),
-                                        accent.copy(alpha = 0.30f),
-                                        Color(0xFF22D3EE).copy(alpha = 0.11f),
-                                        Color.Black.copy(alpha = 0.22f)
-                                    )
-                                )
-                            )
-                            .border(1.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(bottomStart = 19.dp, bottomEnd = 19.dp))
+                            .height(52.dp),
+                        shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
+                        focused = false
                     ) {
-                        GrealTexture(Modifier.matchParentSize(), accent = accent, seed = title.hashCode(), density = 0.30f)
-                        PrgGlassSheen(Modifier.matchParentSize(), accent = accent, seed = title.hashCode())
                         Row(
                             Modifier
                                 .fillMaxSize()
                                 .padding(horizontal = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            GrealControlOrb(
+                            BladeControlOrb(
                                 text = "—",
-                                accent = accent,
                                 modifier = Modifier.size(36.dp),
                                 onClick = { requestExit(onMinimize) }
                             )
                             Spacer(Modifier.width(7.dp))
-                            GrealOrbFace(
-                                modifier = Modifier.size(39.dp),
-                                accent = accent,
+                            BladeIcon(
                                 iconRes = shellEntry?.iconRes ?: targetOrigin.iconRes,
-                                seed = title.hashCode() + 31,
-                                active = true,
-                                iconScale = 0.50f
+                                modifier = Modifier.size(39.dp),
+                                active = true
                             )
                             Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
@@ -1367,29 +1350,27 @@ fun MetroAppShell(
                                 )
                                 Text(
                                     shellDescription,
-                                    color = Color.White.copy(alpha = 0.66f),
+                                    color = BladePalette.DimWhite,
                                     fontSize = 9.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                             }
                             Text(
-                                "GREAL",
-                                color = Color.White.copy(alpha = 0.52f),
+                                "BLADE",
+                                color = BladePalette.Lime,
                                 fontSize = 8.sp,
                                 letterSpacing = 1.sp,
                                 maxLines = 1
                             )
                             Spacer(Modifier.width(7.dp))
-                            GrealControlOrb(
+                            BladeControlOrb(
                                 text = "×",
-                                accent = accent,
                                 modifier = Modifier.size(38.dp),
                                 danger = true,
                                 onClick = { requestExit(onClose) }
                             )
                         }
-                        GrealActiveCorners(Modifier.matchParentSize(), accent = accent, strength = 0.36f)
                     }
                     Box(
                         Modifier
@@ -1401,13 +1382,9 @@ fun MetroAppShell(
                 }
             }
 
-            GrealActiveCorners(
-                Modifier.matchParentSize(),
-                accent = accent,
-                strength = 0.20f + liquidPulse * 0.52f
-            )
+            BladeFocusFrame(Modifier.matchParentSize(), strength = 0.20f + liquidPulse * 0.52f)
 
-            // Тонкая «волна» по материалу GREAL на середине morph-а: окно выглядит живым,
+            // Тонкий световой пробег Blade на середине morph-а: окно выглядит живым,
             // но после раскрытия полностью исчезает и не мешает содержимому.
             if (liquidPulse > 0.01f) {
                 Box(
@@ -1428,7 +1405,7 @@ fun MetroAppShell(
             }
         }
 
-        // Семя окна: сама GREAL-сфера с подписью снизу в том же летящем
+        // Семя окна: иконка Blade с подписью снизу в том же летящем
         // прямоугольнике. Оно растворяется и размывается в настоящем окне.
         if (seedAlpha > 0.01f) {
             val seedWidth = maxWidth * rect.width
@@ -1461,14 +1438,7 @@ fun MetroAppShell(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    GrealOrbFace(
-                        modifier = Modifier.size(seedOrbSize),
-                        accent = accent,
-                        iconRes = targetOrigin.iconRes,
-                        seed = targetOrigin.title.hashCode(),
-                        active = true,
-                        iconScale = 0.50f
-                    )
+                    BladeIcon(iconRes = targetOrigin.iconRes, modifier = Modifier.size(seedOrbSize), active = true)
                     if (seedWidth >= 62.dp && seedHeight >= 48.dp) {
                         Spacer(Modifier.height(3.dp))
                         Box(

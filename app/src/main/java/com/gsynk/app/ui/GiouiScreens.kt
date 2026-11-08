@@ -424,9 +424,9 @@ val GiouiPageIds: List<String> = listOf(
 @Composable
 fun GiouiPage(id: String, vm: MainViewModel, onBack: () -> Unit): Boolean {
     when (id) {
-        "greal" -> { GrealSettingsScreen(vm, onBack); return true }
+        "greal" -> { BladeSettingsScreen(vm, onBack); return true }
         "antistress" -> { GrealAntistressScreen(onBack); return true }
-        "effects", "radius" -> { GrealSettingsScreen(vm, onBack); return true }
+        "effects", "radius" -> { BladeSettingsScreen(vm, onBack); return true }
         "everyday" -> { EverydayScreen(onBack); return true }
         "easter" -> { EasterScreen(onBack); return true }
         "surprise" -> { SurpriseScreen(onBack); return true }

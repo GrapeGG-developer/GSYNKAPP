@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gsynk.app.core.Blade
 import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.Skin
 import com.gsynk.app.ui.theme.TextDim
@@ -270,7 +271,7 @@ object Gioui {
     }
 
     /** Текущая метка интерфейса — показывается в настройках и отчётах. */
-    const val UI_VERSION = Greal.VERSION
+    const val UI_VERSION = Blade.VERSION
 }
 
 /** Уровень эффектов, доступный всему интерфейсу без лишних вызовов. */
