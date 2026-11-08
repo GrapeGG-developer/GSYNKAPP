@@ -98,7 +98,7 @@ class AnonymityLowLevelTest {
 
     @Test
     fun releaseNewsIsCompleteFor52() {
-        assertEquals("5.7.1", ReleaseNews.VERSION)
+        assertEquals("5.7.2", ReleaseNews.VERSION)
         assertTrue(ReleaseNews.items.size >= 5)
         assertEquals(ReleaseNews.items.size, ReleaseNews.items.map { it.id }.distinct().size)
         ReleaseNews.items.forEach { item ->

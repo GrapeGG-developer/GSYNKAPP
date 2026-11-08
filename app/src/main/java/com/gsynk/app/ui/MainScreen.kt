@@ -379,6 +379,7 @@ fun MainScreen(vm: MainViewModel) {
             "panel:scenes" -> return "сцены сейчас"
             "panel:update", "flag:update" -> return "обновление"
             "page:news" -> return "новости"
+            "page:antistress" -> return "антистресс GREAL"
         }
         Catalog.ALL.firstOrNull { it.route == route }?.let { return it.title }
         return route

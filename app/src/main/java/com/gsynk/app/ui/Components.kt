@@ -56,14 +56,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.withFrameNanos
@@ -135,6 +138,39 @@ import kotlin.math.sin
 //  (без размытия и прозрачных слоёв — только градиенты)
 // ————————————————————————————————————————————————
 
+/**
+ * Один общий часовой State GREAL на всё приложение.
+ *
+ * Раньше каждая плитка, блик и сфера заводили собственный
+ * `rememberInfiniteTransition`; теперь они читают один State в фазе рисования.
+ */
+private val StaticGrealPhase = mutableStateOf(0.38f)
+val LocalGrealPhase = staticCompositionLocalOf<State<Float>> { StaticGrealPhase }
+
+@Composable
+private fun rememberSharedGrealPhase(): State<Float> {
+    val skin = LocalSkinValues.current
+    val effects = LocalGiouiEffects.current
+    val transition = rememberInfiniteTransition(label = "grealSharedClock")
+    val raw by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = ((9_500 * 100 / skin.prgMotion.coerceIn(40, 200)) * if (effects == Gioui.Effects.LIGHT) 3 / 2 else 1).coerceIn(4_000, 30_000),
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "grealSharedPhase"
+    )
+    return remember(skin.level, effects, skin.prgMotion) {
+        derivedStateOf {
+            if (skin.level == 0 || effects == Gioui.Effects.PLAIN) 0.38f else raw
+        }
+    }
+}
+
 @Composable
 fun AnimatedGrapeBackground(
     modifier: Modifier = Modifier,
@@ -143,6 +179,7 @@ fun AnimatedGrapeBackground(
     // Акцент и скорость читаем состоянием: изменил настройку — аврора сразу перекрасилась.
     val tweakRevision by UiTweaks.revision.collectAsStateWithLifecycle()
     val skin = LocalSkinValues.current
+    val sharedPhase = rememberSharedGrealPhase()
     if (tweakRevision < 0) return
 
     // GREAL: фоном всего приложения стало северное сияние. На полном уровне
@@ -159,34 +196,31 @@ fun AnimatedGrapeBackground(
                 speedScale = speedScale
             )
         }
-        CompositionLocalProvider(LocalGrealAuroraActive provides true) {
+        CompositionLocalProvider(
+            LocalGrealAuroraActive provides true,
+            LocalGrealPhase provides sharedPhase
+        ) {
             Box(Modifier.matchParentSize()) { content() }
         }
     }
 }
 
-/** Общая фаза GREAL: свет, блики и контурное свечение движутся в одном ритме. */
+/**
+ * Фаза GREAL со сдвигом для конкретной поверхности. Возвращает State: тяжёлые
+ * Canvas'ы читают его внутри `draw`, а не перестраивают композицию каждый кадр.
+ */
 @Composable
-fun rememberPrgPhase(seed: Int = 0): Float {
-    val skin = LocalSkinValues.current
-    val effects = LocalGiouiEffects.current
-    val transition = rememberInfiniteTransition(label = "gsynkprg")
-    val raw by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = ((9_500 * 100 / skin.prgMotion.coerceIn(40, 200)) * if (effects == Gioui.Effects.LIGHT) 3 / 2 else 1).coerceIn(4_000, 30_000),
-                easing = LinearEasing
-            ),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "prgPhase"
-    )
-    if (skin.level == 0 || effects == Gioui.Effects.PLAIN) return 0.38f
+fun rememberPrgPhaseState(seed: Int = 0): State<Float> {
+    val shared = LocalGrealPhase.current
     val shift = ((seed and 0x3ff).toFloat() / 4096f)
-    return (raw + shift) % 1f
+    return remember(shared, shift) {
+        derivedStateOf { (shared.value + shift) % 1f }
+    }
 }
+
+/** Совместимая фаза для лёгких поверхностей, которым удобно читать Float сразу. */
+@Composable
+fun rememberPrgPhase(seed: Int = 0): Float = rememberPrgPhaseState(seed).value
 
 /** Один случайный блик на краю: сторона, позиция, длина и собственная фаза заданы seed-ом. */
 internal data class PrgEdgeGlint(
@@ -238,11 +272,12 @@ fun PrgGlassSheen(
     seed: Int = 0
 ) {
     val skin = LocalSkinValues.current
-    val phase = rememberPrgPhase(seed)
+    val phaseState = rememberPrgPhaseState(seed)
     val glints = remember(seed) { prgEdgeGlints(seed) }
     val glare = (skin.prgGlare.coerceIn(0, 100) / 100f) * if (skin.level == 0 || LocalGiouiEffects.current == Gioui.Effects.PLAIN) 0.35f else 1f
     if (glare <= 0.01f) return
     Canvas(modifier) {
+        val phase = phaseState.value
         val inset = 1.15.dp.toPx().coerceAtMost(size.minDimension * 0.20f).coerceAtLeast(0.6f)
         glints.forEach { glint ->
             val localPhase = (phase * glint.speed + glint.phase) % 1f

@@ -250,6 +250,45 @@ fun GrealSettingsScreen(vm: MainViewModel, onBack: () -> Unit) {
             checked = settings.compactList
         ) { vm.setCompactList(it) }
 
+        Spacer(Modifier.height(16.dp))
+        SectionTitle("Бесконечные плитки и антистресс")
+        SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.45f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(64.dp), contentAlignment = Alignment.Center) {
+                    GrealInfiniteOrbit(
+                        modifier = Modifier.matchParentSize(),
+                        accent = UiTweaks.accentStart,
+                        seed = 5720,
+                        active = true
+                    )
+                    GrealOrbFace(
+                        modifier = Modifier.size(44.dp),
+                        accent = UiTweaks.accentStart,
+                        iconRes = R.drawable.ic_tune,
+                        seed = 5720,
+                        active = true,
+                        iconScale = 0.48f
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Антистресс GREAL", color = TextPrimary, fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Отдельное приложение, куда заходят просто покрутить бесконечные 3D-плитки, полопать сферы или оставить световую рябь.",
+                        color = TextDim,
+                        fontSize = Gioui.Type.caption,
+                        lineHeight = 13.sp
+                    )
+                }
+            }
+            Spacer(Modifier.height(9.dp))
+            SecondaryButton(
+                text = "Открыть и покрутить",
+                onClick = { Router.page("antistress") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         Spacer(Modifier.height(14.dp))
         SecondaryButton(
             text = "Вернуть сцену «GREAL Аврора»",

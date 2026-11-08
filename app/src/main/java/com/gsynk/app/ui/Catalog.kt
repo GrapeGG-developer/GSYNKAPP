@@ -76,7 +76,7 @@ object Catalog {
         CRYPTO("шифраторы", "шифры, машинный уровень, GS-TLS и авто-расшифровка"),
         ANON("анонимность", "персона, аватарки, ники, следы и GANONYM"),
         SYSTEM("система", "новости, разрешения, отчёты и обновление"),
-        FUN("забава", "игры, каждый день, пасхалки")
+        FUN("забава", "антистресс GREAL, игры, каждый день, пасхалки")
     }
 
     enum class Sort(val title: String) {
@@ -224,7 +224,7 @@ object Catalog {
         Entry("schedulenew", "новое правило", "день, время и уровни", Group.SCHEDULE, Gioui.Size.MEDIUM, 9, TUNE, "panel:schedule_new", 94, fresh = false, words = listOf("создать", "править", "автоматика")),
         Entry("schedulestatus", "статус расписания", "ближайшее изменение", Group.SCHEDULE, Gioui.Size.SMALL, 10, BOLT, "panel:schedule", 84, fresh = false, words = listOf("автопилот", "следующее", "активно")),
         Entry("lifeauto", "автоматизации жизни", "школа, дом, учёба и отдых", Group.SCHEDULE, Gioui.Size.WIDE, 11, TIME, "panel:lifeauto", 99, fresh = true, words = listOf("школа", "учёба", "дом", "youtube", "ютуб", "сцены", "автоматика")),
-        Entry("news", "новости 5.6.2 EXP", "жидкие окна: плитка растекается в приложение и уплывает обратно", Group.SYSTEM, Gioui.Size.WIDE, 3, TIME, "page:news", 99, fresh = true, words = listOf("новости", "обновление", "релиз", "5.6.2", "exp", "окна", "жидкие", "ios", "анимации", "лента", "портрет", "gsynk-ai", "ии", "модели")),
+        Entry("news", "новости 5.7.2 EXP", "бесконечные 3D-плитки, антистресс GREAL и общий таймер эффектов", Group.SYSTEM, Gioui.Size.WIDE, 3, TIME, "page:news", 99, fresh = true, words = listOf("новости", "обновление", "релиз", "5.7.2", "exp", "бесконечность", "плитки", "антистресс", "greal", "3d", "эффекты", "оптимизация", "лента", "портрет", "gsynk-ai", "ии", "модели")),
         Entry("settings", "настройки", "автопилот, обновления и доступы", Group.SYSTEM, Gioui.Size.MEDIUM, 4, TUNE, "panel:settings", 98, fresh = true, words = listOf("настройки", "параметры", "доступы", "кастомизация")),
         Entry("quick", "быстрые переключатели", "фонарик, тишина, сирена", Group.SYSTEM, Gioui.Size.MEDIUM, 5, BOLT, "tool:quick", 87, fresh = true, words = listOf("фонарик", "не беспокоить", "сирена", "вибрация")),
         Entry("permissions", "разрешения", "всё, что нужно приложению", Group.SYSTEM, Gioui.Size.SMALL, 9, SHIELD, "panel:settings", 70, words = listOf("права", "доступ")),
@@ -239,6 +239,7 @@ object Catalog {
         Entry("sysapps", "приложения", "системный экран", Group.SYSTEM, Gioui.Size.SMALL, 17, COPY, "sys:apps", 24),
 
         // ——— забава ———
+        Entry("antistress", "антистресс GREAL", "бесконечные 3D-плитки, пузыри и рябь — просто покрутить", Group.FUN, Gioui.Size.LARGE, 11, TUNE, "page:antistress", 100, fresh = true, words = listOf("антистресс", "greal", "крутить", "покрутить", "бесконечность", "бесконечные плитки", "карусель", "пузыри", "рябь", "отдых", "тактильный", "3d")),
         Entry("games", "игры", "мини-игры и дуэли", Group.FUN, Gioui.Size.MEDIUM, 18, TIME, "panel:games", 68, words = listOf("играть")),
         Entry("rogue", "gtboi", "подземелье вдвоём", Group.FUN, Gioui.Size.SMALL, 19, SHIELD, "panel:rogue", 64, words = listOf("игра", "данжен")),
         Entry("music", "композитор", "музыка из частот", Group.FUN, Gioui.Size.SMALL, 0, VOLUME, "lab:music", 56, words = listOf("мелодия", "ноты")),

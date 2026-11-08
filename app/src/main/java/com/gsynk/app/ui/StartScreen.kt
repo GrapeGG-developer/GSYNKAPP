@@ -800,6 +800,7 @@ fun StartMenuScreen(
                     }
                 }
                 GrealDepthBackdrop(Modifier.matchParentSize(), scrollPixels = depthScroll)
+                GrealParallaxShards(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6))
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
@@ -1216,7 +1217,7 @@ private fun StartTile(
         label = "orbPressScaleY"
     )
     var launchOrigin by remember(entry.id) { mutableStateOf<LiquidWindowOrigin?>(null) }
-    val phase = rememberPrgPhase(entry.id.hashCode())
+    val phaseState = rememberPrgPhaseState(entry.id.hashCode())
     val orbSize = grealOrbDiameterDp(width.value.toInt().coerceAtLeast(1), height.value.toInt().coerceAtLeast(1)).dp
     val wide = width >= 128.dp
     val compact = orbSize < 46.dp
@@ -1231,12 +1232,14 @@ private fun StartTile(
     Box(
         modifier
             .graphicsLayer {
+                val phase = phaseState.value
                 alpha = enterAlpha
                 scaleX = enterScale * pressScaleX
                 scaleY = enterScale * pressScaleY
                 translationY = (1f - enterAlpha) * 18f
                 rotationX = (if (pressed) -17f else sin(phase * 2f * PI.toFloat()) * 7.5f)
                 rotationY = (if (pressed) 14f else cos(phase * 2f * PI.toFloat()) * 9.5f)
+                rotationZ = if (pressed) 0f else sin(phase * 2f * PI.toFloat() + index * 0.37f) * 9f
                 cameraDistance = 8.5f * density
                 shadowElevation = if (pressed) 6f else 18f
                 ambientShadowColor = entry.color.copy(alpha = 0.30f)
@@ -1262,6 +1265,13 @@ private fun StartTile(
             verticalArrangement = Arrangement.Center
         ) {
             Box(Modifier.size(orbSize), contentAlignment = Alignment.Center) {
+                // Бесконечная 3D-орбита из маленьких плиток: крутится без остановки.
+                GrealInfiniteOrbit(
+                    modifier = Modifier.matchParentSize(),
+                    accent = entry.color,
+                    seed = entry.id.hashCode(),
+                    active = minimized || favorite
+                )
                 GrealOrbFace(
                     modifier = Modifier.matchParentSize(),
                     accent = entry.color,

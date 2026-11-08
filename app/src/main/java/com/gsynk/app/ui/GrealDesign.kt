@@ -164,8 +164,10 @@ fun GrealAuroraField(
     val effects = LocalGiouiEffects.current
     val skin = LocalSkinValues.current
     val turboActive by TurboState.active.collectAsState()
-    val program: GrealProgram? = remember(effects) {
-        if (effects == Gioui.Effects.FULL && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    // Вложенные превью не запускают второй попиксельный GPU-шейдер поверх родительской авроры.
+    val parentAuroraActive = LocalGrealAuroraActive.current
+    val program: GrealProgram? = remember(effects, parentAuroraActive) {
+        if (!parentAuroraActive && effects == Gioui.Effects.FULL && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             runCatching { createGrealProgram() }.getOrNull()
         } else {
             null
@@ -460,9 +462,10 @@ fun GrealOrbFace(
     active: Boolean = false,
     iconScale: Float = 0.48f
 ) {
-    val phase = rememberPrgPhase(seed)
+    val phaseState = rememberPrgPhaseState(seed)
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.matchParentSize()) {
+            val phase = phaseState.value
             val minDim = size.minDimension
             val center = Offset(size.width / 2f, size.height / 2f)
             val radius = minDim * 0.465f
@@ -552,8 +555,18 @@ fun GrealOrbFace(
                 size = orbitSize,
                 style = Stroke(width = 0.9.dp.toPx(), cap = StrokeCap.Round)
             )
-            for (satellite in 0 until 4) {
-                val angle = phase * 2f * PI.toFloat() + satellite * 1.571f
+            // Вторая наклонная орбита усиливает объём сферы без серых направляющих.
+            drawArc(
+                color = lerp(accent, Greal.AuroraGreen, 0.48f).copy(alpha = 0.16f),
+                startAngle = -phase * 540f + 25f,
+                sweepAngle = 96f,
+                useCenter = false,
+                topLeft = Offset(center.x - radius * 0.86f, center.y - radius * 0.54f),
+                size = Size(radius * 1.72f, radius * 1.08f),
+                style = Stroke(width = 0.8.dp.toPx(), cap = StrokeCap.Round)
+            )
+            for (satellite in 0 until 6) {
+                val angle = phase * 2f * PI.toFloat() + satellite * PI.toFloat() / 3f
                 val pos = Offset(
                     center.x + cos(angle) * radius * 0.98f,
                     center.y + sin(angle) * radius * 0.38f
@@ -659,6 +672,14 @@ half4 main(float2 fragCoord) {
     float stars = step(0.997, starCell) * (0.45 + 0.55 * sin(uTime * 1.7 + starCell * 40.0));
     color += float3(stars) * 0.08;
     color += (grealHash(fragCoord + uTime) - 0.5) * 0.025;
+    // Призматические каустики и хроматические рёбра: ещё один слой живого света.
+    float caustic = sin((uv.x + flow * 0.20) * 19.0 + uTime * 0.34) *
+                    sin((uv.y - flow2 * 0.16) * 13.0 - uTime * 0.27);
+    caustic = pow(max(caustic, 0.0), 3.0);
+    float3 chroma = float3(palette.r * 0.55, palette.g * 0.85, palette.b);
+    color += chroma * caustic * 0.075 * uIntensity;
+    float prism = smoothstep(0.72, 0.98, sin(uv.x * 7.0 + flow2 * 3.0 + uTime * 0.09) * 0.5 + 0.5);
+    color += uAccent * prism * 0.035 * uIntensity;
     float vignette = smoothstep(1.05, 0.25, distance(uv, float2(0.5, 0.46)));
     color *= 0.72 + 0.28 * vignette;
     return half4(color, 1.0);
