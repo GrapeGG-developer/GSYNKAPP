@@ -107,10 +107,10 @@ class GrealInfiniteTest {
         assertTrue("страница не зарегистрирована", GiouiPageIds.contains("antistress"))
         val router = File("src/main/java/com/gsynk/app/ui/GiouiScreens.kt").readText()
         assertTrue("роутер не открывает антистресс", router.contains("\"antistress\" -> {"))
-        assertEquals("5.7.2", ReleaseNews.VERSION)
+        assertEquals("5.8.0", ReleaseNews.VERSION)
         val build = File("build.gradle.kts").readText()
-        assertTrue(build.contains("versionCode = 34"))
-        assertTrue(build.contains("versionName = \"5.7.2\""))
+        assertTrue(build.contains("versionCode = 35"))
+        assertTrue(build.contains("versionName = \"5.8.0\""))
     }
 
     @Test
@@ -128,7 +128,7 @@ class GrealInfiniteTest {
         assertTrue(design.contains("parentAuroraActive"))
         assertTrue(design.contains("!parentAuroraActive"))
         assertTrue(design.contains("Призматические каустики"))
-        val start = File("src/main/java/com/gsynk/app/ui/StartScreen.kt").readText()
+        val start = File("src/main/java/com/gsynk/app/ui/XmbStartScreen.kt").readText()
         assertTrue(start.contains("GrealParallaxShards("))
         assertTrue(start.contains("GrealInfiniteOrbit("))
     }

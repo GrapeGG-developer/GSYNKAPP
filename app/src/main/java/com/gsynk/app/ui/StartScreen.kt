@@ -390,7 +390,7 @@ private fun GrealDepthPanel(
 
 /** Маленькая физическая кнопка-сфера GREAL для шапок и активных углов. */
 @Composable
-private fun GrealControlOrb(
+internal fun GrealControlOrb(
     text: String,
     accent: Color,
     modifier: Modifier = Modifier,
@@ -667,9 +667,12 @@ fun EmptyHomeScreen(
 }
 
 /**
- * GREAL Start EXP — портретная 3D-лента времени. Панели плавают в глубокой
- * аврора-сцене без кассетной графики: вверх — прошлое, в центре — «сейчас», вниз —
- * будущее из объёмных сфер-плиток по подписанным категориям.
+ * GREAL XMB — портретная оболочка XrossMediaBar.
+ *
+ * Старая 3D-лента времени больше не рисуется: `StartMenuScreen` теперь напрямую
+ * открывает [XmbStartScreen] с горизонтальными категориями, вертикальным рядом
+ * функций под фокусом и теми же физическими эффектами GREAL. Старые помощники
+ * раскладки ниже сохранены только для регрессионных проверок чистой геометрии.
  */
 @Composable
 fun StartMenuScreen(
@@ -680,178 +683,14 @@ fun StartMenuScreen(
     onToggleFavorite: (Catalog.Entry) -> Unit,
     onCloseHome: () -> Unit
 ) {
-    val groups = remember(favorites) {
-        buildList {
-            if (favorites.isNotEmpty()) {
-                val favoriteEntries = Catalog.ALL
-                    .filter { it.id in favorites }
-                    .sortedByDescending { it.hot }
-                if (favoriteEntries.isNotEmpty()) {
-                    add(StartGroupData("favorites", "моё", "закреплённые долгим нажатием плитки", favoriteEntries))
-                }
-            }
-            Catalog.Group.entries.forEach { group ->
-                val entries = Catalog.ALL
-                    .filter { it.group == group }
-                    .sortedWith(
-                        compareByDescending<Catalog.Entry> { it.id in favorites }
-                            .thenByDescending { it.hot }
-                    )
-                if (entries.isNotEmpty()) {
-                    add(StartGroupData(group.name, group.title, group.hint, entries))
-                }
-            }
-        }
-    }
-    // Прошлое ленты: от самого давнего (настройки) к ближайшему к «сейчас» (новости).
-    val pastEntries = remember {
-        listOf("settings", "permissions", "diag", "agent", "update", "news")
-            .mapNotNull { Catalog.byId(it) }
-    }
-    val desiredCell = startDesiredCellDp(UiTweaks.tileScale)
-    AnimatedGrapeBackground {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .windowInsetsPadding(WindowInsets.navigationBars)
-        ) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(42.dp)
-                    .clip(RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.14f),
-                                Color(0xFF7C3AED).copy(alpha = 0.28f),
-                                Color(0xFF22D3EE).copy(alpha = 0.12f),
-                                Color.Black.copy(alpha = 0.18f)
-                            )
-                        )
-                    )
-                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp))
-            ) {
-                GrealTexture(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6), seed = 11, density = 0.30f)
-                PrgGlassSheen(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6), seed = 11)
-                Row(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.grapescript_logo),
-                        contentDescription = "Логотип Grape Script",
-                        modifier = Modifier.height(27.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                    Spacer(Modifier.width(7.dp))
-                    Text("GSYNK", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Light, letterSpacing = 1.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        "пуск · " + BuildConfig.VERSION_NAME + " EXP · GREAL 3D-лента",
-                        color = Color.White.copy(alpha = 0.70f),
-                        fontSize = 10.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (minimizedRoutes.isNotEmpty()) {
-                        Box(
-                            Modifier
-                                .clip(RoundedCornerShape(50))
-                                .background(Color.White.copy(alpha = 0.13f))
-                                .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(50))
-                                .padding(horizontal = 7.dp, vertical = 3.dp)
-                        ) {
-                            Text(minimizedRoutes.size.toString() + " окн.", color = TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                        Spacer(Modifier.width(7.dp))
-                    }
-                    GrealControlOrb(
-                        text = "⌂",
-                        accent = Color(0xFF8B5CF6),
-                        modifier = Modifier.size(32.dp),
-                        onClick = onCloseHome
-                    )
-                }
-            }
-            BoxWithConstraints(
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                val contentWidthDp = (maxWidth.value.toInt() - 20).coerceAtLeast(1)
-                val columns = startColumnsForWidth(contentWidthDp, desiredCell)
-                val listState = rememberLazyListState()
-                val nowIndex = pastEntries.size + 1
-                var positioned by remember { mutableStateOf(false) }
-                LaunchedEffect(Unit) {
-                    if (!positioned) {
-                        listState.scrollToItem(nowIndex)
-                        positioned = true
-                    }
-                }
-                val depthScroll by remember {
-                    derivedStateOf {
-                        listState.firstVisibleItemIndex * 560f + listState.firstVisibleItemScrollOffset.toFloat()
-                    }
-                }
-                GrealDepthBackdrop(Modifier.matchParentSize(), scrollPixels = depthScroll)
-                GrealParallaxShards(Modifier.matchParentSize(), accent = Color(0xFF8B5CF6))
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    item(key = "past-head") {
-                        GrealDepthPanel(listState, "past-head") {
-                            TimelineSectionLabel("↑ прошлое", "новости, уведомления и настройки — листай вверх")
-                        }
-                    }
-                    items(pastEntries, key = { "past-" + it.id }) { entry ->
-                        GrealDepthPanel(listState, "past-" + entry.id) {
-                            TimelinePastCard(
-                                entry = entry,
-                                liveLines = liveLinesFor(entry),
-                                onClick = { origin -> onOpen(entry, origin) }
-                            )
-                        }
-                    }
-                    item(key = "now") {
-                        GrealDepthPanel(listState, "now") { TimelineNowCard() }
-                    }
-                    var runningIndex = 0
-                    groups.forEach { group ->
-                        val baseIndex = runningIndex
-                        runningIndex += group.entries.size
-                        item(key = "future-" + group.key) {
-                            GrealDepthPanel(listState, "future-" + group.key) {
-                            TimelineGroupSection(
-                                group = group,
-                                columns = columns,
-                                baseIndex = baseIndex,
-                                favorites = favorites,
-                                minimizedRoutes = minimizedRoutes,
-                                liveLinesFor = liveLinesFor,
-                                onOpen = onOpen,
-                                onToggleFavorite = onToggleFavorite
-                            )
-                            }
-                        }
-                    }
-                    item(key = "future-end") {
-                        GrealDepthPanel(listState, "future-end") {
-                            TimelineSectionLabel("конец будущего", "дальше — только следующие версии GSYNK")
-                        }
-                    }
-                }
-            }
-        }
-    }
+    XmbStartScreen(
+        favorites = favorites,
+        minimizedRoutes = minimizedRoutes,
+        liveLinesFor = liveLinesFor,
+        onOpen = onOpen,
+        onToggleFavorite = onToggleFavorite,
+        onCloseHome = onCloseHome
+    )
 }
 
 @Composable

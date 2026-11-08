@@ -39,6 +39,7 @@ import com.gsynk.app.R
 import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.Eggs
 import com.gsynk.app.core.Skin
+import com.gsynk.app.core.Xmb
 import com.gsynk.app.ui.theme.CardBorder
 import com.gsynk.app.ui.theme.GrapeVioletSoft
 import com.gsynk.app.ui.theme.TextDim
@@ -65,7 +66,7 @@ fun GrealSettingsScreen(vm: MainViewModel, onBack: () -> Unit) {
 
     GrapeScreen(
         title = "Настройки GREAL UI",
-        subtitle = "единая 3D-сцена: материал, формы, сферы и отклик · " + Skin.label(skin.level),
+        subtitle = "GREAL XMB: категории, фокус, материал, волны и отклик · " + Skin.label(skin.level),
         onBack = onBack
     ) {
         GrealSettingsPreview(skin = skin, tileScale = settings.tileScale)
@@ -251,6 +252,86 @@ fun GrealSettingsScreen(vm: MainViewModel, onBack: () -> Unit) {
         ) { vm.setCompactList(it) }
 
         Spacer(Modifier.height(16.dp))
+        SectionTitle("XMB: категории, фокус и волна")
+        Text(
+            text = Xmb.VERSION,
+            color = TextSecondary,
+            fontSize = Gioui.Type.caption,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(7.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(118.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color.White.copy(alpha = 0.10f), UiTweaks.accentStart.copy(alpha = 0.18f), Color.Black.copy(alpha = 0.24f))
+                    )
+                )
+                .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(18.dp))
+        ) {
+            GrealTexture(Modifier.matchParentSize(), accent = UiTweaks.accentStart, seed = 5810, density = 0.28f)
+            XmbWaveField(Modifier.matchParentSize(), accent = UiTweaks.accentStart)
+            Row(
+                Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                listOf("связь", "система", "забава").forEachIndexed { index, label ->
+                    val focused = index == 1
+                    Column(
+                        Modifier
+                            .width(86.dp)
+                            .graphicsLayer {
+                                val scale = Xmb.categoryScale(index - 1)
+                                scaleX = scale
+                                scaleY = scale
+                                alpha = Xmb.categoryAlpha(index - 1)
+                                cameraDistance = 8f * density
+                            },
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                            if (focused) {
+                                GrealInfiniteOrbit(
+                                    Modifier.matchParentSize(),
+                                    accent = UiTweaks.accentStart,
+                                    seed = 5810 + index,
+                                    active = true
+                                )
+                            }
+                            GrealOrbFace(
+                                modifier = Modifier.size(if (focused) 42.dp else 36.dp),
+                                accent = UiTweaks.accentStart,
+                                iconRes = R.drawable.ic_tune,
+                                seed = 5810 + index,
+                                active = focused,
+                                iconScale = 0.48f
+                            )
+                        }
+                        Text(label, color = if (focused) TextPrimary else TextDim, fontSize = 9.sp)
+                    }
+                }
+            }
+            GrealActiveCorners(Modifier.matchParentSize(), accent = UiTweaks.accentStart, strength = 0.24f)
+        }
+        Spacer(Modifier.height(9.dp))
+        GrealValueGroup("Скорость волны XMB", skin.speed, listOf(60, 100, 140, 200), "%") { value ->
+            Skin.save(context, skin.copy(speed = value))
+        }
+        GrealValueGroup("Глубина фокуса XMB", skin.focus, listOf(0, 25, 50, 75, 100), "%") { value ->
+            Skin.save(context, skin.copy(focus = value))
+        }
+        Text(
+            "В «Пуске» категории листаются влево/вправо, функции — вверх/вниз, а GREAL отвечает за материал, свет и объём.",
+            color = TextDim,
+            fontSize = Gioui.Type.caption,
+            lineHeight = 13.sp
+        )
+
+        Spacer(Modifier.height(16.dp))
         SectionTitle("Бесконечные плитки и антистресс")
         SurfaceCard(borderColor = GrapeVioletSoft.copy(alpha = 0.45f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -291,7 +372,7 @@ fun GrealSettingsScreen(vm: MainViewModel, onBack: () -> Unit) {
 
         Spacer(Modifier.height(14.dp))
         SecondaryButton(
-            text = "Вернуть сцену «GREAL Аврора»",
+            text = "Вернуть сцену «GREAL XMB»",
             onClick = {
                 val defaults = Skin.PRESETS.firstOrNull { it.first == "gioui" }?.third ?: Skin.Values()
                 Skin.save(context, Skin.effectiveValues(profile, defaults))

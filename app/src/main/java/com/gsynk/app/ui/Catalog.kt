@@ -136,7 +136,7 @@ object Catalog {
         Entry("coop", "игра вдвоём", "grape link по Wi-Fi", Group.CONNECT, Gioui.Size.SMALL, 10, SHIELD, "panel:coop", 62, words = listOf("кооп", "данж")),
 
         // ——— экран ———
-        Entry("grealui", "настройки GREAL UI", "единая 3D-сцена: материал, формы, сферы-плитки и отклик", Group.SCREEN, Gioui.Size.LARGE, 12, TUNE, "page:greal", 100, fresh = true, words = listOf("greal", "greal ui", "настройки greal", "дизайн", "формы", "плитки", "сферы", "скеуоморфизм", "текстуры", "аврора", "gpu", "3d", "анимации", "акцент", "тема")),
+        Entry("grealui", "настройки GREAL UI", "GREAL XMB: категории, фокус, волны, материал, формы и отклик", Group.SCREEN, Gioui.Size.LARGE, 12, TUNE, "page:greal", 100, fresh = true, words = listOf("greal", "greal ui", "настройки greal", "xmb", "xrossmediabar", "ps3", "дизайн", "категории", "фокус", "волны", "формы", "плитки", "сферы", "скеуоморфизм", "текстуры", "аврора", "gpu", "3d", "анимации", "акцент", "тема")),
         Entry("screensaver", "скринсейвер", "полка с часами", Group.SCREEN, Gioui.Size.SMALL, 15, TIME, "flag:screensaver", 42, words = listOf("часы", "полка")),
         Entry("screen", "проверка экрана", "AMOLED, ШИМ, мультитач", Group.SCREEN, Gioui.Size.SMALL, 16, BRIGHT, "lab:screen", 48, words = listOf("пиксель", "битый")),
         Entry("pwm", "шим-микроскоп", "замер мерцания камерой", Group.SCREEN, Gioui.Size.SMALL, 17, BRIGHT, "lab:pwm", 44, fresh = false, words = listOf("мерцание", "истощение")),
@@ -224,7 +224,7 @@ object Catalog {
         Entry("schedulenew", "новое правило", "день, время и уровни", Group.SCHEDULE, Gioui.Size.MEDIUM, 9, TUNE, "panel:schedule_new", 94, fresh = false, words = listOf("создать", "править", "автоматика")),
         Entry("schedulestatus", "статус расписания", "ближайшее изменение", Group.SCHEDULE, Gioui.Size.SMALL, 10, BOLT, "panel:schedule", 84, fresh = false, words = listOf("автопилот", "следующее", "активно")),
         Entry("lifeauto", "автоматизации жизни", "школа, дом, учёба и отдых", Group.SCHEDULE, Gioui.Size.WIDE, 11, TIME, "panel:lifeauto", 99, fresh = true, words = listOf("школа", "учёба", "дом", "youtube", "ютуб", "сцены", "автоматика")),
-        Entry("news", "новости 5.7.2 EXP", "бесконечные 3D-плитки, антистресс GREAL и общий таймер эффектов", Group.SYSTEM, Gioui.Size.WIDE, 3, TIME, "page:news", 99, fresh = true, words = listOf("новости", "обновление", "релиз", "5.7.2", "exp", "бесконечность", "плитки", "антистресс", "greal", "3d", "эффекты", "оптимизация", "лента", "портрет", "gsynk-ai", "ии", "модели")),
+        Entry("news", "новости 5.8.0 EXP", "GREAL XMB: «Пуск» в стиле PS3 с физическими эффектами GREAL", Group.SYSTEM, Gioui.Size.WIDE, 3, TIME, "page:news", 99, fresh = true, words = listOf("новости", "обновление", "релиз", "5.8.0", "exp", "xmb", "xrossmediabar", "ps3", "категории", "фокус", "волны", "greal", "3d", "эффекты", "оптимизация", "портрет", "gsynk-ai", "ии", "модели")),
         Entry("settings", "настройки", "автопилот, обновления и доступы", Group.SYSTEM, Gioui.Size.MEDIUM, 4, TUNE, "panel:settings", 98, fresh = true, words = listOf("настройки", "параметры", "доступы", "кастомизация")),
         Entry("quick", "быстрые переключатели", "фонарик, тишина, сирена", Group.SYSTEM, Gioui.Size.MEDIUM, 5, BOLT, "tool:quick", 87, fresh = true, words = listOf("фонарик", "не беспокоить", "сирена", "вибрация")),
         Entry("permissions", "разрешения", "всё, что нужно приложению", Group.SYSTEM, Gioui.Size.SMALL, 9, SHIELD, "panel:settings", 70, words = listOf("права", "доступ")),

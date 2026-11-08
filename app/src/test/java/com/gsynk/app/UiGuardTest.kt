@@ -57,9 +57,9 @@ class UiGuardTest {
     @Test
     fun screensRespectStatusBar() {
         val components = read("Components.kt")
-        val shell = read("StartScreen.kt")
+        val shell = read("XmbStartScreen.kt")
         assertTrue(
-            "Metro-оболочка обязана оставлять место строке состояния",
+            "XMB-оболочка обязана оставлять место строке состояния",
             shell.contains("windowInsetsPadding(WindowInsets.statusBars)")
         )
         assertTrue(
