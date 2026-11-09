@@ -4,12 +4,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 
-/** Ловит сработавший будильник и запускает службу применения правила. */
+/**
+ * Совместимость со старыми будильниками: расписание вынесено в GAUTO, поэтому
+ * этот приёмник намеренно ничего не делает. Новые будильники GSYNK не ставит.
+ */
 class ApplyReceiver : BroadcastReceiver() {
-
-    override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != RuleScheduler.ACTION_FIRE) return
-        val ruleId = intent.getStringExtra(RuleScheduler.EXTRA_RULE_ID) ?: return
-        ApplyService.start(context.applicationContext, ruleId)
-    }
+    override fun onReceive(context: Context, intent: Intent?) = Unit
 }

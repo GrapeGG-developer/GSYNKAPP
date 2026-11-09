@@ -62,9 +62,13 @@ class GrealRestoreTest {
         assertFalse(settings.contains("syncToSchedule"))
         val manifest = File("src/main/AndroidManifest.xml").readText()
         listOf(
-            "ApplyReceiver", "BootReceiver", "ApplyService",
-            "SCHEDULE_EXACT_ALARM", "RECEIVE_BOOT_COMPLETED"
+            "BootReceiver", "ApplyService", "SCHEDULE_EXACT_ALARM"
         ).forEach { marker -> assertFalse("манифест ещё содержит $marker", manifest.contains(marker)) }
+        // RECEIVE_BOOT_COMPLETED оставлен осознанно: он нужен OTA-джобу, а не расписанию.
+        assertTrue(manifest.contains("RECEIVE_BOOT_COMPLETED"))
+        val core = File("src/main/java/com/gsynk/app/core")
+        assertFalse(File(core, "ApplyService.kt").exists())
+        assertFalse(File(core, "BootReceiver.kt").exists())
         val permissions = File("src/main/java/com/gsynk/app/core/Permissions.kt").readText()
         assertFalse(permissions.contains("Item(ID_EXACT, \"Точные будильники\""))
         val nfc = read("NfcLinkScreen.kt")

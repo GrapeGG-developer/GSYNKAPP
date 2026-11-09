@@ -26,8 +26,7 @@
 - экраны `ScheduleScreen.kt`, `RuleEditorSheet.kt`, `LifeAutomationsScreen.kt`;
 - маршруты `panel:schedule`, `panel:schedule_new`, `panel:lifeauto`,соответствующие строки `homeTileLines`;
 - кнопка «Синхронизировать» в настройках и передача правил через NFC;
-- `ApplyService`, `ApplyReceiver`, `BootReceiver` и разрешения `RECEIVE_BOOT_COMPLETED`,
-  `SCHEDULE_EXACT_ALARM` из манифеста; карточка «Точные будильники» из панели доступов;
+- `ApplyService`, `BootReceiver` и разрешение `SCHEDULE_EXACT_ALARM` из манифеста; карточка «Точные будильники» из панели доступов;
 - автопланирование правил при старте `MainViewModel`.
 
 Низкоуровневые `RuleEngine.setBrightnessPercent/setVolumePercent` оставлены как внутренние
