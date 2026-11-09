@@ -9,8 +9,6 @@
         android:name="android.permission.WRITE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
     <!-- Расписание -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Уведомления / фоновая служба применения -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -145,34 +143,6 @@
                 android:name="android.nfc.action.TECH_DISCOVERED"
                 android:resource="@xml/nfc_tech_filter" />
         </activity>
-
-        <!-- Служба, которая применяет правило (работает из фона + переживает Android 17+) -->
-        <service
-            android:name=".core.ApplyService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Applies scheduled screen brightness and media volume presets" />
-        </service>
-
-        <!-- Получатель сработавшего будильника правила -->
-        <receiver
-            android:name=".core.ApplyReceiver"
-            android:exported="false" />
-
-        <!-- Перезагрузка, смена времени/часового пояса, выдача доступа к точным будильникам -->
-        <receiver
-            android:name=".core.BootReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.intent.action.TIME_SET" />
-                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
-                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
-            </intent-filter>
-        </receiver>
 
         <!-- Телефон как NDEF-метка: второй телефон читает его при касании -->
         <service

@@ -100,7 +100,6 @@ object Permissions {
 
     fun snapshot(context: Context): Snapshot = Snapshot(
         listOf(
-            Item(ID_EXACT, "Точные будильники", canScheduleExact(context)),
             Item(ID_WRITE, "Изменение системных настроек", canWriteSettings(context)),
             Item(ID_BATTERY, "Без ограничений батареи", batteryExempt(context)),
             Item(ID_NOTIF, "Уведомления", hasNotifications(context)),

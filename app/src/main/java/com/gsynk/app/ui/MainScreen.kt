@@ -97,7 +97,6 @@ import com.gsynk.app.core.Ciphers
 import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.ReleaseNews
 import com.gsynk.app.core.Rule
-import com.gsynk.app.core.RuleScheduler
 import com.gsynk.app.core.RuleSort
 import com.gsynk.app.ui.theme.CardBg
 import com.gsynk.app.ui.theme.CardBgAlt
@@ -158,7 +157,7 @@ fun MainScreen(vm: MainViewModel) {
     var startOpen by remember { mutableStateOf(false) }
     var featureRoute by remember { mutableStateOf<String?>(null) }
     var activeRoute by remember { mutableStateOf<String?>(null) }
-    var minimizedApp by remember { mutableStateOf<MinimizedAppState?>(null) }
+    var minimizedApps by remember { mutableStateOf<List<MinimizedAppState>>(emptyList()) }
     var favorites by remember { mutableStateOf(Catalog.loadFavorites(context)) }
     // Жидкие окна: одноразовая геометрия нажатой плитки, режим выхода и
     // отложенное действие, которое выполнится только после уплывания окна.
@@ -198,8 +197,8 @@ fun MainScreen(vm: MainViewModel) {
     // Запуск без лишних касаний: EXP-портрет сам открывает «Пуск» — ленту времени
     // на точке «сейчас». Если открыта плитка или есть свёрнутая закладка,
     // их состояние не перебиваем.
-    LaunchedEffect(isPortrait, panel, minimizedApp) {
-        if (isPortrait && panel == null && minimizedApp == null) {
+    LaunchedEffect(isPortrait, panel, minimizedApps) {
+        if (isPortrait && panel == null && minimizedApps.isEmpty()) {
             startOpen = true
         }
     }
@@ -271,11 +270,8 @@ fun MainScreen(vm: MainViewModel) {
                 prepareLiquidWindow()
                 activeRoute = request
                 startOpen = false
-                minimizedApp = null
-                if (name == "schedule_new") {
-                    panel = "schedule"
-                    creating = true
-                } else if (name == "tools") {
+                minimizedApps = minimizedApps.filterNot { it.route == request }
+                if (name == "tools") {
                     // Старый маршрут больше не ведёт в хаб: только быстрые переключатели.
                     featureRoute = "tool:quick"
                     panel = "feature"
@@ -289,7 +285,7 @@ fun MainScreen(vm: MainViewModel) {
                 prepareLiquidWindow()
                 activeRoute = request
                 startOpen = false
-                minimizedApp = null
+                minimizedApps = minimizedApps.filterNot { it.route == request }
                 panel = "page:" + name
                 Router.consume()
             }
@@ -307,7 +303,7 @@ fun MainScreen(vm: MainViewModel) {
                 prepareLiquidWindow()
                 activeRoute = request
                 startOpen = false
-                minimizedApp = null
+                minimizedApps = minimizedApps.filterNot { it.route == request }
                 if (request == "flag:update") {
                     panelBeforeUpdate = panel
                     panel = "update"
@@ -356,9 +352,6 @@ fun MainScreen(vm: MainViewModel) {
         }
     }
 
-    val nextRule = remember(rules) { nextOccurrence(rules) }
-    val nextId = remember(rules) { nextRuleId(rules) }
-
     fun currentRoute(): String? = when {
         panel == "feature" -> featureRoute ?: activeRoute
         panel?.startsWith("page:") == true -> panel
@@ -369,8 +362,6 @@ fun MainScreen(vm: MainViewModel) {
     fun titleForRoute(route: String?): String {
         when (route) {
             "panel:settings" -> return "настройки"
-            "panel:schedule", "panel:schedule_new" -> return "расписание"
-            "panel:lifeauto", "page:lifeauto" -> return "автоматизации жизни"
             "panel:diagnostics", "flag:diagnostics" -> return "диагностика"
             "panel:games" -> return "игры"
             "panel:nfc", "tool:nearby" -> return "gsynk рядом"
@@ -379,8 +370,7 @@ fun MainScreen(vm: MainViewModel) {
             "panel:scenes" -> return "сцены сейчас"
             "panel:update", "flag:update" -> return "обновление"
             "page:news" -> return "новости"
-            "page:antistress" -> return "антистресс"
-            "page:script", "page:greal", "page:blade", "page:xmb" -> return "настройки дизайна"
+            "page:antistress" -> return "антистресс GREAL"
         }
         Catalog.ALL.firstOrNull { it.route == route }?.let { return it.title }
         return route
@@ -411,12 +401,14 @@ fun MainScreen(vm: MainViewModel) {
     fun performMinimizeCurrentApp() {
         val currentPanel = panel ?: return
         val routeNow = currentRoute()
-        minimizedApp = MinimizedAppState(
+        val saved = MinimizedAppState(
             panel = currentPanel,
             featureRoute = featureRoute,
             route = routeNow,
             title = titleForRoute(routeNow)
         )
+        // GREAL-мультизадачность: в активных 3D-углах живёт до четырёх окон.
+        minimizedApps = (listOf(saved) + minimizedApps.filterNot { it.route == routeNow }).take(4)
         panel = null
         featureRoute = null
         liquidLaunch = null
@@ -427,28 +419,33 @@ fun MainScreen(vm: MainViewModel) {
         requestLiquidWindowExit(LiquidWindowExit.MINIMIZE) { performMinimizeCurrentApp() }
     }
 
-    fun resumeMinimizedApp() {
-        val saved = minimizedApp ?: return
+    fun resumeMinimizedApp(index: Int = 0) {
+        val saved = minimizedApps.getOrNull(index) ?: return
         prepareLiquidWindow()
         val launchId = liquidLaunchSerial + 1
         liquidLaunchSerial = launchId
         val savedEntry = Catalog.ALL.firstOrNull { it.route == saved.route }
+        val rect = liquidMinimizeRect(index)
         liquidLaunch = LiquidWindowOrigin(
             id = launchId,
             route = saved.route.orEmpty(),
             title = saved.title,
             iconRes = savedEntry?.iconRes ?: 0,
             color = savedEntry?.color ?: Color(0xFF8B5CF6),
-            left = LIQUID_MINIMIZE_RECT.left,
-            top = LIQUID_MINIMIZE_RECT.top,
-            width = LIQUID_MINIMIZE_RECT.width,
-            height = LIQUID_MINIMIZE_RECT.height
+            left = rect.left,
+            top = rect.top,
+            width = rect.width,
+            height = rect.height
         )
         panel = saved.panel
         featureRoute = saved.featureRoute
         activeRoute = saved.route
-        minimizedApp = null
+        minimizedApps = minimizedApps.filterIndexed { itemIndex, _ -> itemIndex != index }
         startOpen = false
+    }
+
+    fun closeMinimizedApp(index: Int) {
+        minimizedApps = minimizedApps.filterIndexed { itemIndex, _ -> itemIndex != index }
     }
 
     fun performDismissUpdatePanel() {
@@ -478,12 +475,6 @@ fun MainScreen(vm: MainViewModel) {
             "касаний NFC на этом телефоне: " + settings.nfcTouches,
             profile.model.ifBlank { "передача рядом" }
         )
-        "schedule", "schedulestatus" -> listOf(
-            "активны " + rules.count { it.enabled } + " из " + rules.size,
-            nextRule?.let { "ближайшее изменение через " + humanDelta(ZonedDateTime.now(), it) } ?: "правил пока нет",
-            if (settings.autopilot) "автопилот включён" else "автопилот выключен"
-        )
-        "schedulenew" -> listOf("дни · время · яркость · громкость", "создай правило в категории расписания")
         "ciphers" -> listOf(
             Ciphers.ALL.size.toString() + " шифров на одном экране",
             "🐽 ноль · 🐷 единица",
@@ -506,12 +497,11 @@ fun MainScreen(vm: MainViewModel) {
             "вопросы и ответы агента"
         )
         "lowlevel", "registers" -> listOf("HEX · биты · BE/LE", "IP · A/B/C · флаги", "CRC32 · SHA-256 · дампы")
-        "lifeauto" -> listOf("07:00 школа — тихо и приглушённо", "15:00 дом — YouTube ярко и громко", "12 готовых наборов правил")
         "settings" -> listOf("автопилот и доступы", "обновления и внешний вид", "отдельное Metro-приложение")
         "smartdecode" -> listOf("слой за слоем до исходного текста", "одинаковый шифр несколько раз — не проблема")
         else -> buildList {
             add(entry.subtitle)
-            if (entry.fresh) add("новое в GSYNKPRG")
+            if (entry.fresh) add("новое в GREAL")
             add(entry.group.hint)
         }
     }
@@ -553,10 +543,13 @@ fun MainScreen(vm: MainViewModel) {
                 .graphicsLayer {
                     val reveal = rootRevealProgress
                     val backdrop = backdropProgress
-                    scaleX = (0.91f + 0.09f * reveal) * (1f - 0.045f * backdrop)
-                    scaleY = (0.94f + 0.06f * reveal) * (1f - 0.035f * backdrop)
+                    scaleX = (0.88f + 0.12f * reveal) * (1f - 0.070f * backdrop)
+                    scaleY = (0.92f + 0.08f * reveal) * (1f - 0.055f * backdrop)
                     alpha = reveal * (1f - 0.30f * backdrop)
                     translationY = (1f - reveal) * 58f + backdrop * 22f
+                    rotationX = (1f - reveal) * 12f + backdrop * 6.5f
+                    rotationY = backdrop * -4.5f
+                    cameraDistance = 11f * density
                     shape = RoundedCornerShape(((1f - reveal) * 30f).dp)
                     clip = reveal < 0.999f
                 }
@@ -577,7 +570,7 @@ fun MainScreen(vm: MainViewModel) {
             if (open) {
                 StartMenuScreen(
                     favorites = favorites,
-                    minimizedRoute = minimizedApp?.route,
+                    minimizedRoutes = minimizedApps.mapNotNull { it.route }.toSet(),
                     liveLinesFor = { entry -> homeTileLines(entry) },
                     onOpen = { entry, origin ->
                         prepareLiquidWindow()
@@ -607,29 +600,21 @@ fun MainScreen(vm: MainViewModel) {
             } else {
                 EmptyHomeScreen(
                     onOpenStart = { startOpen = true },
-                    minimizedTitle = minimizedApp?.title,
-                    onResumeMinimized = { resumeMinimizedApp() }
+                    minimizedWindows = minimizedApps.map { saved ->
+                        val entry = Catalog.ALL.firstOrNull { it.route == saved.route }
+                        MinimizedWindowUi(
+                            title = saved.title,
+                            route = saved.route,
+                            iconRes = entry?.iconRes ?: 0,
+                            color = entry?.color ?: Color(0xFF8B5CF6)
+                        )
+                    },
+                    onResumeMinimized = { index -> resumeMinimizedApp(index) },
+                    onCloseMinimized = { index -> closeMinimizedApp(index) }
                 )
             }
         }
         }
-
-    // ModalBottomSheet живёт в отдельном окне, поэтому в ландшафте его нельзя
-    // оставлять поверх экрана требования портрета.
-    if (isPortrait && (creating || editing != null)) {
-        RuleEditorSheet(
-            initial = editing,
-            onDismiss = {
-                creating = false
-                editing = null
-            },
-            onSave = { rule ->
-                vm.upsert(rule)
-                creating = false
-                editing = null
-            }
-        )
-    }
 
     if (panel == "settings") {
         MetroAppShell(
@@ -638,21 +623,6 @@ fun MainScreen(vm: MainViewModel) {
             onMinimize = { minimizeCurrentApp() }
         ) {
             SettingsScreen(vm = vm, onBack = { closeCurrentApp() })
-        }
-    }
-
-    if (panel == "schedule") {
-        MetroAppShell(
-            title = shellTitle,
-            onClose = { closeCurrentApp() },
-            onMinimize = { minimizeCurrentApp() }
-        ) {
-            ScheduleScreen(
-                vm = vm,
-                onBack = { closeCurrentApp() },
-                onCreate = { creating = true },
-                onEdit = { editing = it }
-            )
         }
     }
 
@@ -685,20 +655,6 @@ fun MainScreen(vm: MainViewModel) {
                     }
                 )
             }
-        }
-    }
-
-    if (panel == "lifeauto") {
-        MetroAppShell(
-            title = shellTitle,
-            onClose = { closeCurrentApp() },
-            onMinimize = { minimizeCurrentApp() }
-        ) {
-            LifeAutomationsScreen(
-                vm = vm,
-                onBack = { closeCurrentApp() },
-                onOpenSchedule = { panel = "schedule" }
-            )
         }
     }
 
@@ -1032,25 +988,6 @@ internal fun EmptyState(onAdd: () -> Unit) {
             modifier = Modifier.fillMaxWidth()
         )
     }
-}
-
-// ————————————————————————————————————————————————
-//  Ближайшее правило
-// ————————————————————————————————————————————————
-
-internal fun nextOccurrence(rules: List<Rule>): ZonedDateTime? {
-    val now = ZonedDateTime.now()
-    return rules.filter { it.enabled }
-        .mapNotNull { RuleScheduler.nextOccurrence(it, now) }
-        .minOrNull()
-}
-
-internal fun nextRuleId(rules: List<Rule>): String? {
-    val now = ZonedDateTime.now()
-    return rules.filter { it.enabled }
-        .mapNotNull { rule -> RuleScheduler.nextOccurrence(rule, now)?.let { it to rule } }
-        .minByOrNull { it.first }
-        ?.second?.id
 }
 
 fun humanDelta(from: ZonedDateTime, to: ZonedDateTime): String {

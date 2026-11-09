@@ -48,10 +48,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val agentUnseen: kotlinx.coroutines.flow.StateFlow<Int> = _agentUnseen.asStateFlow()
     val message: StateFlow<String?> = _message.asStateFlow()
 
-    init {
-        viewModelScope.launch { rescheduleAll() }
-    }
-
     private fun app(): Application = getApplication()
 
     /** Операции с хранилищем не должны ронять приложение — оборачиваем и сообщаем. */

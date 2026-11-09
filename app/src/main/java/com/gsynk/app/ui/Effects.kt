@@ -35,9 +35,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Эффекты GIOUI — «стёкла» из одного набора правил.
+ * Эффекты GREAL — физические материалы из одного набора правил.
  *
- * Идея простая: интерфейс собран из плиток GIOUI без скруглений, а объём и глубину
+ * Идея простая: интерфейс собран из слоёных панелей и сфер, а объём и глубину
  * дают четыре вещи — матовое стекло под панелями, живое размытие фона, световые лучи
  * и трассировка теней. Всё считается средствами Compose (RuntimeShader/GpuField —
  * отдельно, для шейдерного поля), поэтому одинаково работает и на слабом телефоне:
@@ -47,7 +47,7 @@ object Glass {
 
     /** Плотность стекла: чем больше — тем плотнее матовый слой. */
     enum class Kind(val title: String) {
-        PRG("GSYNKPRG"),
+        PRG("GREAL"),
         MATTE("матовое"),
         LIQUID("жидкое"),
         FROST("морозное"),
@@ -105,6 +105,7 @@ fun GlassPanel(
                 )
                 .border(1.dp, recipe.border, shape)
         )
+        GrealTexture(Modifier.matchParentSize(), accent = recipe.tint, seed = kind.ordinal * 131, density = density)
         PrgGlassSheen(Modifier.matchParentSize(), accent = recipe.tint, seed = kind.ordinal * 131)
         Box(
             Modifier

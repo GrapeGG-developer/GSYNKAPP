@@ -863,7 +863,7 @@ private fun readableSize(bytes: Long): String = when {
 }
 
 private suspend fun profilePayload(context: android.content.Context): String = runCatching {
-    PayloadCodec.encodeRules(RuleRepository(context).currentRules())
+    "GAUTO1;расписание вынесено в GAUTO"
 }.getOrDefault("")
 
 /** Карточка полученных данных: одно действие по типу — без лишних кнопок. */
@@ -1010,7 +1010,7 @@ private fun ReceivedCard(
                         val count = withContext(Dispatchers.IO) {
                             runCatching {
                                 val repository = RuleRepository(context)
-                                val incoming = PayloadCodec.decodeRules(payload.body)
+                                val incoming = emptyList<com.gsynk.app.core.Rule>()
                                 if (incoming.isEmpty()) return@runCatching 0
                                 val existing = repository.currentRules()
                                 val merged = existing + incoming.filterNot { fresh ->

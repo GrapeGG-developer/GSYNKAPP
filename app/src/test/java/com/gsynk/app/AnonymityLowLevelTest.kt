@@ -98,7 +98,7 @@ class AnonymityLowLevelTest {
 
     @Test
     fun releaseNewsIsCompleteFor52() {
-        assertEquals("6.1.0", ReleaseNews.VERSION)
+        assertEquals("6.2.0", ReleaseNews.VERSION)
         assertTrue(ReleaseNews.items.size >= 5)
         assertEquals(ReleaseNews.items.size, ReleaseNews.items.map { it.id }.distinct().size)
         ReleaseNews.items.forEach { item ->
@@ -111,16 +111,13 @@ class AnonymityLowLevelTest {
 
     @Test
     fun catalog52HasDirectCategoriesScheduleAnonymityAndNoDeletedEntries() {
-        assertEquals(10, Catalog.Group.entries.size)
+        assertEquals(9, Catalog.Group.entries.size)
         assertNotNull(Catalog.byId("anonymity"))
         assertNotNull(Catalog.byId("avatarlab"))
         assertNotNull(Catalog.byId("ganonym"))
         assertNotNull(Catalog.byId("lowlevel"))
         assertNotNull(Catalog.byId("news"))
         assertEquals(Catalog.Group.ANON, Catalog.byId("ganonym")?.group)
-        assertEquals(Catalog.Group.SCHEDULE, Catalog.byId("schedule")?.group)
-        assertEquals("panel:schedule", Catalog.byId("schedule")?.route)
-        assertEquals("panel:schedule_new", Catalog.byId("schedulenew")?.route)
 
         listOf("island", "folders", "nfc", "nfcmark").forEach { id ->
             assertEquals("удалённая плитка вернулась: " + id, null, Catalog.byId(id))
