@@ -52,7 +52,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -65,7 +64,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.gsynk.app.core.Script
 import com.gsynk.app.core.DeviceProfile
 import com.gsynk.app.core.Skin
 import com.gsynk.app.ui.theme.TextDim
@@ -75,13 +73,13 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 /**
- * Внутренний каркас SCRIPT (бывший GIOUI).
+ * GIOUI — GSYNK INTELLIGENT OUR UI (5.0).
  *
- * Единая дизайн-система Grape Realism:
- *  * бесшовные физические формы: сферы, фаски, активные 3D-углы и мягкие кромки;
+ * Единая дизайн-система вместо старого интерфейса:
+ *  * один язык форм Windows 8: плитки 3 dp, карточки 6 dp, контролы 4 dp, листы 8 dp;
  *  * одна сетка карточек: функции лежат по категориям, а не свалены одной лентой;
  *  * одна типографика: компактные заголовки без огромных «плакатов»;
- *  * северное сияние под полупрозрачными скевоморфными материалами;
+ *  * одна виноградная палитра акцентов на тёмном фирменном фоне;
  *  * эффекты (стекло/аврора) — по силам железа: слабому телефону честно даётся облегчённый уровень.
  */
 object Gioui {
@@ -101,19 +99,19 @@ object Gioui {
     /** Скругления GIOUI: единый язык форм. */
     object Radius {
         /** Карточки-функции: единый мягкий угол GIOUI. */
-        val tile: Dp = 18.dp
+        val tile: Dp = 3.dp
         /** Карточки и списки — тот же угол, что у плиток. */
-        val card: Dp = 20.dp
+        val card: Dp = 6.dp
         /** Листы и диалоги — чуть круглее. */
-        val sheet: Dp = 24.dp
+        val sheet: Dp = 8.dp
         /** Кнопки и поля — единый контрольный угол. */
-        val button: Dp = 14.dp
+        val button: Dp = 4.dp
         /** Переключатели и чипы — как контролы. */
-        val switch: Dp = 16.dp
+        val switch: Dp = 6.dp
         /** Капсулы и мягкие акценты — самые скруглённые формы приложения. */
-        val capsule: Dp = 28.dp
+        val capsule: Dp = 14.dp
         /** Панель обновления — как лист. */
-        val panel: Dp = 24.dp
+        val panel: Dp = 8.dp
     }
 
     object Shapes {
@@ -271,7 +269,7 @@ object Gioui {
     }
 
     /** Текущая метка интерфейса — показывается в настройках и отчётах. */
-    const val UI_VERSION = Script.VERSION
+    const val UI_VERSION = "GSYNKPRG Premium Realtime Glass"
 }
 
 /** Уровень эффектов, доступный всему интерфейсу без лишних вызовов. */
@@ -300,7 +298,7 @@ fun skinRadius(kind: String): Dp {
 @Composable
 fun skinShape(kind: String): Shape = RoundedCornerShape(skinRadius(kind))
 
-/** Материал из настроек: единственный UI — SCRIPT. */
+/** Стекло из настроек: единственный UI — GSYNKPRG Premium Realtime Glass. */
 @Composable
 fun skinGlass(): Glass.Kind = Glass.Kind.PRG
 
@@ -406,7 +404,7 @@ fun GioCard(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (pressed) 0.93f else 1f,
+        targetValue = if (pressed) 0.97f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy),
         label = "gioPress"
     )
@@ -414,21 +412,10 @@ fun GioCard(
     Box(
         modifier
             .gioSpan(size)
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = if (pressed) pressScale * 1.025f else 1f
-            }
+            .scale(pressScale)
             .clip(Gioui.Shapes.tile)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        color.copy(alpha = 0.66f),
-                        color.copy(alpha = 0.34f),
-                        Color(0xFF090614).copy(alpha = 0.30f)
-                    )
-                )
-            )
-            .border(1.dp, Color.White.copy(alpha = 0.22f), Gioui.Shapes.tile)
+            .background(Brush.linearGradient(listOf(color.copy(alpha = 0.72f), color.copy(alpha = 0.38f))))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), Gioui.Shapes.tile)
             .then(
                 if (onLongClick != null) {
                     Modifier.combinedClickable(
@@ -454,8 +441,7 @@ fun GioCard(
                 }
             )
     ) {
-        // Физический материал SCRIPT: текстура и краевой свет поверх авроры.
-        GrealTexture(Modifier.matchParentSize(), accent = color, seed = title.hashCode(), density = 0.36f)
+        // Живое переливание: только там, где телефон это вытянет.
         if (effects != Gioui.Effects.PLAIN) {
             PrgGlassSheen(Modifier.matchParentSize(), accent = color, seed = title.hashCode())
         }
@@ -467,28 +453,14 @@ fun GioCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (icon != null) {
-                    Box(
-                        Modifier
-                            .width(Gioui.unit * 4.5f)
-                            .height(Gioui.unit * 4.5f)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(Color.White.copy(alpha = 0.34f), color.copy(alpha = 0.30f), Color.Black.copy(alpha = 0.24f))
-                                )
-                            )
-                            .border(1.dp, Color.White.copy(alpha = 0.30f), androidx.compose.foundation.shape.CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = rememberVectorPainter(icon),
-                            contentDescription = null,
-                            tint = textColor,
-                            modifier = Modifier
-                                .width(Gioui.unit * 2.7f)
-                                .height(Gioui.unit * 2.7f)
-                        )
-                    }
+                    Icon(
+                        painter = rememberVectorPainter(icon),
+                        contentDescription = null,
+                        tint = textColor,
+                        modifier = Modifier
+                            .width(Gioui.unit * 2.5f)
+                            .height(Gioui.unit * 2.5f)
+                    )
                     Spacer(Modifier.width(Gioui.unit))
                 }
                 Spacer(Modifier.weight(1f))
@@ -600,7 +572,7 @@ fun GioGroup(header: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Совместимый вызов старого блика: в SCRIPT свет живёт сегментами по краям. */
+/** Совместимый вызов старого блика: теперь это те же случайные сегменты только на краях GSYNKPRG. */
 @Composable
 fun GioSheen(color: Color, strong: Boolean) {
     PrgGlassSheen(

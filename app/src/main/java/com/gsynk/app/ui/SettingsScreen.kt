@@ -31,9 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -89,7 +87,7 @@ fun SettingsScreen(
                 )
                 Spacer(Modifier.width(9.dp))
                 Text(
-                    text = "GSYNK ${BuildConfig.VERSION_NAME} · SCRIPT",
+                    text = "GSYNK ${BuildConfig.VERSION_NAME} · GSYNKPRG",
                     color = TextDim,
                     fontSize = Gioui.Type.caption,
                     maxLines = 1,
@@ -141,25 +139,105 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // ————— Script UI живёт отдельным единым приложением —————
+            // ————— кастомизация: как выглядит и отзывается приложение —————
             Spacer(Modifier.height(16.dp))
-            SectionTitle("Script — дизайн")
+            SectionTitle("GSYNKPRG — дизайн")
             Spacer(Modifier.height(8.dp))
             SurfaceCard(borderColor = CardBorder) {
-                Text("GSYNK Script UI", color = ScriptPalette.Lime, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
-                Text(
-                    "постоянная система: типографика, строки, глифы, чёткая палитра и неизменный каркас. Градиент " + skin.prgOpacity +
-                        "%, акцент " + skin.prgGlow + "%, фон " + skin.speed + "%, фокус " + skin.focus + "%",
-                    color = TextDim,
-                    fontSize = Gioui.Type.caption
-                )
+                Text("GSYNKPRG · Premium Realtime Glass", color = TextPrimary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.SemiBold))
+                Text("один UI для всего приложения: прозрачное стекло, анимированный контур и случайные блики только по краям", color = TextDim, fontSize = Gioui.Type.caption)
                 Spacer(Modifier.height(10.dp))
-                SecondaryButton(
-                    text = "Открыть настройки Script UI",
-                    onClick = { Router.page("script") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Text("Акцент", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    UiTweaks.ACCENTS.forEachIndexed { index, (name, _) ->
+                        SortChip(label = name, selected = settings.accent == index) {
+                            vm.setAccent(index)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Переливание фона", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    listOf("спокойно", "обычно", "быстро").forEachIndexed { index, name ->
+                        SortChip(label = name, selected = settings.backgroundSpeed == index) {
+                            vm.setBackgroundSpeed(index)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Плитки", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium).copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    listOf("мелкие", "обычные", "крупные").forEachIndexed { index, name ->
+                        SortChip(label = name, selected = settings.tileScale == index + 1) {
+                            vm.setTileScale(index + 1)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Text("Плотность стекла — " + skin.prgOpacity + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                ChipFlow {
+                    listOf(15, 30, 38, 55, 75).forEach { value ->
+                        SortChip(value.toString() + "%", skin.prgOpacity == value) { Skin.save(context, skin.copy(prgOpacity = value)) }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Контурное свечение — " + skin.prgGlow + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                ChipFlow {
+                    listOf(0, 25, 55, 80, 100).forEach { value ->
+                        SortChip(value.toString() + "%", skin.prgGlow == value) { Skin.save(context, skin.copy(prgGlow = value)) }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Блики — " + skin.prgGlare + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                ChipFlow {
+                    listOf(0, 25, 50, 65, 85, 100).forEach { value ->
+                        SortChip(value.toString() + "%", skin.prgGlare == value) { Skin.save(context, skin.copy(prgGlare = value)) }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Движение краевых бликов — " + skin.prgMotion + "%", color = TextSecondary, style = MaterialTheme.typography.titleSmall.copy(fontSize = Gioui.Type.body, fontWeight = FontWeight.Medium))
+                Spacer(Modifier.height(6.dp))
+                ChipFlow {
+                    listOf(60, 100, 140, 200).forEach { value ->
+                        SortChip(value.toString() + "%", skin.prgMotion == value) { Skin.save(context, skin.copy(prgMotion = value)) }
+                    }
+                }
             }
+
+            Spacer(Modifier.height(10.dp))
+            SettingRow(
+                title = "Отклик вибрацией",
+                subtitle = "касание плиток подтверждается короткой вибрацией",
+                checked = settings.haptics
+            ) { vm.setHaptics(it) }
+
+            Spacer(Modifier.height(8.dp))
+            SettingRow(
+                title = "Щелчок при нажатии",
+                subtitle = "короткий тон вместо тишины",
+                checked = settings.clickSound
+            ) { vm.setClickSound(it) }
+
+            Spacer(Modifier.height(8.dp))
+            SettingRow(
+                title = "Счётчики на плитках",
+                subtitle = "живые значения: касания, нагрузка, обновления",
+                checked = settings.tileCounters
+            ) { vm.setTileCounters(it) }
+
+            Spacer(Modifier.height(8.dp))
+            SettingRow(
+                title = "Плотный список",
+                subtitle = "меньше воздуха между карточками на главном экране",
+                checked = settings.compactList
+            ) { vm.setCompactList(it) }
 
             // ————— доступы —————
             Spacer(Modifier.height(16.dp))
@@ -225,17 +303,11 @@ fun SettingRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-            }
-            .clip(skinShape("card"))
-            .background(
-                Brush.linearGradient(
-                    listOf(Color.White.copy(alpha = 0.10f), UiTweaks.accentStart.copy(alpha = 0.10f), Color.Black.copy(alpha = 0.14f))
-                )
-            )
-            .border(1.dp, Color.White.copy(alpha = 0.16f), skinShape("card"))
+            .clip(RectangleShape)
+            .background(Color.White.copy(alpha = 0.045f))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RectangleShape)
             .clickable { onChange(!checked) }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {

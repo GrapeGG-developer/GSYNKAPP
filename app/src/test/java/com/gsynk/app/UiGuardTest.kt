@@ -57,9 +57,9 @@ class UiGuardTest {
     @Test
     fun screensRespectStatusBar() {
         val components = read("Components.kt")
-        val shell = read("ScriptStartScreen.kt")
+        val shell = read("StartScreen.kt")
         assertTrue(
-            "Script-оболочка обязана оставлять место строке состояния",
+            "Metro-оболочка обязана оставлять место строке состояния",
             shell.contains("windowInsetsPadding(WindowInsets.statusBars)")
         )
         assertTrue(
@@ -150,7 +150,7 @@ class UiGuardTest {
             assertTrue("настройка «$field» потерялась", settings.contains(field))
         }
         val sheet = read("SettingsScreen.kt")
-        assertTrue("в настройках нет раздела кастомизации", sheet.contains("Script — дизайн"))
+        assertTrue("в настройках нет раздела кастомизации", sheet.contains("GSYNKPRG — дизайн"))
         assertTrue("акцент не применяется", read("Tweaks.kt").contains("accentBrush"))
         assertTrue("фон не читает скорость", read("Components.kt").contains("UiTweaks.breathMs"))
     }

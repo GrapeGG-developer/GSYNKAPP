@@ -158,7 +158,7 @@ fun MainScreen(vm: MainViewModel) {
     var startOpen by remember { mutableStateOf(false) }
     var featureRoute by remember { mutableStateOf<String?>(null) }
     var activeRoute by remember { mutableStateOf<String?>(null) }
-    var minimizedApps by remember { mutableStateOf<List<MinimizedAppState>>(emptyList()) }
+    var minimizedApp by remember { mutableStateOf<MinimizedAppState?>(null) }
     var favorites by remember { mutableStateOf(Catalog.loadFavorites(context)) }
     // Жидкие окна: одноразовая геометрия нажатой плитки, режим выхода и
     // отложенное действие, которое выполнится только после уплывания окна.
@@ -198,8 +198,8 @@ fun MainScreen(vm: MainViewModel) {
     // Запуск без лишних касаний: EXP-портрет сам открывает «Пуск» — ленту времени
     // на точке «сейчас». Если открыта плитка или есть свёрнутая закладка,
     // их состояние не перебиваем.
-    LaunchedEffect(isPortrait, panel, minimizedApps) {
-        if (isPortrait && panel == null && minimizedApps.isEmpty()) {
+    LaunchedEffect(isPortrait, panel, minimizedApp) {
+        if (isPortrait && panel == null && minimizedApp == null) {
             startOpen = true
         }
     }
@@ -271,7 +271,7 @@ fun MainScreen(vm: MainViewModel) {
                 prepareLiquidWindow()
                 activeRoute = request
                 startOpen = false
-                minimizedApps = minimizedApps.filterNot { it.route == request }
+                minimizedApp = null
                 if (name == "schedule_new") {
                     panel = "schedule"
                     creating = true
@@ -289,7 +289,7 @@ fun MainScreen(vm: MainViewModel) {
                 prepareLiquidWindow()
                 activeRoute = request
                 startOpen = false
-                minimizedApps = minimizedApps.filterNot { it.route == request }
+                minimizedApp = null
                 panel = "page:" + name
                 Router.consume()
             }
@@ -307,7 +307,7 @@ fun MainScreen(vm: MainViewModel) {
                 prepareLiquidWindow()
                 activeRoute = request
                 startOpen = false
-                minimizedApps = minimizedApps.filterNot { it.route == request }
+                minimizedApp = null
                 if (request == "flag:update") {
                     panelBeforeUpdate = panel
                     panel = "update"
@@ -379,8 +379,8 @@ fun MainScreen(vm: MainViewModel) {
             "panel:scenes" -> return "сцены сейчас"
             "panel:update", "flag:update" -> return "обновление"
             "page:news" -> return "новости"
-            "page:script" -> return "настройки Script UI"
-            "page:antistress" -> return "антистресс Script"
+            "page:antistress" -> return "антистресс"
+            "page:script", "page:greal", "page:blade", "page:xmb" -> return "настройки дизайна"
         }
         Catalog.ALL.firstOrNull { it.route == route }?.let { return it.title }
         return route
@@ -411,14 +411,12 @@ fun MainScreen(vm: MainViewModel) {
     fun performMinimizeCurrentApp() {
         val currentPanel = panel ?: return
         val routeNow = currentRoute()
-        val saved = MinimizedAppState(
+        minimizedApp = MinimizedAppState(
             panel = currentPanel,
             featureRoute = featureRoute,
             route = routeNow,
             title = titleForRoute(routeNow)
         )
-        // SCRIPT-мультизадачность: в активных 3D-углах живёт до четырёх окон.
-        minimizedApps = (listOf(saved) + minimizedApps.filterNot { it.route == routeNow }).take(4)
         panel = null
         featureRoute = null
         liquidLaunch = null
@@ -429,33 +427,28 @@ fun MainScreen(vm: MainViewModel) {
         requestLiquidWindowExit(LiquidWindowExit.MINIMIZE) { performMinimizeCurrentApp() }
     }
 
-    fun resumeMinimizedApp(index: Int = 0) {
-        val saved = minimizedApps.getOrNull(index) ?: return
+    fun resumeMinimizedApp() {
+        val saved = minimizedApp ?: return
         prepareLiquidWindow()
         val launchId = liquidLaunchSerial + 1
         liquidLaunchSerial = launchId
         val savedEntry = Catalog.ALL.firstOrNull { it.route == saved.route }
-        val rect = liquidMinimizeRect(index)
         liquidLaunch = LiquidWindowOrigin(
             id = launchId,
             route = saved.route.orEmpty(),
             title = saved.title,
             iconRes = savedEntry?.iconRes ?: 0,
             color = savedEntry?.color ?: Color(0xFF8B5CF6),
-            left = rect.left,
-            top = rect.top,
-            width = rect.width,
-            height = rect.height
+            left = LIQUID_MINIMIZE_RECT.left,
+            top = LIQUID_MINIMIZE_RECT.top,
+            width = LIQUID_MINIMIZE_RECT.width,
+            height = LIQUID_MINIMIZE_RECT.height
         )
         panel = saved.panel
         featureRoute = saved.featureRoute
         activeRoute = saved.route
-        minimizedApps = minimizedApps.filterIndexed { itemIndex, _ -> itemIndex != index }
+        minimizedApp = null
         startOpen = false
-    }
-
-    fun closeMinimizedApp(index: Int) {
-        minimizedApps = minimizedApps.filterIndexed { itemIndex, _ -> itemIndex != index }
     }
 
     fun performDismissUpdatePanel() {
@@ -518,7 +511,7 @@ fun MainScreen(vm: MainViewModel) {
         "smartdecode" -> listOf("слой за слоем до исходного текста", "одинаковый шифр несколько раз — не проблема")
         else -> buildList {
             add(entry.subtitle)
-            if (entry.fresh) add("новое в SCRIPT")
+            if (entry.fresh) add("новое в GSYNKPRG")
             add(entry.group.hint)
         }
     }
@@ -560,8 +553,8 @@ fun MainScreen(vm: MainViewModel) {
                 .graphicsLayer {
                     val reveal = rootRevealProgress
                     val backdrop = backdropProgress
-                    scaleX = (0.88f + 0.12f * reveal) * (1f - 0.070f * backdrop)
-                    scaleY = (0.92f + 0.08f * reveal) * (1f - 0.055f * backdrop)
+                    scaleX = (0.91f + 0.09f * reveal) * (1f - 0.045f * backdrop)
+                    scaleY = (0.94f + 0.06f * reveal) * (1f - 0.035f * backdrop)
                     alpha = reveal * (1f - 0.30f * backdrop)
                     translationY = (1f - reveal) * 58f + backdrop * 22f
                     shape = RoundedCornerShape(((1f - reveal) * 30f).dp)
@@ -584,7 +577,7 @@ fun MainScreen(vm: MainViewModel) {
             if (open) {
                 StartMenuScreen(
                     favorites = favorites,
-                    minimizedRoutes = minimizedApps.mapNotNull { it.route }.toSet(),
+                    minimizedRoute = minimizedApp?.route,
                     liveLinesFor = { entry -> homeTileLines(entry) },
                     onOpen = { entry, origin ->
                         prepareLiquidWindow()
@@ -614,17 +607,8 @@ fun MainScreen(vm: MainViewModel) {
             } else {
                 EmptyHomeScreen(
                     onOpenStart = { startOpen = true },
-                    minimizedWindows = minimizedApps.map { saved ->
-                        val entry = Catalog.ALL.firstOrNull { it.route == saved.route }
-                        MinimizedWindowUi(
-                            title = saved.title,
-                            route = saved.route,
-                            iconRes = entry?.iconRes ?: 0,
-                            color = entry?.color ?: Color(0xFF8B5CF6)
-                        )
-                    },
-                    onResumeMinimized = { index -> resumeMinimizedApp(index) },
-                    onCloseMinimized = { index -> closeMinimizedApp(index) }
+                    minimizedTitle = minimizedApp?.title,
+                    onResumeMinimized = { resumeMinimizedApp() }
                 )
             }
         }

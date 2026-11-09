@@ -55,18 +55,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.withFrameNanos
@@ -120,6 +117,9 @@ import com.gsynk.app.ui.theme.GlowGreen
 import com.gsynk.app.ui.theme.GlowViolet
 import com.gsynk.app.ui.theme.GrapeGradient
 import com.gsynk.app.ui.theme.GrapeGreen
+import com.gsynk.app.ui.theme.GrapeViolet
+import com.gsynk.app.ui.theme.GrapeVioletSoft
+import com.gsynk.app.ui.theme.GrapeVioletDeep
 import com.gsynk.app.ui.theme.TextDim
 import com.gsynk.app.ui.theme.TextPrimary
 import com.gsynk.app.ui.theme.TextSecondary
@@ -135,20 +135,157 @@ import kotlin.math.sin
 //  (без размытия и прозрачных слоёв — только градиенты)
 // ————————————————————————————————————————————————
 
-/**
- * Один общий часовой State SCRIPT на всё приложение.
- *
- * Раньше каждая плитка, блик и сфера заводили собственный
- * `rememberInfiniteTransition`; теперь они читают один State в фазе рисования.
- */
-private val StaticGrealPhase = mutableStateOf(0.38f)
-val LocalGrealPhase = staticCompositionLocalOf<State<Float>> { StaticGrealPhase }
-
 @Composable
-private fun rememberSharedGrealPhase(): State<Float> {
+fun AnimatedGrapeBackground(
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit
+) {
+    // Акцент и скорость читаем состоянием: изменил настройку — фон сразу перекрасился.
+    val tweakRevision by UiTweaks.revision.collectAsStateWithLifecycle()
+    val skin = LocalSkinValues.current
+    val turboActive by TurboState.active.collectAsState()
+    val aiMode by TurboState.aiMode.collectAsState()
+    if (tweakRevision < 0) return
+
+    // Одна круговая фаза 0→1. Все координаты и цвета ниже построены на sin/cos(2π·phase),
+    // поэтому последний кадр цикла совпадает с первым: нет прыгающей полосы и «шва».
+    val transition = rememberInfiniteTransition(label = "bg")
+    val rawPhase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = (UiTweaks.breathMs * 100 / skin.prgMotion.coerceIn(40, 200)).coerceIn(6_000, 60_000), easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "bgPhase"
+    )
+
+    Box(
+        modifier
+            .fillMaxSize()
+            .drawBehind {
+                val angle = (rawPhase * 2f * PI).toFloat()
+                val wave = (sin(angle) + 1f) * 0.5f
+                val wave2 = (sin(angle * 2f + PI.toFloat() * 0.35f) + 1f) * 0.5f
+                val driftX = cos(angle)
+                val driftY = sin(angle)
+
+                val top = lerp(BgTopA, BgTopB, wave)
+                val mid = lerp(BgMidA, BgMidB, wave2)
+                val bottom = lerp(BgBottomA, BgBottomB, 1f - wave)
+                drawRect(
+                    brush = Brush.linearGradient(
+                        colors = listOf(top, mid, bottom),
+                        start = Offset(size.width * (0.18f + 0.08f * driftX), 0f),
+                        end = Offset(size.width * (0.82f - 0.08f * driftX), size.height)
+                    )
+                )
+
+                val accent = if (turboActive) {
+                    when (aiMode) {
+                        TurboMode.ACTIVE -> Color(0xFF7C3AED)
+                        TurboMode.NIGHT -> Color(0xFF2563EB)
+                        else -> Color(0xFF22C55E)
+                    }
+                } else {
+                    lerp(UiTweaks.accentStart, Color(0xFF22D3EE), wave)
+                }
+                val glowAlpha = if (turboActive) 0.42f else 0.32f
+
+                fun glow(center: Offset, radius: Float, color: Color, alpha: Float) {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(color.copy(alpha = alpha), Color.Transparent),
+                            center = center,
+                            radius = radius
+                        ),
+                        radius = radius,
+                        center = center
+                    )
+                }
+
+                glow(
+                    center = Offset(
+                        size.width * (0.18f + 0.055f * driftX),
+                        size.height * (0.12f + 0.03f * driftY)
+                    ),
+                    radius = size.minDimension * (0.92f + 0.08f * wave),
+                    color = accent,
+                    alpha = glowAlpha
+                )
+                glow(
+                    center = Offset(
+                        size.width * (0.84f - 0.05f * driftX),
+                        size.height * (0.54f + 0.06f * cos(angle * 2f))
+                    ),
+                    radius = size.minDimension * (0.72f + 0.07f * wave2),
+                    color = lerp(accent, Color(0xFF22D3EE), 0.55f),
+                    alpha = glowAlpha * 0.72f
+                )
+                glow(
+                    center = Offset(
+                        size.width * (0.78f + 0.04f * sin(angle * 2f)),
+                        size.height * (0.9f - 0.025f * driftY)
+                    ),
+                    radius = size.minDimension * (0.86f + 0.08f * (1f - wave)),
+                    color = lerp(accent, Color(0xFF22C55E), 0.58f),
+                    alpha = glowAlpha * 0.82f
+                )
+
+                // GSYNKPRG: диагональные авроры, тонкая сетка и искры поверх дыхания фона.
+                val motionAlpha = if (skin.level == 0) 0.45f else 1f
+                for (band in 0..2) {
+                    val centerX = size.width * (0.22f + band * 0.28f + 0.07f * sin(angle + band * 1.7f))
+                    val bandWidth = size.width * (0.16f + band * 0.035f)
+                    rotate(-14f, Offset(centerX, size.height * 0.5f)) {
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(Color.Transparent, accent.copy(alpha = 0.10f * motionAlpha), Color.Transparent),
+                                startX = centerX - bandWidth / 2f,
+                                endX = centerX + bandWidth / 2f
+                            ),
+                            topLeft = Offset(centerX - bandWidth / 2f, -size.height * 0.12f),
+                            size = Size(bandWidth, size.height * 1.24f)
+                        )
+                    }
+                }
+                if (skin.grid) {
+                    val stepPx = 30.dp.toPx()
+                    var gx = (driftX * 5f) % stepPx
+                    while (gx < size.width) {
+                        drawLine(Color.White.copy(alpha = 0.026f), Offset(gx, 0f), Offset(gx, size.height), 1f)
+                        gx += stepPx
+                    }
+                    var gy = (driftY * 5f) % stepPx
+                    while (gy < size.height) {
+                        drawLine(Color.White.copy(alpha = 0.022f), Offset(0f, gy), Offset(size.width, gy), 1f)
+                        gy += stepPx
+                    }
+                }
+                if (skin.level > 0) {
+                    for (spark in 0 until 18) {
+                        val fx = ((spark * 37 + 13) % 100) / 100f
+                        val fy = ((spark * 53 + 7) % 100) / 100f
+                        val twinkle = (sin(angle * 2f + spark * 1.31f) + 1f) * 0.5f
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.05f + 0.13f * twinkle),
+                            radius = 1.1f + 1.8f * twinkle,
+                            center = Offset(size.width * fx, size.height * fy + 5f * sin(angle + spark))
+                        )
+                    }
+                }
+            }
+    ) {
+        content()
+    }
+}
+
+/** Общая фаза GSYNKPRG: блики и контурное свечение движутся в одном ритме. */
+@Composable
+fun rememberPrgPhase(seed: Int = 0): Float {
     val skin = LocalSkinValues.current
     val effects = LocalGiouiEffects.current
-    val transition = rememberInfiniteTransition(label = "grealSharedClock")
+    val transition = rememberInfiniteTransition(label = "gsynkprg")
     val raw by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
@@ -159,54 +296,22 @@ private fun rememberSharedGrealPhase(): State<Float> {
             ),
             repeatMode = RepeatMode.Restart
         ),
-        label = "grealSharedPhase"
+        label = "prgPhase"
     )
-    return remember(skin.level, effects, skin.prgMotion) {
-        derivedStateOf {
-            if (skin.level == 0 || effects == Gioui.Effects.PLAIN) 0.38f else raw
-        }
-    }
-}
-
-@Composable
-fun AnimatedGrapeBackground(
-    modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit
-) {
-    val tweakRevision by UiTweaks.revision.collectAsStateWithLifecycle()
-    val sharedPhase = rememberSharedGrealPhase()
-    val speedScale = (24_000f / UiTweaks.breathMs.toFloat()).coerceIn(0.5f, 2f)
-    if (tweakRevision < 0) return
-
-    // Script UI: общий зелёно-чёрный фон со световым пробегом. SCRIPT-аврора
-    // больше не запускается; общий phase сохраняется для совместимых бликов.
-    Box(modifier.fillMaxSize()) {
-        ScriptBackground(Modifier.matchParentSize(), speedScale = speedScale)
-        CompositionLocalProvider(
-            LocalGrealAuroraActive provides true,
-            LocalGrealPhase provides sharedPhase
-        ) {
-            Box(Modifier.matchParentSize()) { content() }
-        }
-    }
+    if (skin.level == 0 || effects == Gioui.Effects.PLAIN) return 0.38f
+    val shift = ((seed and 0x3ff).toFloat() / 4096f)
+    return (raw + shift) % 1f
 }
 
 /**
- * Фаза SCRIPT со сдвигом для конкретной поверхности. Возвращает State: тяжёлые
- * Canvas'ы читают его внутри `draw`, а не перестраивают композицию каждый кадр.
+ * Та же фаза, но состоянием: тяжёлые Canvas антистресса читают её прямо в фазе
+ * рисования и не перестраивают композицию на каждом кадре.
  */
 @Composable
 fun rememberPrgPhaseState(seed: Int = 0): State<Float> {
-    val shared = LocalGrealPhase.current
-    val shift = ((seed and 0x3ff).toFloat() / 4096f)
-    return remember(shared, shift) {
-        derivedStateOf { (shared.value + shift) % 1f }
-    }
+    val phase = rememberPrgPhase(seed)
+    return remember(phase) { mutableStateOf(phase) }
 }
-
-/** Совместимая фаза для лёгких поверхностей, которым удобно читать Float сразу. */
-@Composable
-fun rememberPrgPhase(seed: Int = 0): Float = rememberPrgPhaseState(seed).value
 
 /** Один случайный блик на краю: сторона, позиция, длина и собственная фаза заданы seed-ом. */
 internal data class PrgEdgeGlint(
@@ -248,19 +353,74 @@ internal fun prgEdgeGlints(seed: Int): List<PrgEdgeGlint> {
 }
 
 /**
- * Блики SCRIPT живут только на краях поверхности.
+ * Блики GSYNKPRG живут только на краях поверхности.
  * Каждый короткий сегмент случайно выбирает сторону, позицию, длину, скорость и оттенок.
  */
 @Composable
 fun PrgGlassSheen(
     modifier: Modifier = Modifier,
-    accent: Color = ScriptPalette.Accent,
+    accent: Color = GrapeViolet,
     seed: Int = 0
 ) {
-    ScriptEdgeMark(modifier, accent, seed)
+    val skin = LocalSkinValues.current
+    val phase = rememberPrgPhase(seed)
+    val glints = remember(seed) { prgEdgeGlints(seed) }
+    val glare = (skin.prgGlare.coerceIn(0, 100) / 100f) * if (skin.level == 0 || LocalGiouiEffects.current == Gioui.Effects.PLAIN) 0.35f else 1f
+    if (glare <= 0.01f) return
+    Canvas(modifier) {
+        val inset = 1.15.dp.toPx().coerceAtMost(size.minDimension * 0.20f).coerceAtLeast(0.6f)
+        glints.forEach { glint ->
+            val localPhase = (phase * glint.speed + glint.phase) % 1f
+            val wave = 0.5f + 0.5f * sin(localPhase * (2f * PI).toFloat())
+            val pulse = 0.38f + 0.62f * wave
+            val glintStart = (glint.start + sin(localPhase * (2f * PI).toFloat()) * glint.drift)
+                .coerceIn(0.025f, (0.975f - glint.length).coerceAtLeast(0.03f))
+            val glintEnd = glintStart + glint.length
+            val startPoint: Offset
+            val endPoint: Offset
+            when (glint.edge) {
+                0 -> {
+                    startPoint = Offset(size.width * glintStart, inset)
+                    endPoint = Offset(size.width * glintEnd, inset)
+                }
+                1 -> {
+                    startPoint = Offset(size.width - inset, size.height * glintStart)
+                    endPoint = Offset(size.width - inset, size.height * glintEnd)
+                }
+                2 -> {
+                    startPoint = Offset(size.width * glintEnd, size.height - inset)
+                    endPoint = Offset(size.width * glintStart, size.height - inset)
+                }
+                else -> {
+                    startPoint = Offset(inset, size.height * glintEnd)
+                    endPoint = Offset(inset, size.height * glintStart)
+                }
+            }
+            val color = lerp(Color.White, accent, glint.accentMix * 0.55f)
+            drawLine(
+                color = color.copy(alpha = 0.12f * glare * glint.alpha * pulse),
+                start = startPoint,
+                end = endPoint,
+                strokeWidth = 3.4.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = color.copy(alpha = 0.52f * glare * glint.alpha * pulse),
+                start = startPoint,
+                end = endPoint,
+                strokeWidth = 1.15.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawCircle(
+                color = color.copy(alpha = 0.34f * glare * glint.alpha * pulse),
+                radius = 1.55.dp.toPx(),
+                center = if (glint.accentMix >= 0.5f) endPoint else startPoint
+            )
+        }
+    }
 }
 
-/** Единая плоская поверхность Script UI: 2D-градиент без стекла. */
+/** Единственная поверхность приложения: прозрачное realtime-стекло GSYNKPRG. */
 @Composable
 fun PrgGlassSurface(
     modifier: Modifier = Modifier,
@@ -271,24 +431,43 @@ fun PrgGlassSurface(
     contentPadding: PaddingValues = PaddingValues(18.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val focused = borderColor != CardBorder
+    val skin = LocalSkinValues.current
+    val phase = rememberPrgPhase(accent.hashCode())
+    val density = skin.prgOpacity.coerceIn(5, 90) / 100f
+    val glow = skin.prgGlow.coerceIn(0, 100) / 100f
+    val pulse = (sin((phase * 2f * PI).toFloat()) + 1f) * 0.5f
+    val borderBrush = Brush.linearGradient(
+        listOf(
+            lerp(borderColor, Color.White, 0.20f + 0.18f * pulse).copy(alpha = 0.55f + 0.30f * glow * pulse),
+            accent.copy(alpha = 0.28f + 0.34f * glow * (1f - pulse)),
+            lerp(borderColor, accent, 0.45f).copy(alpha = 0.62f)
+        )
+    )
     Box(
         modifier
+            .let { base ->
+                if (skin.level > 0 && glow > 0.02f) {
+                    base.shadow(
+                        elevation = (3f + 9f * glow * (0.55f + 0.45f * pulse)).dp,
+                        shape = shape,
+                        ambientColor = accent.copy(alpha = 0.28f * glow),
+                        spotColor = accent.copy(alpha = 0.42f * glow)
+                    )
+                } else {
+                    base
+                }
+            }
             .clip(shape)
             .background(
-                Brush.verticalGradient(
+                Brush.linearGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.08f),
-                        ScriptPalette.Green.copy(alpha = if (focused) 0.26f else 0.14f),
-                        ScriptPalette.Ink.copy(alpha = 0.46f)
+                        Color.White.copy(alpha = 0.11f + 0.07f * (1f - density)),
+                        accent.copy(alpha = 0.07f + 0.28f * density),
+                        Color(0xFF090614).copy(alpha = 0.17f + 0.47f * density)
                     )
                 )
             )
-            .border(
-                1.dp,
-                if (focused) ScriptPalette.Lime.copy(alpha = 0.62f) else Color.White.copy(alpha = 0.16f),
-                shape
-            )
+            .border(1.dp, borderBrush, shape)
             .then(
                 if (onClick != null) {
                     Modifier.clickable(
@@ -301,7 +480,7 @@ fun PrgGlassSurface(
                 }
             )
     ) {
-        ScriptFocusBar(Modifier.matchParentSize(), strength = if (focused) 0.55f else 0.08f)
+        PrgGlassSheen(Modifier.matchParentSize(), accent = accent, seed = borderColor.hashCode())
         Column(Modifier.padding(contentPadding), content = content)
     }
 }
@@ -374,6 +553,7 @@ fun PrimaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
+    // Кнопка GIOUI: плотная заливка, своё скругление, отклик масштабом.
     val shape = skinShape("button")
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -386,30 +566,26 @@ fun PrimaryButton(
         modifier
             .scale(scale)
             .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(ScriptPalette.Lime, ScriptPalette.Green, ScriptPalette.Ink)
-                )
-            )
-            .border(1.dp, Color.White.copy(alpha = 0.42f), shape)
+            .background(if (enabled) UiTweaks.accentBrush else Brush.linearGradient(listOf(ChipBg, ChipBg)))
+            .border(1.dp, if (enabled) Color.White.copy(alpha = 0.34f) else ChipBorder, shape)
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled) { onClick() }
             .padding(horizontal = 20.dp, vertical = 13.dp),
         contentAlignment = Alignment.Center
     ) {
-        ScriptFocusBar(Modifier.matchParentSize(), strength = if (enabled) 0.38f else 0.08f)
+        if (enabled) PrgGlassSheen(Modifier.matchParentSize(), accent = Color.White, seed = text.hashCode())
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Color(0xFF06200D),
+                    tint = if (enabled) Color(0xFF120720) else TextDim,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(8.dp))
             }
             Text(
                 text = text,
-                color = Color(0xFF06200D),
+                color = if (enabled) Color(0xFF120720) else TextDim,
                 fontSize = Gioui.Type.body,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.6.sp
@@ -424,7 +600,7 @@ fun SecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
-    tint: Color = ScriptPalette.White,
+    tint: Color = TextPrimary,
     enabled: Boolean = true
 ) {
     val shape = skinShape("button")
@@ -439,17 +615,13 @@ fun SecondaryButton(
         modifier
             .scale(scale)
             .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.09f), ScriptPalette.Green.copy(alpha = 0.24f), ScriptPalette.Ink.copy(alpha = 0.50f))
-                )
-            )
-            .border(1.dp, ScriptPalette.Lime.copy(alpha = 0.42f), shape)
+            .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.10f), CardBgAlt.copy(alpha = 0.72f))))
+            .border(1.dp, ChipBorder.copy(alpha = 0.9f), shape)
             .clickable(interactionSource = interactionSource, indication = null, enabled = enabled) { onClick() }
             .padding(horizontal = 18.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
-        ScriptFocusBar(Modifier.matchParentSize(), strength = if (enabled) 0.22f else 0.06f)
+        PrgGlassSheen(Modifier.matchParentSize(), accent = UiTweaks.accentStart, seed = text.hashCode())
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             if (icon != null) {
                 Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
@@ -538,9 +710,9 @@ fun NeoSlider(
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(16.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
-                .background(Brush.linearGradient(listOf(Color.Black.copy(alpha = 0.26f), Color.White.copy(alpha = 0.10f), TrackBg)))
+                .height(14.dp)
+                .clip(skinShape("card"))
+                .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.08f), TrackBg)))
         ) {
             Box(
                 Modifier
@@ -561,17 +733,9 @@ fun NeoSlider(
             Modifier
                 .offset { IntOffset(((widthState.floatValue - thumbPx) * animatedFill).roundToInt(), 0) }
                 .size(thumbSize)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.98f),
-                            if (enabled) ScriptPalette.Lime.copy(alpha = 0.86f) else Color(0xFF8E82A8),
-                            if (enabled) ScriptPalette.Lime.copy(alpha = 0.88f) else Color(0xFF554D6E)
-                        )
-                    )
-                )
-                .border(1.dp, Color.White.copy(alpha = 0.42f), androidx.compose.foundation.shape.CircleShape)
+                .clip(skinShape("card"))
+                .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.92f), if (enabled) GrapeVioletSoft.copy(alpha = 0.72f) else Color(0xFF8E82A8))))
+                .border(1.dp, if (enabled) GrapeViolet else ChipBorder, skinShape("card"))
         )
     }
 }
@@ -590,12 +754,12 @@ fun DayChip(
 ) {
     val shape = skinShape("toggle")
     val bg by animateColorAsState(
-        targetValue = if (selected) ScriptPalette.Green.copy(alpha = 0.62f) else Color.White.copy(alpha = 0.07f),
+        targetValue = if (selected) GrapeVioletDeep.copy(alpha = 0.62f) else Color.White.copy(alpha = 0.07f),
         animationSpec = tween(220),
         label = "dayBg"
     )
     val border by animateColorAsState(
-        targetValue = if (selected) ScriptPalette.Lime else ChipBorder,
+        targetValue = if (selected) GrapeViolet else ChipBorder,
         animationSpec = tween(220),
         label = "dayBorder"
     )
@@ -633,8 +797,8 @@ fun TagChip(
     Box(
         Modifier
             .clip(shape)
-            .background(if (selected) ScriptPalette.Green.copy(alpha = 0.60f) else Color.White.copy(alpha = 0.07f))
-            .border(1.dp, if (selected) ScriptPalette.Lime else ChipBorder, shape)
+            .background(if (selected) GrapeVioletDeep.copy(alpha = 0.60f) else Color.White.copy(alpha = 0.07f))
+            .border(1.dp, if (selected) GrapeViolet else ChipBorder, shape)
             .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
             .padding(horizontal = 12.dp, vertical = 7.dp)
     ) {
@@ -742,18 +906,18 @@ fun PulseDot(color: Color, modifier: Modifier = Modifier) {
         modifier
             .size(10.dp)
             .scale(scale)
-            .clip(androidx.compose.foundation.shape.CircleShape)
-            .background(Brush.radialGradient(listOf(Color.White.copy(alpha = alpha), color.copy(alpha = alpha))))
+            .clip(skinShape("card"))
+            .background(color.copy(alpha = alpha))
     )
 }
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
-    // Script UI: подпись группы лаймовым акцентом.
+    // GIOUI: заголовок группы — строчными буквами, с разрядкой, без капса.
     Text(
         text = text.lowercase(),
         modifier = modifier.padding(top = Gioui.unit, bottom = Gioui.unit / 2f),
-        color = ScriptPalette.Lime,
+        color = TextPrimary.copy(alpha = 0.88f),
         fontSize = Gioui.Type.groupHeader,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 1.6.sp
@@ -766,11 +930,7 @@ fun ThinDivider(modifier: Modifier = Modifier) {
         modifier
             .fillMaxWidth()
             .height(1.dp)
-            .background(
-                Brush.horizontalGradient(
-                    listOf(Color.Transparent, ScriptPalette.Lime.copy(alpha = 0.42f), Color.Transparent)
-                )
-            )
+            .background(DividerColor)
     )
 }
 
@@ -836,14 +996,14 @@ fun GrapeTextField(
         shape = skinShape("sheet"),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = ScriptPalette.Lime,
+            focusedBorderColor = GrapeViolet,
             unfocusedBorderColor = ChipBorder,
             focusedContainerColor = Color.White.copy(alpha = 0.09f),
             unfocusedContainerColor = Color.White.copy(alpha = 0.055f),
             focusedTextColor = TextPrimary,
             unfocusedTextColor = TextPrimary,
             cursorColor = GrapeGreen,
-            focusedLabelColor = ScriptPalette.Lime,
+            focusedLabelColor = GrapeVioletSoft,
             unfocusedLabelColor = TextDim
         ),
         modifier = modifier.fillMaxWidth()
@@ -880,18 +1040,27 @@ fun GrapeScreen(
                     .padding(top = 4.dp, bottom = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ScriptControlButton(
-                    text = "←",
-                    modifier = Modifier.size(38.dp),
-                    onClick = onBack
-                )
+                Box(
+                    Modifier
+                        .size(width = 36.dp, height = 30.dp)
+                        .clip(RectangleShape)
+                        .background(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.13f), Color.White.copy(alpha = 0.04f))))
+                        .border(1.dp, Color.White.copy(alpha = 0.22f), RectangleShape)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onBack() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("←", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Light)
+                }
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = title.lowercase(),
-                        color = ScriptPalette.White,
+                        color = TextPrimary,
                         fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Light,
                         maxLines = 1
                     )
                     if (subtitle != null) {
@@ -930,7 +1099,7 @@ fun GrapeScreen(
 fun GrapeLogoBurst(
     trigger: Int,
     modifier: Modifier = Modifier,
-    color: Color = ScriptPalette.Lime
+    color: Color = GrapeViolet
 ) {
     if (trigger == 0) return
     var elapsed by remember(trigger) { mutableFloatStateOf(0f) }
@@ -1009,7 +1178,7 @@ fun SortChip(
 ) {
     val shape = skinShape("toggle")
     val bg by animateColorAsState(
-        targetValue = if (selected) ScriptPalette.Green else ScriptPalette.Ink,
+        targetValue = if (selected) GrapeVioletDeep else ChipBg,
         animationSpec = tween(180),
         label = "sortBg"
     )
@@ -1017,13 +1186,13 @@ fun SortChip(
         modifier
             .clip(shape)
             .background(bg)
-            .border(1.dp, if (selected) ScriptPalette.Lime else Color.White.copy(alpha = 0.18f), shape)
+            .border(1.dp, if (selected) GrapeViolet else ChipBorder, shape)
             .clickable { onClick() }
             .padding(horizontal = 13.dp, vertical = 7.dp)
     ) {
         Text(
             text = label,
-            color = if (selected) ScriptPalette.White else ScriptPalette.DimWhite,
+            color = if (selected) TextPrimary else TextSecondary,
             fontSize = Gioui.Type.caption,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             letterSpacing = 0.4.sp

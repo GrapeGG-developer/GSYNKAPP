@@ -1,5 +1,16 @@
 # История версий GSYNK
 
+## 6.1.0 (versionCode 39) — «возврат классического Пуска с приложениями»
+
+- **Возвращён дизайн 5.6.2 по просьбе пользователя:** плитки приложений, подписанные категории, вертикальная лента времени, стеклянные поверхности GSYNKPRG и «жидкие» окна из нажатой плитки. Script UI, Blades, XMB и GREAL как оболочка «Пуска» удалены.
+- **Восстановлены** `StartScreen.kt`, `MainScreen.kt`, `Components.kt`, `Effects.kt`, `Gioui.kt`, `GiouiScreens.kt`, `HomeTiles.kt`, `SettingsScreen.kt`, `Catalog.kt`, `Skin.kt`, тема и сторожевые тесты из `v5.6.2`; `Gioui.UI_VERSION` снова `GSYNKPRG Premium Realtime Glass`.
+- **Удалены** `core/Script.kt`, `ScriptDesign.kt`, `ScriptStartScreen.kt`, `ScriptSettingsScreen.kt` и тесты отвергнутых экспериментальных оболочек.
+- **Сохранено приложение «антистресс»** (`page:antistress`) со стеклянной бесконечной каруселью, пузырями и рябью; добавлена совместимая `rememberPrgPhaseState()` для общего таймера эффектов.
+- **Настройки дизайна** снова на плитках `GSYNKPRG`, `формы GSYNKPRG` и `дизайн GSYNKPRG`; ярлыки `page:script`, `page:greal`, `page:blade`, `page:xmb` открывают настройки классического стекла.
+- Все 107 плиток, маршруты, функции, портретная ориентация, отсутствие поиска в «Пуске», NFC/Grape Link, GSYNK-AI, автообновление и формат `.gsai` сохранены.
+- Добавлены `ClassicUiRestoreTest.kt` и `AntistressPlayTest.kt`; `ReleaseNews` получил новость 6.1.0, а запись 6.0.0 помечена как заменённая.
+- **Приёмка:** 362/362 unit-тестов, Lint 85 Warning / 59 Hint / 0 Error / 0 Fatal, debug APK 38 910 131 байт, SHA-256 `54747bde04ed5f1a631ea09725924e89d04bd28d8de1fb1a230c335c38749614`.
+
 ## 6.0.0 (versionCode 38) — «GSYNK Script UI»
 
 - **Зафиксирована постоянная дизайн-система GSYNK Script UI:** Script = типографика, нумерованные строки, подписанные главы, активная строка и собственные глифы; Monolith = неизменный каркас экрана. Парадигма навигации больше не меняется, дальше только доработки системы.

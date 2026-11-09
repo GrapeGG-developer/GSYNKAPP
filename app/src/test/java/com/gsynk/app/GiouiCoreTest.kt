@@ -408,8 +408,8 @@ class GiouiCoreTest {
     }
 
     @Test
-    fun grealIsTheOnlyUiSystem() {
-        assertEquals("GSYNK Script UI — Monolith baseline 1.0", com.gsynk.app.ui.Gioui.UI_VERSION)
+    fun gsynkPrgIsTheOnlyUiSystem() {
+        assertEquals("GSYNKPRG Premium Realtime Glass", com.gsynk.app.ui.Gioui.UI_VERSION)
         val uiDir = java.io.File("src/main/java/com/gsynk/app/ui")
         assertTrue("старый файл дизайн-системы остался", !java.io.File(uiDir, "Metro.kt").exists())
         val leftovers = uiDir.listFiles()!!.filter { it.extension == "kt" }

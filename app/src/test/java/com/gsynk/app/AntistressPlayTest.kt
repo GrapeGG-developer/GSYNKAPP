@@ -1,19 +1,15 @@
 package com.gsynk.app
 
 import com.gsynk.app.core.GrealPlay
-import com.gsynk.app.core.ReleaseNews
-import com.gsynk.app.ui.Catalog
-import com.gsynk.app.ui.GiouiPageIds
 import java.io.File
 import kotlin.math.abs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Стабильность бесконечной SCRIPT-графики и нового антистресс-приложения. */
-class GrealInfiniteTest {
+/** Математика сохранённого приложения «антистресс»: инерция, границы и эффекты. */
+class AntistressPlayTest {
 
     @Test
     fun carouselWrapsForeverAndNeverLeavesTheScene() {
@@ -98,52 +94,15 @@ class GrealInfiniteTest {
     }
 
     @Test
-    fun antistressIsOneDirectFullscreenApp() {
-        val entry = Catalog.byId("antistress")
-        assertNotNull("плитка антистресса потерялась", entry)
-        assertEquals("page:antistress", entry?.route)
-        assertEquals(Catalog.Group.FUN, entry?.group)
-        assertTrue(entry?.fresh == true)
-        assertTrue("страница не зарегистрирована", GiouiPageIds.contains("antistress"))
-        val router = File("src/main/java/com/gsynk/app/ui/GiouiScreens.kt").readText()
-        assertTrue("роутер не открывает антистресс", router.contains("\"antistress\" -> {"))
-        assertEquals("6.0.0", ReleaseNews.VERSION)
-        val build = File("build.gradle.kts").readText()
-        assertTrue(build.contains("versionCode = 38"))
-        assertTrue(build.contains("versionName = \"6.0.0\""))
-    }
-
-    @Test
-    fun effectsUseSharedClockAndScriptBackground() {
-        val components = File("src/main/java/com/gsynk/app/ui/Components.kt").readText()
-        assertTrue(components.contains("val LocalGrealPhase"))
-        assertTrue(components.contains("fun rememberSharedGrealPhase()"))
-        assertTrue(components.contains("LocalGrealPhase provides sharedPhase"))
-        assertTrue(components.contains("fun rememberPrgPhaseState("))
-        assertTrue(
-            "лёгкая фаза больше не должна создавать свою бесконечную анимацию",
-            components.contains("fun rememberPrgPhase(seed: Int = 0): Float = rememberPrgPhaseState(seed).value")
-        )
-        assertTrue(components.contains("ScriptBackground(") && components.contains("ScriptFocusBar("))
-        val design = File("src/main/java/com/gsynk/app/ui/ScriptDesign.kt").readText()
-        assertTrue(design.contains("fun ScriptBackground(") && design.contains("fun ScriptFocusBar("))
-        assertFalse(design.contains("Color.Gray") || design.contains("drawLine(") || design.contains("drawCircle(") || design.contains("blur(") || design.contains("cameraDistance") || design.contains("rotationX") || design.contains("rotationY") || design.contains("shadowElevation") || design.contains("ShaderBrush") || design.contains("RuntimeShader"))
-        val script = File("src/main/java/com/gsynk/app/ui/ScriptStartScreen.kt").readText()
-        assertTrue(script.contains("ScriptBackground(") && script.contains("ScriptIcon(") && script.contains("ScriptSurface("))
-        assertFalse(script.contains("AnimatedGrapeBackground") || script.contains("GrealAuroraField") || script.contains("Blade") || script.contains("Xmb") || script.contains("cameraDistance") || script.contains("rotationX") || script.contains("rotationY") || script.contains("blur(") || script.contains("shadowElevation"))
-    }
-
-    @Test
-    fun infiniteGraphicsStayInGrealWithoutCassetteLines() {
-        val infinite = File("src/main/java/com/gsynk/app/ui/GrealInfinite.kt").readText()
-        assertFalse(infinite.contains("GrealTapeBackdrop"))
-        assertFalse(infinite.contains("Color.Gray"))
-        assertFalse(infinite.contains("drawLine("))
+    fun antistressIsOneDirectFullscreenAppOnClassicTiles() {
         val screen = File("src/main/java/com/gsynk/app/ui/GrealAntistressScreen.kt").readText()
         assertTrue(screen.contains("GrealInfiniteCarousel("))
         assertTrue(screen.contains("GrealBubbleField("))
         assertTrue(screen.contains("GrealRippleField("))
+        assertTrue(screen.contains("PrgGlassSheen("))
         assertFalse("вложенный скролл в полноэкранном приложении запрещён", screen.contains("verticalScroll"))
         assertFalse(screen.contains("GrapeScreen("))
+        val router = File("src/main/java/com/gsynk/app/ui/GiouiScreens.kt").readText()
+        assertTrue(router.contains("\"antistress\" -> { GrealAntistressScreen(onBack); return true }"))
     }
 }
