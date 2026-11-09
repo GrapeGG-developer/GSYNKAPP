@@ -39,3 +39,11 @@
 - Только портрет, поиска в «Пуске» нет, все прочие маршруты и формат `.gsai` сохранены.
 - GSYNK-AI для Windows остаётся отдельной версией 1.1.1; служебные prerelease не смещают Android latest.
 - 6.0.0 Script UI и 6.1.0 (классика 5.6.2) остаются в истории релизов, но не являются текущими.
+
+## Полная проверка
+
+- `testDebugUnitTest lintDebug assembleDebug` — **BUILD SUCCESSFUL**.
+- Unit-тесты: **346 / 346**, failures `0`, errors `0`, skipped `0`.
+- Android Lint: **87 Warning / 59 Hint / 0 Error / 0 Fatal**.
+- Debug APK: `GSYNK-v6.2.0-debug.apk`, **38 729 467 байт**, SHA-256 `e8fd6db4288fb5f79a398a52ed52cdf5092a4fb9987f960c5b9d468d07e4d9f9`.
+- AAPT: `versionCode='40'`, `versionName='6.2.0'`, `minSdk='30'`, `targetSdk='36'`.
